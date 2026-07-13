@@ -1,0 +1,7 @@
+[Unit]
+Description=Projekte ins Git-Lager sichern
+
+[Service]
+Type=oneshot
+User=%i
+ExecStart=/home/%i/Hetzner-App/scripts/auto-sichern.sh

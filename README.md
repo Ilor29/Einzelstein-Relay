@@ -68,6 +68,35 @@ Kein Bauschritt: Datei ändern, Seite neu laden. Das Anmelde-Plätzchen ist als
 `secure` markiert, funktioniert also nur über HTTPS — beim Testen auf
 `localhost` macht Chrome eine Ausnahme.
 
+## Immer auf demselben Stand
+
+Das Grundproblem: Du arbeitest am Windows-Rechner, in einer Linux-VM und
+unterwegs am Handy — und keiner weiß vom anderen. Die Lösung nutzt aus, dass
+mit dieser App **die Arbeit auf dem Server passiert**. Der Hetzner ist damit die
+Wahrheit, alle anderen holen sich von dort ab.
+
+Nichts davon verlässt deinen Server. Kein GitHub, kein fremder Dienst.
+
+**Einmalig auf dem Hetzner:**
+
+```bash
+./scripts/lager-einrichten.sh Hetzner-App Skillsradar KI-WIKI
+sudo cp deploy/auto-sichern.{service,timer} /etc/systemd/system/
+sudo systemctl enable --now auto-sichern.timer
+```
+
+Ab jetzt sichert der Server alle zehn Minuten von selbst, was Claude Code
+geändert hat.
+
+**Einmalig auf dem Windows-Rechner:** `scripts/abgleich-windows.ps1` nach
+`D:\Virtual Code\` legen, Server und Benutzer eintragen, und in der
+Aufgabenplanung als Aufgabe *„Bei Anmeldung"* eintragen. Danach ist dein
+Rechner beim Hochfahren automatisch auf dem Stand von unterwegs.
+
+Das Skript ist absichtlich vorsichtig: Liegen auf dem Rechner ungesicherte
+Änderungen, überspringt es das Projekt und sagt es dir, statt deine Arbeit zu
+überfahren.
+
 ## Was noch fehlt
 
 - **Benachrichtigungen**, wenn Claude fertig ist oder nachfragt. Der Schalter

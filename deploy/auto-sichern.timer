@@ -1,0 +1,16 @@
+# Sichert alle zehn Minuten, was auf dem Server entstanden ist.
+#
+# Zusammen mit auto-sichern.service nach /etc/systemd/system/ kopieren:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now auto-sichern.timer
+
+[Unit]
+Description=Sichert die Projekte auf dem Hetzner ins Git-Lager
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
