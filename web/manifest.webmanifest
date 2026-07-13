@@ -1,0 +1,18 @@
+{
+  "name": "Hetzner",
+  "short_name": "Hetzner",
+  "description": "Deine Claude-Code-Sitzungen auf dem Server — mit Übersicht und Anheften.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16130F",
+  "theme_color": "#16130F",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#16130F">
+  <title>Hetzner</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="stylesheet" href="/vendor/xterm.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- Anmeldung -->
+<section id="ansicht-anmeldung" class="ansicht" hidden>
+  <div class="anmeldung">
+    <h1>Hetzner</h1>
+    <p>Deine Sitzungen laufen auf dem Server. Melde dich an, um sie zu sehen.</p>
+    <form id="anmelde-formular">
+      <input type="password" id="zugangswort" class="eingabe" placeholder="Zugangswort"
+             autocomplete="current-password" required>
+      <button type="submit" class="knopf-voll">Anmelden</button>
+    </form>
+    <p id="anmelde-fehler" class="fehler" hidden></p>
+  </div>
+</section>
+
+<!-- Sitzungsübersicht -->
+<section id="ansicht-liste" class="ansicht" hidden>
+  <header class="kopf">
+    <h1>Sitzungen</h1>
+    <span id="verbindung" class="verbindung"><span class="punkt"></span>verbunden</span>
+  </header>
+  <div id="liste" class="liste"></div>
+  <div class="fuss">
+    <button id="knopf-neu" class="knopf-voll">＋ Neue Sitzung</button>
+  </div>
+</section>
+
+<!-- Eine Sitzung -->
+<section id="ansicht-sitzung" class="ansicht" hidden>
+  <header class="kopf kopf-sitzung">
+    <button id="knopf-zurueck" class="knopf-blank" aria-label="Zurück zur Übersicht">←</button>
+    <h1 id="sitzung-name" class="mono"></h1>
+    <button id="knopf-vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">🔊</button>
+    <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">📌</button>
+  </header>
+  <div id="terminal" class="terminal"></div>
+  <div class="sondertasten" id="sondertasten"></div>
+  <form id="eingabe-formular" class="eingabezeile">
+    <input type="text" id="eingabe" class="eingabe mono" placeholder="Nachricht an Claude …"
+           autocomplete="off" autocapitalize="sentences" enterkeyhint="send">
+    <button type="submit" class="knopf-senden" aria-label="Senden">↑</button>
+  </form>
+</section>
+
+<!-- Neue Sitzung -->
+<section id="ansicht-neu" class="ansicht" hidden>
+  <header class="kopf">
+    <button id="knopf-abbrechen" class="knopf-blank" aria-label="Abbrechen">←</button>
+    <h1>Neue Sitzung</h1>
+  </header>
+  <form id="neu-formular" class="formular">
+    <label class="feld">
+      <span class="marke">Name</span>
+      <input type="text" id="neu-name" class="eingabe mono" required
+             pattern="[A-Za-z0-9._\-]+" placeholder="z. B. mail-relay-fix">
+    </label>
+
+    <div class="feld">
+      <span class="marke">Arbeitsordner</span>
+      <div id="neu-ordner" class="ordnerwahl"></div>
+    </div>
+
+    <label class="feld">
+      <span class="marke">Erster Auftrag</span>
+      <textarea id="neu-auftrag" class="eingabe" rows="3"
+                placeholder="Optional — kann auch leer bleiben"></textarea>
+    </label>
+
+    <label class="schalterzeile">
+      <span>Sofort anheften</span>
+      <input type="checkbox" id="neu-anheften" checked>
+      <span class="schalter"></span>
+    </label>
+
+    <button type="submit" class="knopf-voll">Sitzung starten</button>
+    <p id="neu-fehler" class="fehler" hidden></p>
+  </form>
+</section>
+
+<audio id="stimme" hidden></audio>
+
+<script src="/vendor/xterm.js"></script>
+<script src="/vendor/xterm-addon-fit.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

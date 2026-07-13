@@ -1,0 +1,426 @@
+/* Hetzner-App — Handy zuerst.
+   Farben und Schrift wie im Entwurf: warmes Tiefschwarz als Grund, ein
+   einziger Akzent, dazu drei Statusfarben. Monospace für alles, was vom
+   Server kommt, Groteske für alles, was man drücken kann. */
+
+:root {
+  --grund: #16130F;
+  --erhoben: #1F1B16;
+  --erhoben-2: #2A241D;
+  --linie: #383026;
+  --schrift: #F0EAE2;
+  --schrift-leise: #A79C8E;
+  --schrift-schwach: #6E6558;
+  --akzent: #D9764F;
+  --akzent-weich: #3A2419;
+  --laeuft: #5FB894;
+  --wartet: #E3AE4A;
+  --ruht: #6E6558;
+
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* Sicherheitsabstand zu Notch und Gestenleiste. */
+  --oben: env(safe-area-inset-top, 0px);
+  --unten: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;              /* die Ansichten scrollen, nicht die Seite */
+  background: var(--grund);
+  color: var(--schrift);
+  font-family: var(--sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;     /* kein Gummiband beim Scrollen */
+}
+
+.mono { font-family: var(--mono); }
+
+.ansicht {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--oben);
+  padding-bottom: var(--unten);
+}
+.ansicht[hidden] { display: none; }
+
+/* --- Kopfzeile --- */
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .7rem 1rem .8rem;
+  border-bottom: 1px solid var(--linie);
+  flex: none;
+}
+.kopf h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kopf-sitzung h1 { font-size: .95rem; }
+
+.verbindung {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--laeuft);
+  flex: none;
+}
+.verbindung.weg { color: var(--wartet); }
+.punkt {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* --- Knöpfe --- */
+.knopf-voll {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  width: 100%;
+  background: var(--akzent);
+  color: #fff;
+  border: 0;
+  border-radius: 11px;
+  padding: .85rem;
+  font-family: var(--sans);
+  font-size: .92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.knopf-voll:active { filter: brightness(.9); }
+.knopf-voll:disabled { opacity: .5; }
+
+.knopf-blank {
+  background: none;
+  border: 0;
+  color: var(--schrift-leise);
+  font-size: 1.05rem;
+  padding: .35rem .45rem;
+  cursor: pointer;
+  border-radius: 8px;
+  flex: none;
+  line-height: 1;
+}
+.knopf-blank:active { background: var(--erhoben-2); }
+.knopf-blank.an { color: var(--akzent); }
+.knopf-blank.spricht { color: var(--laeuft); }
+
+:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+
+/* --- Sitzungsübersicht --- */
+.liste {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: .6rem .7rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.gruppe {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-family: var(--mono);
+  font-size: .64rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--schrift-schwach);
+  padding: .7rem .3rem .25rem;
+}
+.gruppe .anzahl { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.karte {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: .28rem;
+  background: var(--erhoben-2);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: .7rem .75rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.karte:active { background: var(--erhoben); }
+.karte.angeheftet { border-color: var(--linie); }
+
+.karte .streifen {
+  position: absolute;
+  left: 0; top: 10px; bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+}
+.karte .streifen.running { background: var(--laeuft); }
+.karte .streifen.waiting { background: var(--wartet); }
+.karte .streifen.idle    { background: transparent; }
+
+.karte .zeile-oben { display: flex; align-items: center; gap: .45rem; }
+.karte .name {
+  font-family: var(--mono);
+  font-size: .84rem;
+  font-weight: 500;
+  letter-spacing: -.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.karte .nadel {
+  margin-left: auto;
+  font-size: .78rem;
+  line-height: 1;
+  flex: none;
+  opacity: .35;
+}
+.karte.angeheftet .nadel { opacity: 1; }
+
+.karte .vorschau {
+  font-size: .78rem;
+  color: var(--schrift-leise);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.karte .angaben {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-family: var(--mono);
+  font-size: .67rem;
+  color: var(--schrift-schwach);
+  font-variant-numeric: tabular-nums;
+}
+
+.etikett {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: .63rem;
+  font-weight: 500;
+  padding: .12rem .42rem;
+  border-radius: 5px;
+}
+.etikett.running { color: var(--laeuft); background: color-mix(in srgb, var(--laeuft) 14%, transparent); }
+.etikett.waiting { color: var(--wartet); background: color-mix(in srgb, var(--wartet) 16%, transparent); }
+.etikett.idle    { color: var(--ruht);   background: color-mix(in srgb, var(--ruht) 16%, transparent); }
+
+.leer {
+  text-align: center;
+  color: var(--schrift-schwach);
+  font-size: .88rem;
+  padding: 3rem 1.5rem;
+}
+
+.fuss {
+  flex: none;
+  padding: .7rem .8rem calc(.7rem + var(--unten));
+  border-top: 1px solid var(--linie);
+  background: var(--grund);
+}
+
+/* --- Terminal --- */
+.terminal {
+  flex: 1;
+  min-height: 0;
+  padding: .4rem .3rem .2rem .5rem;
+  background: var(--grund);
+  overflow: hidden;
+}
+.xterm .xterm-viewport { overflow-y: auto !important; }
+
+/* Die Tastenleiste, die es auf dem Handy sonst nicht gibt. */
+.sondertasten {
+  flex: none;
+  display: flex;
+  gap: .35rem;
+  padding: .45rem .55rem;
+  border-top: 1px solid var(--linie);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sondertasten::-webkit-scrollbar { display: none; }
+
+.taste {
+  font-family: var(--mono);
+  font-size: .72rem;
+  background: var(--erhoben-2);
+  color: var(--schrift-leise);
+  border: 1px solid var(--linie);
+  border-radius: 7px;
+  padding: .4rem .6rem;
+  white-space: nowrap;
+  flex: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.taste:active { background: var(--akzent-weich); }
+.taste.warm {
+  color: var(--akzent);
+  border-color: color-mix(in srgb, var(--akzent) 40%, transparent);
+}
+
+.eingabezeile {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem .7rem calc(.7rem + var(--unten));
+}
+.knopf-senden {
+  width: 38px; height: 38px;
+  flex: none;
+  background: var(--akzent);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  font-size: .95rem;
+  cursor: pointer;
+}
+.knopf-senden:active { filter: brightness(.9); }
+
+/* --- Eingabefelder --- */
+.eingabe {
+  width: 100%;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  padding: .65rem .75rem;
+  color: var(--schrift);
+  font-family: var(--sans);
+  font-size: 16px;      /* unter 16px zoomt Android beim Antippen hinein */
+  resize: none;
+}
+.eingabe::placeholder { color: var(--schrift-schwach); }
+.eingabe:focus { border-color: var(--akzent); outline: none; }
+
+/* --- Formulare --- */
+.formular {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.1rem .9rem calc(1.5rem + var(--unten));
+}
+.feld { display: flex; flex-direction: column; gap: .4rem; }
+.marke {
+  font-family: var(--mono);
+  font-size: .64rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--schrift-schwach);
+}
+
+.ordnerwahl { display: flex; flex-direction: column; gap: .35rem; }
+.ordner {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  padding: .6rem .7rem;
+  font-family: var(--mono);
+  font-size: .78rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ordner.gewaehlt {
+  border-color: var(--akzent);
+  background: var(--akzent-weich);
+}
+.ordner .punkt-wahl {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  flex: none;
+  border: 1.5px solid var(--schrift-schwach);
+}
+.ordner.gewaehlt .punkt-wahl {
+  border-color: var(--akzent);
+  border-width: 4px;
+}
+
+.schalterzeile {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-size: .88rem;
+  color: var(--schrift-leise);
+  cursor: pointer;
+}
+.schalterzeile input { display: none; }
+.schalter {
+  margin-left: auto;
+  width: 38px; height: 21px;
+  border-radius: 11px;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  position: relative;
+  flex: none;
+  transition: background .15s;
+}
+.schalter::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: var(--schrift-schwach);
+  transition: transform .15s, background .15s;
+}
+.schalterzeile input:checked + .schalter {
+  background: var(--akzent);
+  border-color: var(--akzent);
+}
+.schalterzeile input:checked + .schalter::after {
+  transform: translateX(17px);
+  background: #fff;
+}
+
+/* --- Anmeldung --- */
+.anmeldung {
+  margin: auto;
+  width: 100%;
+  max-width: 340px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  text-align: center;
+}
+.anmeldung h1 {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--akzent);
+  letter-spacing: -.02em;
+}
+.anmeldung p { color: var(--schrift-leise); font-size: .9rem; }
+#anmelde-formular { display: flex; flex-direction: column; gap: .6rem; margin-top: .4rem; }
+
+.fehler {
+  color: var(--akzent);
+  font-size: .85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

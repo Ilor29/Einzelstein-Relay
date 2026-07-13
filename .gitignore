@@ -1,0 +1,21 @@
+# Nichts, was auf dem einen Rechner entsteht und auf dem anderen stört.
+.venv/
+__pycache__/
+*.pyc
+
+# Das Zugangswort und die Sitzungsdaten gehören niemandem außer dem Server,
+# auf dem sie liegen. Die dürfen nie in ein Lager wandern.
+.env
+umgebung
+sitzungen.json
+
+# Die Stimmdateien sind groß und lassen sich jederzeit neu herunterladen.
+stimmen/
+*.onnx
+*.onnx.json
+
+# Kram, den Editoren und Betriebssysteme hinterlassen.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

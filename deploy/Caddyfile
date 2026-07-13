@@ -1,0 +1,26 @@
+# Caddy sitzt vor der App und macht zwei Dinge, die beide nicht verhandelbar
+# sind: Er besorgt automatisch ein HTTPS-Zertifikat, und er sorgt dafür, dass
+# der Dienst selbst niemals direkt aus dem Netz erreichbar ist.
+#
+# Ohne HTTPS wäre alles im Klartext unterwegs — dein Zugangswort, dein Code,
+# deine Sitzungen. Und das Anmelde-Plätzchen (Cookie) würde vom Browser gar
+# nicht erst gesetzt, weil es als "secure" markiert ist.
+#
+# Trage unten deine Domain ein und lege die Datei auf dem Server nach
+# /etc/caddy/Caddyfile.
+
+hetzner.deine-domain.de {
+	# Die App lauscht nur auf 127.0.0.1 — von außen kommt niemand direkt dran.
+	reverse_proxy 127.0.0.1:8787
+
+	# Ein paar Kopfzeilen, die dem Browser sagen, dass er sich benehmen soll.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	encode gzip zstd
+}

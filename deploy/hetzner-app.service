@@ -1,0 +1,28 @@
+# Damit die App nach einem Neustart des Servers von selbst wieder da ist.
+#
+# Nach /etc/systemd/system/hetzner-app.service kopieren, dann:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hetzner-app
+
+[Unit]
+Description=Hetzner-App — Claude-Code-Sitzungen vom Handy
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/Hetzner-App
+ExecStart=/home/%i/Hetzner-App/.venv/bin/python -m hetzner_app.server
+Restart=always
+RestartSec=3
+
+# Das Zugangswort steht in einer Datei, nicht hier — sonst könnte es jeder
+# lesen, der "systemctl cat" tippen darf.
+EnvironmentFile=/home/%i/.hetzner-app/umgebung
+
+# Nur auf 127.0.0.1 lauschen. Nach außen geht ausschließlich Caddy.
+Environment=HETZNER_APP_HOST=127.0.0.1
+Environment=HETZNER_APP_PORT=8787
+
+[Install]
+WantedBy=multi-user.target
