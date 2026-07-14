@@ -22,7 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import geraete, melden, state, tmux, tts, verlauf
+from . import geraete, melden, mitschrift, state, tmux, tts, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -53,7 +53,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 13
+VERSION = 14
 
 
 @app.get("/api/version")
@@ -241,21 +241,43 @@ async def speak(body: Speak) -> Response:
 
 @app.get("/api/sessions/{name}/text", dependencies=[Depends(require_auth)])
 def session_text(name: str) -> dict:
-    """Der Text der Sitzung, aufbereitet zum Vorlesen."""
-    if not tmux.exists(name):
+    """Claudes letzte Antwort, zum Vorlesen."""
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
-    screen = tmux.capture(name, lines=200)
-    return {"text": tts.for_speech(screen)}
+
+    # Aus der Mitschrift, nicht vom Bildschirm: Dort steht die Antwort ganz,
+    # nicht nur der Teil, der gerade zu sehen ist.
+    bloecke = mitschrift.lesen(treffer[0].cwd)
+    for block in reversed(bloecke):
+        if block["typ"] == "claude" and block["text"].strip():
+            return {"text": block["text"]}
+
+    # Keine Mitschrift? Dann eben doch vom Bildschirm.
+    return {"text": tts.for_speech(tmux.capture(name, lines=200))}
 
 
 @app.get("/api/sessions/{name}/verlauf", dependencies=[Depends(require_auth)])
 def session_verlauf(name: str) -> list[dict]:
-    """Die Unterhaltung als lesbare Blöcke — statt als Terminal-Gewusel."""
-    if not tmux.exists(name):
+    """Die Unterhaltung, so wie sie wirklich stattfand.
+
+    Nicht mehr vom Terminal-Bildschirm abgelesen und geraten: Claude Code
+    schreibt jede Sitzung ohnehin mit, vollständig und sauber getrennt nach
+    Sprecher. Das ist die richtige Quelle. Sie überlebt jeden Neustart, reicht
+    beliebig weit zurück, und niemand verwechselt mehr, wer was gesagt hat.
+    """
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
-    # Der ganze Verlauf, den tmux noch hat. Wer nachlesen will, was vor einer
-    # Stunde besprochen wurde, soll es finden — nicht nur die letzten Sätze.
-    return verlauf.lesen(tmux.capture(name, lines=50000))
+
+    bloecke = mitschrift.lesen(treffer[0].cwd)
+
+    # Findet sich keine Mitschrift — etwa bei einer ganz frischen Sitzung —,
+    # lesen wir notfalls doch den Bildschirm ab. Besser als eine leere Seite.
+    if not bloecke:
+        return verlauf.lesen(tmux.capture(name, lines=5000))
+
+    return bloecke
 
 
 BILDER = Path.home() / ".hetzner-app" / "bilder"
