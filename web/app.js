@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 8;
+const VERSION = 9;
 
 const $ = (id) => document.getElementById(id);
 
@@ -178,7 +178,9 @@ function karte(sitzung) {
     <div class="streifen ${sitzung.state}"></div>
     <div class="zeile-oben">
       <span class="name"></span>
-      <span class="nadel" role="button" aria-label="Anheften">📌</span>
+      <button class="nadel" aria-label="Anheften">
+        <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
+      </button>
     </div>
     <div class="vorschau"></div>
     <div class="angaben">
@@ -399,7 +401,9 @@ function ansichtWechseln() {
   $("verlauf").hidden = imTerminal;
   $("terminal").hidden = !imTerminal;
   $("sondertasten").hidden = !imTerminal;
-  $("knopf-ansicht").textContent = imTerminal ? "💬" : "⌨";
+  // Der Knopf zeigt, wohin er führt — nicht, wo man ist.
+  $("knopf-ansicht").querySelector("use")
+    .setAttribute("href", imTerminal ? "#i-lesen" : "#i-terminal");
 
   if (imTerminal) {
     clearInterval(verlaufTakt);
@@ -455,7 +459,7 @@ function oeffneSitzung(sitzung) {
   $("verlauf").hidden = false;
   $("terminal").hidden = true;
   $("sondertasten").hidden = true;
-  $("knopf-ansicht").textContent = "⌨";
+  $("knopf-ansicht").querySelector("use").setAttribute("href", "#i-terminal");
 
   $("verlauf").replaceChildren();
   ladeVerlauf();
@@ -637,16 +641,20 @@ let spricht = false;
 $("knopf-vorlesen").addEventListener("click", async () => {
   const knopf = $("knopf-vorlesen");
 
+  const zeichen = (name) => knopf.querySelector("use").setAttribute("href", name);
+
   if (spricht) {
     stimme.pause();
     stimme.currentTime = 0;
     spricht = false;
     knopf.classList.remove("spricht");
+    zeichen("#i-lautsprecher");
     return;
   }
   if (!aktuelleSitzung) return;
 
   knopf.classList.add("spricht");
+  zeichen("#i-stopp");     // während es spricht, hält derselbe Knopf an
   spricht = true;
 
   try {
@@ -665,12 +673,14 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     stimme.onended = () => {
       spricht = false;
       knopf.classList.remove("spricht");
+      zeichen("#i-lautsprecher");
       URL.revokeObjectURL(stimme.src);
     };
     await stimme.play();
   } catch (err) {
     spricht = false;
     knopf.classList.remove("spricht");
+    zeichen("#i-lautsprecher");
     alert(err.message);
   }
 });

@@ -4,25 +4,40 @@
    Server kommt, Groteske für alles, was man drücken kann. */
 
 :root {
-  --grund: #16130F;
-  --erhoben: #1F1B16;
-  --erhoben-2: #2A241D;
-  --linie: #383026;
-  --schrift: #F0EAE2;
-  --schrift-leise: #A79C8E;
-  --schrift-schwach: #6E6558;
-  --akzent: #D9764F;
-  --akzent-weich: #3A2419;
-  --laeuft: #5FB894;
-  --wartet: #E3AE4A;
-  --ruht: #6E6558;
+  /* Angelehnt an die Claude-App: warmes Anthrazit statt Schwarz, ein einziger
+     Akzent im Terracotta, und ruhige Neutraltöne dazwischen. */
+  --grund: #1F1E1D;
+  --erhoben: #262624;
+  --erhoben-2: #30302E;
+  --linie: #3E3E3B;
+  --schrift: #F5F4EF;
+  --schrift-leise: #A6A29A;
+  --schrift-schwach: #7A766E;
+  --akzent: #D97757;
+  --akzent-weich: #3A2820;
+  --laeuft: #6BB899;
+  --wartet: #D9A441;
+  --ruht: #7A766E;
 
   --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Für gelesenen Fließtext — genau wie in der Claude-App. Eine Serifenschrift
+     liest sich in längeren Absätzen ruhiger als eine Groteske. */
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
 
   /* Sicherheitsabstand zu Notch und Gestenleiste. */
   --oben: env(safe-area-inset-top, 0px);
   --unten: env(safe-area-inset-bottom, 0px);
+}
+
+/* Alle Icons sind gezeichnete Linien, keine Emoji: Sie nehmen die Farbe ihres
+   Knopfes an, sind auf jedem Gerät gleich und sehen nicht nach Provisorium aus. */
+svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex: none;
+  color: inherit;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -108,15 +123,17 @@ html, body {
 .knopf-voll:disabled { opacity: .5; }
 
 .knopf-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: 0;
   color: var(--schrift-leise);
-  font-size: 1.05rem;
-  padding: .35rem .45rem;
+  padding: .45rem;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 9px;
   flex: none;
-  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
 }
 .knopf-blank:active { background: var(--erhoben-2); }
 .knopf-blank.an { color: var(--akzent); }
@@ -198,12 +215,16 @@ html, body {
 }
 .karte .nadel {
   margin-left: auto;
-  font-size: .78rem;
-  line-height: 1;
   flex: none;
-  opacity: .35;
+  background: none;
+  border: 0;
+  padding: .2rem;
+  color: var(--schrift-schwach);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.karte.angeheftet .nadel { opacity: 1; }
+.karte .nadel svg { width: 16px; height: 16px; }
+.karte.angeheftet .nadel { color: var(--akzent); }
 
 .karte .vorschau {
   font-size: .78rem;
@@ -264,29 +285,34 @@ html, body {
 }
 
 .blase {
-  border-radius: 14px;
-  padding: .7rem .85rem;
-  font-size: .93rem;
-  line-height: 1.6;
   white-space: pre-wrap;      /* Absätze bleiben Absätze */
   overflow-wrap: anywhere;    /* lange Pfade sprengen nicht das Layout */
 }
 
-/* Was du gesagt hast — rechts, im Akzent, wie man es erwartet. */
+/* Was du gesagt hast — rechts, in einer Blase, wie man es erwartet. */
 .blase.du {
   align-self: flex-end;
   max-width: 85%;
-  background: var(--akzent);
-  color: #fff;
-  border-bottom-right-radius: 5px;
-}
-
-/* Was Claude geantwortet hat — links, ruhig, volle Breite zum Lesen. */
-.blase.claude {
-  align-self: stretch;
   background: var(--erhoben-2);
   color: var(--schrift);
-  border-bottom-left-radius: 5px;
+  border-radius: 16px;
+  border-bottom-right-radius: 5px;
+  padding: .65rem .85rem;
+  font-size: .92rem;
+  line-height: 1.55;
+}
+
+/* Was Claude geantwortet hat — keine Blase, sondern Text. Volle Breite,
+   Serifenschrift, luftig gesetzt: gebaut zum Lesen, nicht zum Überfliegen.
+   Genau so macht es die Claude-App, und aus gutem Grund. */
+.blase.claude {
+  align-self: stretch;
+  background: none;
+  color: var(--schrift);
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  line-height: 1.68;
+  padding: .1rem .1rem .3rem;
 }
 
 /* Werkzeuge und Code: da, aber leise. Sie sollen den Text nicht überstimmen. */
@@ -361,42 +387,64 @@ html, body {
   border-color: color-mix(in srgb, var(--akzent) 40%, transparent);
 }
 
+/* Die Eingabezeile: ein Feld, in dem die Knöpfe sitzen — nicht drei Dinge
+   nebeneinander. So macht es die Claude-App, und es beruhigt den unteren Rand. */
 .eingabezeile {
   flex: none;
   display: flex;
   align-items: center;
-  gap: .5rem;
-  padding: .55rem .7rem calc(.7rem + var(--unten));
+  gap: .4rem;
+  margin: .55rem .7rem calc(.7rem + var(--unten));
+  padding: .35rem .4rem .35rem .5rem;
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  border-radius: 24px;
 }
+.eingabezeile:focus-within { border-color: var(--schrift-schwach); }
+
+.eingabezeile .eingabe {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: .45rem .2rem;
+}
+.eingabezeile .eingabe:focus { border: 0; outline: none; }
 .knopf-senden {
-  width: 38px; height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
   flex: none;
   background: var(--akzent);
   color: #fff;
   border: 0;
-  border-radius: 10px;
-  font-size: .95rem;
+  border-radius: 50%;
   cursor: pointer;
 }
 .knopf-senden:active { filter: brightness(.9); }
+.knopf-senden svg { width: 17px; height: 17px; }
 
 /* Das Mikrofon. Im Auto der wichtigste Knopf der App. */
 .knopf-diktat {
-  width: 38px; height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
   flex: none;
-  background: var(--erhoben-2);
-  border: 1px solid var(--linie);
-  border-radius: 10px;
-  font-size: .95rem;
+  background: none;
+  color: var(--schrift-leise);
+  border: 0;
+  border-radius: 50%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.knopf-diktat:active { background: var(--akzent-weich); }
+.knopf-diktat:active { background: var(--erhoben-2); }
+.knopf-diktat svg { width: 18px; height: 18px; }
 
 /* Während es zuhört, pulsiert es — sonst weiß man nicht, ob es lauscht. */
 .knopf-diktat.hoert {
   background: var(--akzent);
-  border-color: var(--akzent);
+  color: #fff;
   animation: pochen 1.4s ease-in-out infinite;
 }
 @keyframes pochen {

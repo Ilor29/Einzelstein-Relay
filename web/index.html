@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-  <meta name="theme-color" content="#16130F">
+  <meta name="theme-color" content="#1F1E1D">
   <title>Hetzner</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=8">
+  <link rel="stylesheet" href="/styles.css?v=9">
 
   <script>
     /* Die Notbremse.
@@ -41,6 +41,71 @@
   </script>
 </head>
 <body>
+
+<!-- Die Icons. Einmal als Vorlage hinterlegt, überall per <use> benutzt.
+     Gezeichnete Linien statt Emoji: Emoji sehen auf jedem Gerät anders aus,
+     lassen sich nicht einfärben und wirken wie ein Provisorium. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-zurueck" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </g>
+
+    <g id="i-mikrofon" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="11" rx="3"/>
+      <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+      <path d="M12 18v4"/>
+    </g>
+
+    <g id="i-senden" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 19V5"/>
+      <path d="M5 12l7-7 7 7"/>
+    </g>
+
+    <g id="i-lautsprecher" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 5L6 9H3v6h3l5 4V5z"/>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+      <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+    </g>
+
+    <g id="i-stopp" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="6" width="12" height="12" rx="2"/>
+    </g>
+
+    <g id="i-glocke" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
+    </g>
+
+    <g id="i-nadel" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 17v5"/>
+      <path d="M9 10.8V4h6v6.8l2 2.7v1.5H7v-1.5l2-2.7z"/>
+    </g>
+
+    <g id="i-terminal" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 17l6-5-6-5"/>
+      <path d="M12 19h8"/>
+    </g>
+
+    <g id="i-lesen" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5a8.4 8.4 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.5-8.7 8.4 8.4 0 0 1 8.5 8.5z"/>
+    </g>
+
+    <g id="i-plus" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M5 12h14"/>
+    </g>
+  </defs>
+</svg>
 
 <!-- Anmeldung läuft (unsichtbar, dauert einen Wimpernschlag) -->
 <section id="ansicht-anmeldung" class="ansicht" hidden>
@@ -78,28 +143,45 @@
   </header>
   <div id="liste" class="liste"></div>
   <div class="fuss">
-    <button id="knopf-neu" class="knopf-voll">＋ Neue Sitzung</button>
+    <button id="knopf-neu" class="knopf-voll">
+      <svg viewBox="0 0 24 24"><use href="#i-plus"/></svg>
+      Neue Sitzung
+    </button>
   </div>
 </section>
 
 <!-- Eine Sitzung -->
 <section id="ansicht-sitzung" class="ansicht" hidden>
   <header class="kopf kopf-sitzung">
-    <button id="knopf-zurueck" class="knopf-blank" aria-label="Zurück zur Übersicht">←</button>
-    <h1 id="sitzung-name" class="mono"></h1>
-    <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">⌨</button>
-    <button id="knopf-vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">🔊</button>
-    <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn fertig">🔔</button>
-    <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">📌</button>
+    <button id="knopf-zurueck" class="knopf-blank" aria-label="Zurück zur Übersicht">
+      <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
+    </button>
+    <h1 id="sitzung-name"></h1>
+    <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">
+      <svg viewBox="0 0 24 24"><use href="#i-terminal"/></svg>
+    </button>
+    <button id="knopf-vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">
+      <svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>
+    </button>
+    <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn fertig">
+      <svg viewBox="0 0 24 24"><use href="#i-glocke"/></svg>
+    </button>
+    <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">
+      <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
+    </button>
   </header>
   <div id="verlauf" class="verlauf"></div>
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>
   <form id="eingabe-formular" class="eingabezeile">
-    <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">🎤</button>
-    <input type="text" id="eingabe" class="eingabe mono" placeholder="Nachricht an Claude …"
+    <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
+      <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
+    </button>
+    <input type="text" id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
            autocomplete="off" autocapitalize="sentences" enterkeyhint="send">
-    <button type="submit" class="knopf-senden" aria-label="Senden">↑</button>
+    <button type="submit" class="knopf-senden" aria-label="Senden">
+      <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
+    </button>
   </form>
 </section>
 
@@ -148,6 +230,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=8"></script>
+<script src="/app.js?v=9"></script>
 </body>
 </html>
