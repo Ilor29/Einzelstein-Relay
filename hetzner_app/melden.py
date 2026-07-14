@@ -122,10 +122,22 @@ def schicken(titel: str, text: str, sitzung: str = "") -> int:
             )
             zugestellt += 1
         except WebPushException as fehler:
+            code = fehler.response.status_code if fehler.response is not None else 0
+
             # 404 und 410 heißen: Dieses Gerät gibt es nicht mehr. Dann tragen
             # wir es aus, statt es ewig weiter anzuschreiben.
-            if fehler.response is not None and fehler.response.status_code in (404, 410):
+            if code in (404, 410):
                 tot.append(empfaenger.get("endpoint", ""))
+
+            # 403 heißt: Die Anmeldung wurde mit einem anderen Ausweis erstellt.
+            # Auch die ist wertlos — das Gerät muss sich neu anmelden.
+            elif code == 403:
+                tot.append(empfaenger.get("endpoint", ""))
+
+            # Alles andere gehört ins Protokoll. Ein stiller Fehlschlag ist das
+            # Schlimmste: Man drückt die Glocke, alles sieht gut aus, und es
+            # klingelt nie.
+            print(f"Benachrichtigung fehlgeschlagen ({code}): {fehler}", flush=True)
 
     for endpoint in tot:
         austragen(endpoint)

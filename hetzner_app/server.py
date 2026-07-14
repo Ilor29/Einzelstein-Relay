@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 import secrets
+import subprocess
 import time
 from pathlib import Path
 
@@ -53,7 +54,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 19
+VERSION = 20
 
 
 @app.get("/api/version")
@@ -396,6 +397,49 @@ def bild_zeigen(sitzung: str, datei: str) -> FileResponse:
 
 class Nachricht(BaseModel):
     text: str
+
+
+@app.post("/api/sessions/{name}/sichern", dependencies=[Depends(require_auth)])
+def session_sichern(name: str) -> dict:
+    """Den Stand dieses Projekts sichern — auf Knopfdruck.
+
+    Kein Zeitgeber, der unbeaufsichtigt an allen Projekten arbeitet: Du drückst,
+    wenn du fertig bist. Dann liegt der Stand im Lager auf dem Server, und dein
+    Rechner holt ihn sich beim nächsten Hochfahren.
+    """
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if not treffer:
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    ordner = Path(treffer[0].cwd)
+    if not (ordner / ".git").is_dir():
+        raise HTTPException(400, "Dieses Projekt hat kein Lager.")
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-C", str(ordner),
+             "-c", "user.name=Hetzner-App",
+             "-c", "user.email=hetzner-app@localhost", *args],
+            capture_output=True, text=True,
+        )
+
+    if not git("status", "--porcelain").stdout.strip():
+        return {"ok": True, "geaendert": False, "text": "Nichts zu sichern — alles ist schon gesichert."}
+
+    git("add", "-A")
+    stempel = time.strftime("%d.%m.%Y um %H:%M")
+    ergebnis = git("commit", "-m", f"Vom Handy gesichert, {stempel}")
+    if ergebnis.returncode != 0:
+        raise HTTPException(500, f"Sichern fehlgeschlagen: {ergebnis.stderr[:200]}")
+
+    # Ins Lager schieben, falls es eins gibt.
+    geschoben = git("push", "hetzner", "HEAD").returncode == 0
+
+    return {
+        "ok": True,
+        "geaendert": True,
+        "text": "Gesichert." + ("" if geschoben else " (Noch kein Lager — nur örtlich gesichert.)"),
+    }
 
 
 @app.post("/api/sessions/{name}/abbrechen", dependencies=[Depends(require_auth)])

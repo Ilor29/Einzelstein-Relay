@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=19">
+  <link rel="stylesheet" href="/styles.css?v=20">
 
   <script>
     /* Die Notbremse.
@@ -129,6 +129,14 @@
       <rect x="9" y="9" width="6" height="6" rx="1"/>
     </g>
 
+    <!-- Eine Uhr mit Pfeil: den Stand festhalten, damit man später zurück kann. -->
+    <g id="i-sichern" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M12 8v4l3 2"/>
+    </g>
+
     <g id="i-zahnrad" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="3"/>
@@ -198,6 +206,9 @@
     </button>
     <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn fertig">
       <svg viewBox="0 0 24 24"><use href="#i-glocke"/></svg>
+    </button>
+    <button id="knopf-sichern" class="knopf-blank" aria-label="Stand sichern">
+      <svg viewBox="0 0 24 24"><use href="#i-sichern"/></svg>
     </button>
     <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">
       <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
@@ -291,6 +302,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=19"></script>
+<script src="/app.js?v=20"></script>
 </body>
 </html>

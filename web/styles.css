@@ -145,6 +145,30 @@ html, body {
 .knopf-blank:active { background: var(--erhoben-2); }
 .knopf-blank.an { color: var(--akzent); }
 .knopf-blank.spricht { color: var(--laeuft); }
+.knopf-blank.laeuft { color: var(--akzent); animation: pochen 1.2s ease-in-out infinite; }
+
+/* Eine kurze Rückmeldung, die von selbst wieder geht. Besser als ein
+   Hinweisfenster, das man erst wegtippen muss. */
+.zettel {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.5rem + var(--unten));
+  transform: translate(-50%, 1rem);
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  color: var(--schrift);
+  font-size: .85rem;
+  padding: .6rem 1rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px -12px rgba(0,0,0,.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 50;
+  max-width: 88vw;
+  text-align: center;
+}
+.zettel.da { opacity: 1; transform: translate(-50%, 0); }
 
 :focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
 

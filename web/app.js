@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 19;
+const VERSION = 20;
 
 const $ = (id) => document.getElementById(id);
 
@@ -875,6 +875,51 @@ $("knopf-anheften").addEventListener("click", async () => {
   $("knopf-anheften").classList.toggle("an", neu);
 });
 
+// Den Stand sichern — auf Knopfdruck, nicht durch einen Zeitgeber, der
+// unbeaufsichtigt an allen Projekten herumwerkelt. Du drückst, wenn du fertig
+// bist; zu Hause holt sich der Rechner den Stand.
+$("knopf-sichern").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  const knopf = $("knopf-sichern");
+  knopf.classList.add("laeuft");
+
+  try {
+    const { text } = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/sichern`,
+      { method: "POST" }
+    )).json();
+
+    knopf.classList.remove("laeuft");
+    knopf.classList.add("an");
+    zeichen(knopf, "#i-haken");
+    setTimeout(() => {
+      knopf.classList.remove("an");
+      zeichen(knopf, "#i-sichern");
+    }, 2000);
+
+    melde(text);
+  } catch (err) {
+    knopf.classList.remove("laeuft");
+    melde(err.message);
+  }
+});
+
+// Eine kurze Rückmeldung, die von selbst wieder verschwindet — besser als ein
+// Hinweisfenster, das man wegtippen muss.
+function melde(text) {
+  let zettel = document.getElementById("zettel");
+  if (!zettel) {
+    zettel = document.createElement("div");
+    zettel.id = "zettel";
+    zettel.className = "zettel";
+    document.body.append(zettel);
+  }
+  zettel.textContent = text;
+  zettel.classList.add("da");
+  clearTimeout(zettel.zeit);
+  zettel.zeit = setTimeout(() => zettel.classList.remove("da"), 2600);
+}
+
 $("knopf-melden").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
   const neu = !aktuelleSitzung.notifyWhenDone;
@@ -999,12 +1044,32 @@ async function meldenEinschalten() {
 
   const wache = await navigator.serviceWorker.ready;
   const { schluessel } = await (await api("/melden/schluessel")).json();
+  const gewuenscht = rohSchluessel(schluessel);
 
   let anmeldung = await wache.pushManager.getSubscription();
+
+  // Passt die bestehende Anmeldung noch zum Ausweis des Servers?
+  //
+  // Hat der Server einen neuen bekommen, weist der Push-Dienst jede Nachricht
+  // ab: "Die Zugangsdaten passen nicht zu denen, mit denen die Anmeldung
+  // erstellt wurde." Und zwar stumm — man drückt die Glocke, alles sieht gut
+  // aus, und es klingelt nie. Also: alte Anmeldung wegwerfen und neu machen.
+  if (anmeldung) {
+    const alt = new Uint8Array(anmeldung.options?.applicationServerKey ?? []);
+    const gleich =
+      alt.length === gewuenscht.length &&
+      alt.every((wert, i) => wert === gewuenscht[i]);
+
+    if (!gleich) {
+      await anmeldung.unsubscribe();
+      anmeldung = null;
+    }
+  }
+
   if (!anmeldung) {
     anmeldung = await wache.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: rohSchluessel(schluessel),
+      applicationServerKey: gewuenscht,
     });
   }
 
