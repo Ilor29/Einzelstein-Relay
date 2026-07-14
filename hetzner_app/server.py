@@ -409,10 +409,13 @@ class Modell(BaseModel):
 
 
 # Was Claude Code versteht — und was ein Mensch darunter versteht.
+# Die Kurznamen links sind die, die `claude --model` annimmt; die Zahlen dahinter
+# ändern sich mit jeder Modellgeneration, die Kurznamen nicht.
 MODELLE = {
-    "opus": ("Opus", "am stärksten, am teuersten"),
-    "sonnet": ("Sonnet", "guter Mittelweg"),
-    "haiku": ("Haiku", "schnell und günstig"),
+    "fable": ("Fable 5", "das neueste"),
+    "opus": ("Opus 4.8", "am stärksten, verbraucht die Limits schneller"),
+    "sonnet": ("Sonnet 5", "am effizientesten für Alltagsaufgaben"),
+    "haiku": ("Haiku 4.5", "am schnellsten für kurze Antworten"),
 }
 
 
@@ -442,6 +445,38 @@ async def modell_wechseln(name: str, body: Modell) -> dict:
 
     state.update(name, modell=body.name)
     return {"ok": True, "modell": body.name}
+
+
+class Antwort(BaseModel):
+    nummer: int
+
+
+@app.get("/api/sessions/{name}/frage", dependencies=[Depends(require_auth)])
+def session_frage(name: str) -> dict:
+    """Hängt die Sitzung gerade an einer Rückfrage? Dann hier, mit Antworten."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    return state.frage(name) or {}
+
+
+@app.post("/api/sessions/{name}/antwort", dependencies=[Depends(require_auth)])
+def session_antwort(name: str, body: Antwort) -> dict:
+    """Eine Rückfrage beantworten — so, wie man es im Terminal täte.
+
+    Claude Code nimmt die Zifferntaste: Sie wählt und bestätigt in einem. Ein
+    Enter hinterher würde nur eine leere Nachricht abschicken.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    offen = state.frage(name)
+    if not offen:
+        raise HTTPException(409, "Es steht gerade keine Frage offen.")
+    if not any(m["nummer"] == body.nummer for m in offen["moeglichkeiten"]):
+        raise HTTPException(400, "Diese Antwort gibt es zu dieser Frage nicht.")
+
+    tmux.send_text(name, str(body.nummer))
+    return {"ok": True}
 
 
 @app.post("/api/sessions/{name}/sichern", dependencies=[Depends(require_auth)])

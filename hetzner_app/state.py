@@ -115,6 +115,73 @@ def detect(name: str) -> str:
     return IDLE
 
 
+# Der Rahmen, den Claude Code um seine Rückfragen malt. Fürs Auge im Terminal
+# schön, für uns nur Beiwerk — wir wollen die nackte Zeile.
+_RAHMEN = re.compile(r"^[\s│┃|╭╰╮╯─━]*|[\s│┃|─━]*$")
+
+# "❯ 1. Yes" — eine Antwortmöglichkeit, wie Claude Code sie anbietet.
+_MOEGLICHKEIT = re.compile(r"^[❯>»\s]*(\d+)\.\s+(.+?)$")
+
+
+def frage(name: str) -> dict | None:
+    """Die Rückfrage, an der die Sitzung gerade hängt — samt Antworten.
+
+    Claude Code fragt um Erlaubnis, bevor es Dateien ändert oder Befehle
+    ausführt. Im Terminal beantwortet man das mit einer Zifferntaste. Unterwegs
+    stand die App bisher einfach still: Sie zeigte "wartet auf dich", aber es
+    gab nichts, worauf man hätte tippen können. Also lesen wir die Frage vom
+    Bildschirm ab und machen Knöpfe daraus.
+
+    Gibt None zurück, wenn gerade nichts zu beantworten ist.
+    """
+    try:
+        screen = tmux.capture(name, lines=None)
+    except tmux.TmuxError:
+        return None
+
+    # Arbeitet Claude noch, ist eine Auswahlliste auf dem Schirm bestenfalls
+    # ein Überbleibsel von vorhin.
+    if _ARBEITET.search(screen):
+        return None
+
+    zeilen = [_RAHMEN.sub("", z) for z in screen.splitlines()]
+
+    moeglichkeiten: list[dict] = []
+    erste = -1
+    gewaehlt = False
+    for i, zeile in enumerate(zeilen):
+        treffer = _MOEGLICHKEIT.match(zeile)
+        if not treffer:
+            continue
+        nummer = int(treffer.group(1))
+        # Eine Liste beginnt bei 1 und zählt lückenlos weiter. Alles andere ist
+        # eine Aufzählung in Claudes Fließtext und keine Frage an uns.
+        if nummer == 1:
+            moeglichkeiten = []
+            erste = i
+            gewaehlt = False
+        if nummer != len(moeglichkeiten) + 1:
+            continue
+        # Auf genau einer Antwort steht der Auswahlpfeil. Fehlt er ganz, zählt
+        # Claude nur etwas auf — dann wären unsere Knöpfe eine Erfindung.
+        if "❯" in zeile:
+            gewaehlt = True
+        moeglichkeiten.append({"nummer": nummer, "text": treffer.group(2).strip()})
+
+    # Eine einzelne Zeile "1. irgendwas" ist keine Auswahl.
+    if len(moeglichkeiten) < 2 or not gewaehlt:
+        return None
+
+    # Die Frage steht über der ersten Antwort — die letzte Zeile mit Inhalt.
+    text = ""
+    for zeile in reversed(zeilen[:erste]):
+        if zeile.strip():
+            text = zeile.strip()
+            break
+
+    return {"text": text, "moeglichkeiten": moeglichkeiten}
+
+
 def preview(name: str, max_len: int = 90) -> str:
     """Die eine Zeile, die in der Übersicht unter dem Sitzungsnamen steht.
 

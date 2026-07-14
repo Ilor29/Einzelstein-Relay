@@ -498,6 +498,69 @@ async function ladeVerlauf() {
   if (unten) behaelter.scrollTop = behaelter.scrollHeight;
 }
 
+// --- Claudes Rückfragen ------------------------------------------------------
+//
+// Bevor Claude eine Datei ändert oder einen Befehl ausführt, fragt es um
+// Erlaubnis. Im Terminal drückt man eine Zifferntaste. Unterwegs stand die App
+// bisher einfach still — sie zeigte "wartet auf dich", aber es gab nichts zum
+// Antippen. Man musste die Erlaubnis in der offiziellen App erteilen.
+
+let offeneFrage = "";
+
+async function pruefeFrage() {
+  if (!aktuelleSitzung || imTerminal) return;
+
+  let frage;
+  try {
+    frage = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/frage`
+    )).json();
+  } catch {
+    return;
+  }
+
+  const kasten = $("frage");
+  if (!frage.moeglichkeiten) {
+    kasten.hidden = true;
+    offeneFrage = "";
+    return;
+  }
+
+  // Dieselbe Frage nicht bei jedem Takt neu bauen — sonst springt ein Knopf
+  // unter dem Finger weg, während man ihn drückt.
+  const abdruck = JSON.stringify(frage);
+  if (abdruck === offeneFrage) return;
+  offeneFrage = abdruck;
+
+  $("frage-text").textContent = frage.text;
+  $("frage-knoepfe").replaceChildren(
+    ...frage.moeglichkeiten.map((m) => {
+      const knopf = document.createElement("button");
+      // Die erste Antwort ist die zustimmende — sie bekommt das Gewicht.
+      knopf.className = m.nummer === 1 ? "frage-knopf ja" : "frage-knopf";
+      knopf.textContent = m.text;
+      knopf.addEventListener("click", () => antworte(m.nummer));
+      return knopf;
+    })
+  );
+  kasten.hidden = false;
+}
+
+async function antworte(nummer) {
+  const kasten = $("frage");
+  kasten.hidden = true;
+  offeneFrage = "";
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/antwort`, {
+      method: "POST",
+      body: JSON.stringify({ nummer }),
+    });
+    setTimeout(ladeVerlauf, 600);
+  } catch (err) {
+    melde(err.message);
+  }
+}
+
 // Der Anhalten-Knopf zeigt sich nur, während Claude wirklich arbeitet.
 async function pruefeObClaudeArbeitet() {
   if (!aktuelleSitzung) return;
@@ -593,12 +656,16 @@ function oeffneSitzung(sitzung) {
   $("knopf-ansicht").querySelector("use").setAttribute("href", "#i-terminal");
 
   $("verlauf").replaceChildren();
+  $("frage").hidden = true;
+  offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
   ladeVerlauf();
+  pruefeFrage();
   clearInterval(verlaufTakt);
   verlaufTakt = setInterval(() => {
     ladeVerlauf();
     pruefeObClaudeArbeitet();
+    pruefeFrage();
   }, 3000);
 }
 
@@ -894,32 +961,57 @@ async function modelleHolen() {
 
 function zeigeModell(name) {
   const treffer = modelle.find((m) => m.name === name);
-  $("modell-name").textContent = treffer ? treffer.anzeige : "Modell wählen";
+  // Ohne bekanntes Modell steht dort nur "Modell" — behaupten, es liefe Opus,
+  // wäre geraten. Claude Code sagt uns nicht, womit es gestartet ist.
+  $("modell-name").textContent = treffer ? treffer.anzeige : "Modell";
   $("knopf-modell").classList.toggle("gesetzt", Boolean(treffer));
 }
+
+function blattZu() {
+  $("modell-blatt").hidden = true;
+}
+
+$("modell-schatten").addEventListener("click", blattZu);
+$("modell-schliessen").addEventListener("click", blattZu);
 
 $("knopf-modell").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
 
   const liste = await modelleHolen();
-  // Reihum durchschalten — ein Tipp, ein Wechsel. Kein Menü, das man im Auto
-  // erst treffen müsste.
-  const jetzt = liste.findIndex((m) => m.name === aktuelleSitzung.modell);
-  const naechstes = liste[(jetzt + 1) % liste.length];
+  $("modell-liste").replaceChildren(
+    ...liste.map((m) => {
+      const zeile = document.createElement("button");
+      zeile.type = "button";
+      zeile.className = "modell-zeile";
+      // Das laufende Modell trägt den Haken — so wie in der offiziellen App.
+      const gewaehlt = m.name === aktuelleSitzung.modell;
+      zeile.classList.toggle("gewaehlt", gewaehlt);
+      zeile.innerHTML = `
+        <span class="modell-titel">${m.anzeige}</span>
+        <span class="modell-art">${m.art}</span>
+        ${gewaehlt ? '<span class="modell-haken">✓</span>' : ""}`;
+      zeile.addEventListener("click", () => waehleModell(m));
+      return zeile;
+    })
+  );
+  $("modell-blatt").hidden = false;
+});
 
+async function waehleModell(m) {
+  blattZu();
   try {
     await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modell`, {
       method: "POST",
-      body: JSON.stringify({ name: naechstes.name }),
+      body: JSON.stringify({ name: m.name }),
     });
-    aktuelleSitzung.modell = naechstes.name;
-    zeigeModell(naechstes.name);
-    melde(`${naechstes.anzeige} — ${naechstes.art}`);
+    aktuelleSitzung.modell = m.name;
+    zeigeModell(m.name);
+    melde(`${m.anzeige} — ${m.art}`);
     setTimeout(ladeVerlauf, 800);
   } catch (err) {
     melde(err.message);
   }
-});
+}
 
 // Den Stand sichern — auf Knopfdruck, nicht durch einen Zeitgeber, der
 // unbeaufsichtigt an allen Projekten herumwerkelt. Du drückst, wenn du fertig

@@ -214,12 +214,6 @@
       <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
     </button>
   </header>
-  <!-- Welches Modell gerade denkt. Antippen wechselt. -->
-  <div class="modell-leiste">
-    <button id="knopf-modell" class="modell-knopf">
-      <span id="modell-name">Modell wählen</span>
-    </button>
-  </div>
   <div id="verlauf" class="verlauf"></div>
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>
@@ -228,6 +222,11 @@
     <svg viewBox="0 0 24 24"><use href="#i-abbrechen"/></svg>
     Claude anhalten
   </button>
+  <!-- Claude fragt um Erlaubnis. Ohne diese Knöpfe stünde alles still. -->
+  <div id="frage" class="frage" hidden>
+    <p id="frage-text" class="frage-text"></p>
+    <div id="frage-knoepfe" class="frage-knoepfe"></div>
+  </div>
   <form id="eingabe-formular" class="eingabezeile">
     <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Foto schicken">
       <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
@@ -236,6 +235,10 @@
     <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
       <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
     </button>
+    <!-- Welches Modell gerade denkt. Antippen öffnet die Auswahl. -->
+    <button type="button" id="knopf-modell" class="modell-knopf">
+      <span id="modell-name">Modell</span>
+    </button>
     <textarea id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
               rows="1" autocomplete="off" autocapitalize="sentences"
               enterkeyhint="send"></textarea>
@@ -243,6 +246,19 @@
       <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
     </button>
   </form>
+
+  <!-- Die Modellauswahl, wie in der offiziellen App: ein Blatt von unten. -->
+  <div id="modell-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="modell-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="modell-schliessen" class="knopf-blank"
+                aria-label="Schließen">✕</button>
+        <h2>Modell auswählen</h2>
+      </div>
+      <div id="modell-liste" class="modell-liste"></div>
+    </div>
+  </div>
 </section>
 
 <!-- Neue Sitzung -->

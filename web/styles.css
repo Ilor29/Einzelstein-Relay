@@ -109,34 +109,140 @@ html, body {
   background: currentColor;
 }
 
-/* --- Welches Modell gerade denkt --- */
-.modell-leiste {
-  display: flex;
-  justify-content: flex-end;
-  padding: .5rem 1rem;
-  border-bottom: 1px solid var(--linie);
+/* --- Claude fragt um Erlaubnis --- */
+.frage {
   flex: none;
+  padding: .8rem 1rem;
+  border-top: 1px solid var(--linie);
+  background: var(--erhoben);
 }
+.frage[hidden] { display: none; }
+.frage-text {
+  font-size: .9rem;
+  line-height: 1.4;
+  color: var(--schrift);
+  margin-bottom: .7rem;
+}
+.frage-knoepfe {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+/* Untereinander, in voller Breite: Im Auto trifft man keine schmalen Knöpfe. */
+.frage-knopf {
+  width: 100%;
+  text-align: left;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 11px;
+  padding: .75rem .9rem;
+  font-family: var(--sans);
+  font-size: .88rem;
+  color: var(--schrift);
+}
+.frage-knopf.ja {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: #fff;
+  font-weight: 600;
+}
+.frage-knopf:active { filter: brightness(.9); }
+
+/* --- Welches Modell gerade denkt --- */
+/* Die Pille sitzt in der Eingabezeile, neben dem Mikrofon — dort, wo sie in
+   der offiziellen App auch sitzt. Antippen öffnet die Auswahl. */
 .modell-knopf {
+  flex: none;
+  background: var(--erhoben-2);
+  border: 0;
+  border-radius: 999px;
+  padding: .4rem .7rem;
+  font-family: var(--sans);
+  font-size: .75rem;
+  white-space: nowrap;
+  color: var(--schrift-leise);
+}
+.modell-knopf.gesetzt { color: var(--schrift); }
+.modell-knopf:active { filter: brightness(1.25); }
+
+/* Das Auswahlblatt, das von unten hereinfährt. */
+.blatt {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.blatt[hidden] { display: none; }
+.blatt-schatten {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+}
+.blatt-inhalt {
+  position: relative;
+  background: var(--erhoben);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--linie);
+  padding: .5rem 1rem calc(1.2rem + var(--unten));
+  max-height: 75vh;
+  overflow-y: auto;
+  animation: blatt-auf .22s ease-out;
+}
+@keyframes blatt-auf {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.blatt-kopf {
   display: flex;
   align-items: center;
-  gap: .4rem;
-  background: var(--erhoben);
-  border: 1px solid var(--linie);
-  border-radius: 999px;
-  padding: .3rem .75rem;
-  font-family: var(--mono);
-  font-size: .72rem;
-  letter-spacing: .02em;
-  color: var(--schrift-schwach);
+  gap: .5rem;
+  padding: .6rem 0 1rem;
 }
-/* Steht ein Modell fest, tritt die Pille aus dem Hintergrund hervor. */
-.modell-knopf.gesetzt {
-  color: var(--akzent);
-  border-color: var(--akzent-weich);
+.blatt-kopf h2 {
+  flex: 1;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  /* Der Titel steht mittig — der Schließen-Knopf links darf ihn nicht kippen. */
+  margin-right: 2.2rem;
+}
+
+.modell-liste {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.modell-zeile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .2rem;
+  width: 100%;
+  text-align: left;
+  background: var(--erhoben-2);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: .85rem 2.5rem .85rem 1rem;
+  font-family: var(--sans);
+}
+.modell-zeile.gewaehlt {
+  border-color: var(--akzent);
   background: var(--akzent-weich);
 }
-.modell-knopf:active { filter: brightness(1.2); }
+.modell-zeile:active { filter: brightness(1.2); }
+.modell-titel { font-size: .95rem; font-weight: 600; color: var(--schrift); }
+.modell-art { font-size: .8rem; color: var(--schrift-leise); line-height: 1.35; }
+.modell-haken {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--akzent);
+  font-size: 1.1rem;
+}
 
 /* --- Knöpfe --- */
 .knopf-voll {
