@@ -30,6 +30,10 @@ class Meta:
     # Welches Modell wir zuletzt gewählt haben. Claude Code sagt es uns nicht,
     # also merken wir es uns selbst.
     modell: str = ""
+    # Wie die Sitzung im Handy heißen soll. Leer heißt: ihr technischer Name.
+    # Der bleibt unangetastet — an ihm hängen tmux, der Ordner und die
+    # Mitschrift. Wir benennen nur das Schild an der Tür um, nicht das Haus.
+    anzeige: str = ""
     # Zuletzt gesehener Zustand — damit wir merken, wenn RUNNING zu WAITING
     # wird, und dann eine Benachrichtigung schicken können.
     last_state: str = IDLE
@@ -228,6 +232,7 @@ def overview() -> list[dict]:
             # darf man ansehen und bedienen, aber nicht beenden.
             "eigen": session.eigen,
             "modell": meta.modell,
+            "anzeige": meta.anzeige,
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.

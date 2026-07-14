@@ -660,24 +660,36 @@ html, body {
 
 /* Die Eingabezeile: ein Feld, in dem die Knöpfe sitzen — nicht drei Dinge
    nebeneinander. So macht es die Claude-App, und es beruhigt den unteren Rand. */
+/* Der Text steht oben über die volle Breite, die Knöpfe darunter.
+   Alles in einer Reihe zu drängen ging schief: Mit Bild, Mikrofon, Kreuz und
+   Modellwähler blieb dem Textfeld ein Streifen von wenigen Zeichen. */
 .eingabezeile {
   flex: none;
   display: flex;
-  align-items: center;
-  gap: .4rem;
+  flex-direction: column;
+  gap: .3rem;
   margin: .55rem .7rem calc(.7rem + var(--unten));
-  padding: .35rem .4rem .35rem .5rem;
+  padding: .5rem .6rem .45rem;
   background: var(--erhoben);
   border: 1px solid var(--linie);
-  border-radius: 24px;
+  border-radius: 20px;
 }
 .eingabezeile:focus-within { border-color: var(--schrift-schwach); }
 
+.eingabe-knoepfe {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+/* Schiebt den Senden-Knopf ans rechte Ende. */
+.fueller { flex: 1; }
+
 .eingabezeile .eingabe {
+  width: 100%;
   background: none;
   border: 0;
   border-radius: 0;
-  padding: .45rem .2rem;
+  padding: .35rem .2rem;
   /* Wächst beim Diktieren mit, bis es selbst zu rollen beginnt. */
   resize: none;
   max-height: 160px;
@@ -686,8 +698,6 @@ html, body {
 }
 .eingabezeile .eingabe:focus { border: 0; outline: none; }
 
-/* Steht das Feld über einer Zeile, sitzen die Knöpfe unten statt mittig. */
-.eingabezeile { align-items: flex-end; }
 .knopf-senden {
   display: flex;
   align-items: center;

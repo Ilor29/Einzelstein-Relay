@@ -171,6 +171,11 @@ function lesbar(kennung) {
   return server === sitzung ? server : `${server} · ${sitzung}`;
 }
 
+// Wie die Sitzung heißen soll: der selbstvergebene Name, sonst der technische.
+function benannt(s) {
+  return s.anzeige || lesbar(s.name);
+}
+
 function karte(sitzung) {
   const el = document.createElement("div");
   el.className = "karte" + (sitzung.pinned ? " angeheftet" : "");
@@ -190,7 +195,7 @@ function karte(sitzung) {
   `;
   // Über textContent gesetzt, nicht über innerHTML — ein Sitzungsname oder
   // eine Terminalzeile darf kein HTML in die Seite schmuggeln.
-  el.querySelector(".name").textContent = lesbar(sitzung.name);
+  el.querySelector(".name").textContent = benannt(sitzung);
   el.querySelector(".vorschau").textContent = sitzung.preview || "—";
   el.querySelector(".wann").textContent = alter(sitzung.idleSeconds);
 
@@ -640,7 +645,7 @@ function oeffneSitzung(sitzung) {
   stoppeListe();
   aktuelleSitzung = sitzung;
 
-  $("sitzung-name").textContent = lesbar(sitzung.name);
+  $("sitzung-name").textContent = benannt(sitzung);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
   $("knopf-melden").classList.toggle("an", sitzung.notifyWhenDone);
   // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
@@ -940,6 +945,36 @@ $("knopf-diktat").addEventListener("click", () => {
 });
 
 $("knopf-diktat-weg").addEventListener("click", () => hoertVerwerfen?.());
+
+// --- Die Sitzung umbenennen --------------------------------------------------
+//
+// Ein Tipp auf den Namen in der Kopfzeile. Umbenannt wird nur das Schild an der
+// Tür: Die tmux-Sitzung, der Projektordner und die Mitschrift behalten ihre
+// technischen Namen — an denen hängt alles andere. Der neue Name liegt auf dem
+// Server, nicht im Handy, und gilt darum auf jedem Gerät.
+
+$("sitzung-name").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+
+  const jetzt = aktuelleSitzung.anzeige || "";
+  const neu = prompt(
+    `Wie soll diese Sitzung heißen?\n\nTechnischer Name: ${lesbar(aktuelleSitzung.name)}\n(Leer lassen, um ihn wieder zu benutzen.)`,
+    jetzt
+  );
+  if (neu === null) return;   // abgebrochen
+
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ anzeige: neu }),
+    });
+    aktuelleSitzung.anzeige = neu.trim();
+    $("sitzung-name").textContent = benannt(aktuelleSitzung);
+    melde(neu.trim() ? `Heißt jetzt „${neu.trim()}“` : "Wieder der technische Name");
+  } catch (err) {
+    melde(err.message);
+  }
+});
 
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();

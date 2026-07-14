@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=22">
+  <link rel="stylesheet" href="/styles.css?v=23">
 
   <script>
     /* Die Notbremse.
@@ -234,29 +234,35 @@
     <p id="frage-text" class="frage-text"></p>
     <div id="frage-knoepfe" class="frage-knoepfe"></div>
   </div>
+  <!-- Zwei Zeilen, wie in der offiziellen App: oben der Text über die volle
+       Breite, unten die Knöpfe. Nebeneinander gedrängt blieb dem Textfeld
+       nichts mehr übrig, sobald Kreuz und Modellwähler dazukamen. -->
   <form id="eingabe-formular" class="eingabezeile">
-    <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Foto schicken">
-      <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
-    </button>
-    <input type="file" id="bild-waehler" accept="image/*" hidden>
-    <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
-      <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
-    </button>
-    <!-- Verwirft das Diktat. Erscheint nur, während zugehört wird. -->
-    <button type="button" id="knopf-diktat-weg" class="knopf-diktat verwerfen"
-            aria-label="Diktat verwerfen" hidden>
-      <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
-    </button>
-    <!-- Welches Modell gerade denkt. Antippen öffnet die Auswahl. -->
-    <button type="button" id="knopf-modell" class="modell-knopf">
-      <span id="modell-name">Modell</span>
-    </button>
     <textarea id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
               rows="1" autocomplete="off" autocapitalize="sentences"
               enterkeyhint="send"></textarea>
-    <button type="submit" class="knopf-senden" aria-label="Senden">
-      <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
-    </button>
+    <div class="eingabe-knoepfe">
+      <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Foto schicken">
+        <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
+      </button>
+      <input type="file" id="bild-waehler" accept="image/*" hidden>
+      <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
+        <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
+      </button>
+      <!-- Verwirft das Diktat. Erscheint nur, während zugehört wird. -->
+      <button type="button" id="knopf-diktat-weg" class="knopf-diktat verwerfen"
+              aria-label="Diktat verwerfen" hidden>
+        <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+      </button>
+      <!-- Welches Modell gerade denkt. Antippen öffnet die Auswahl. -->
+      <button type="button" id="knopf-modell" class="modell-knopf">
+        <span id="modell-name">Modell</span>
+      </button>
+      <span class="fueller"></span>
+      <button type="submit" class="knopf-senden" aria-label="Senden">
+        <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
+      </button>
+    </div>
   </form>
 
   <!-- Die Modellauswahl, wie in der offiziellen App: ein Blatt von unten. -->
@@ -336,6 +342,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=22"></script>
+<script src="/app.js?v=23"></script>
 </body>
 </html>

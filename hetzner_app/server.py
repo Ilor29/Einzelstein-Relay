@@ -112,6 +112,10 @@ class NewSession(BaseModel):
 class Patch(BaseModel):
     pinned: bool | None = None
     notify_when_done: bool | None = None
+    # Wie die Sitzung heißen soll. Der technische Name der tmux-Sitzung bleibt,
+    # wie er ist — sonst verlöre alles andere seinen Bezug. Wir merken uns nur,
+    # wie sie im Handy heißen soll.
+    anzeige: str | None = None
 
 
 @app.get("/api/sessions", dependencies=[Depends(require_auth)])
@@ -169,9 +173,17 @@ def patch_session(name: str, body: Patch) -> dict:
         changes["pinned"] = body.pinned
     if body.notify_when_done is not None:
         changes["notify_when_done"] = body.notify_when_done
+    if body.anzeige is not None:
+        # Ein leerer Name heißt: zurück zum technischen Namen.
+        changes["anzeige"] = body.anzeige.strip()[:60]
 
     meta = state.update(name, **changes)
-    return {"ok": True, "pinned": meta.pinned, "notifyWhenDone": meta.notify_when_done}
+    return {
+        "ok": True,
+        "pinned": meta.pinned,
+        "notifyWhenDone": meta.notify_when_done,
+        "anzeige": meta.anzeige,
+    }
 
 
 @app.delete("/api/sessions/{name}", dependencies=[Depends(require_auth)])
