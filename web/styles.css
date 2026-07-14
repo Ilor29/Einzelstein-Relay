@@ -327,10 +327,16 @@ html, body {
   padding: .1rem .1rem .2rem;
 }
 
-/* Jede Antwort hat ihren eigenen Lautsprecher. Sonst hört man immer nur die
-   letzte — und muss den Rest lesen, obwohl man am Steuer sitzt. */
-.vorlesen-klein {
-  align-self: flex-start;
+/* Unter jeder Antwort: vorlesen und kopieren.
+   Vorlesen, weil man am Steuer nicht lesen kann. Kopieren, weil Markieren mit
+   dem Finger die Hölle ist und Claude ständig Befehle und Pfade nennt. */
+.antwort-leiste {
+  display: flex;
+  gap: .15rem;
+  margin-top: -.15rem;
+}
+
+.klein-knopf {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,9 +348,57 @@ html, body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.vorlesen-klein svg { width: 16px; height: 16px; }
-.vorlesen-klein:active { background: var(--erhoben-2); }
-.vorlesen-klein.spricht { color: var(--laeuft); }
+.klein-knopf svg { width: 16px; height: 16px; }
+.klein-knopf:active { background: var(--erhoben-2); }
+.klein-knopf.spricht { color: var(--laeuft); }
+.klein-knopf.getan  { color: var(--laeuft); }
+
+/* Ein geschicktes Foto — als Bild, nicht als Pfad. */
+.foto {
+  align-self: flex-end;
+  max-width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+.foto img {
+  width: 100%;
+  border-radius: 14px;
+  border-bottom-right-radius: 5px;
+  border: 1px solid var(--linie);
+  cursor: pointer;
+}
+.bildunterschrift {
+  font-size: .82rem;
+  color: var(--schrift-leise);
+  text-align: right;
+  padding-right: .2rem;
+}
+
+/* "Claude anhalten" — erscheint nur, während er wirklich arbeitet.
+   Kein "neu erzeugen": Claude tut hier Dinge, die man nicht doppelt will. */
+.abbrechen-leiste {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  margin: 0 .7rem .3rem;
+  padding: .55rem;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 11px;
+  color: var(--schrift-leise);
+  font-family: var(--sans);
+  font-size: .85rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.abbrechen-leiste:active {
+  background: var(--akzent-weich);
+  color: var(--akzent);
+}
+.abbrechen-leiste svg { width: 16px; height: 16px; }
 
 /* Werkzeuge und Code: da, aber leise. Sie sollen den Text nicht überstimmen. */
 .notiz {

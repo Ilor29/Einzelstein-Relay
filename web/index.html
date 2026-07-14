@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=12">
+  <link rel="stylesheet" href="/styles.css?v=13">
 
   <script>
     /* Die Notbremse.
@@ -111,6 +111,23 @@
       <circle cx="8.5" cy="9.5" r="1.6"/>
       <path d="M21 16l-4.5-4.5L7 21"/>
     </g>
+
+    <g id="i-kopieren" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="11" height="11" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </g>
+
+    <g id="i-haken" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </g>
+
+    <g id="i-abbrechen" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <rect x="9" y="9" width="6" height="6" rx="1"/>
+    </g>
   </defs>
 </svg>
 
@@ -180,6 +197,11 @@
   <div id="verlauf" class="verlauf"></div>
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>
+  <!-- Erscheint nur, während Claude arbeitet. -->
+  <button id="knopf-abbrechen-arbeit" class="abbrechen-leiste" hidden>
+    <svg viewBox="0 0 24 24"><use href="#i-abbrechen"/></svg>
+    Claude anhalten
+  </button>
   <form id="eingabe-formular" class="eingabezeile">
     <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Foto schicken">
       <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
@@ -241,6 +263,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=12"></script>
+<script src="/app.js?v=13"></script>
 </body>
 </html>

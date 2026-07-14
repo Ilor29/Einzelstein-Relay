@@ -21,6 +21,11 @@ from . import tts
 # Deine Nachricht: ein Eingabepfeil mit Text dahinter.
 _DU = re.compile(r"^[>❯]\s+(\S.*)$")
 
+# Ein Foto, das du über die App geschickt hast. Im Terminal steht nur der Pfad —
+# im Verlauf soll aber das Bild selbst zu sehen sein, sonst weiß man nach zehn
+# Minuten nicht mehr, welches man geschickt hat.
+_BILD = re.compile(r"((?:\S*/)?\.hetzner-bilder/([\w.-]+\.(?:jpg|png|webp|gif|heic)))")
+
 # Ein Werkzeugaufruf: "⏺ Read(src/app.py)"
 _WERKZEUG = re.compile(r"^⏺\s*(\w+)\((.*?)\)?\s*$")
 
@@ -29,7 +34,7 @@ _ERGEBNIS = re.compile(r"^[⎿└]\s*(.*)$")
 
 
 def _neuer_block(typ: str) -> dict:
-    return {"typ": typ, "text": "", "zeilen": 0}
+    return {"typ": typ, "text": "", "zeilen": 0, "datei": ""}
 
 
 def lesen(screen: str) -> list[dict]:
@@ -48,7 +53,7 @@ def lesen(screen: str) -> list[dict]:
 
     def abschliessen() -> None:
         nonlocal aktuell
-        if aktuell and (aktuell["text"].strip() or aktuell["zeilen"]):
+        if aktuell and (aktuell["text"].strip() or aktuell["zeilen"] or aktuell["datei"]):
             aktuell["text"] = aktuell["text"].strip()
             bloecke.append(aktuell)
         aktuell = None
@@ -75,9 +80,22 @@ def lesen(screen: str) -> list[dict]:
         treffer = _DU.match(text)
         if treffer:
             abschliessen()
-            aktuell = _neuer_block("du")
-            aktuell["text"] = treffer.group(1)
-            abschliessen()
+            gesagt = treffer.group(1)
+
+            # Steckt ein Foto darin? Dann zeigen wir das Bild, nicht den Pfad.
+            bild = _BILD.search(gesagt)
+            # Bewusst nicht abschließen: Eine lange Nachricht bricht im
+            # Terminal um, und die Fortsetzung gehört noch zu dir — nicht zu
+            # Claude. Erst die nächste Leerzeile beendet sie.
+            if bild:
+                aktuell = _neuer_block("bild")
+                aktuell["datei"] = bild.group(2)
+                # Was du dazugeschrieben hast, wird zur Bildunterschrift.
+                aktuell["text"] = _BILD.sub("", gesagt).strip()
+            else:
+                aktuell = _neuer_block("du")
+                aktuell["text"] = gesagt
+
             continue
 
         # Ein Werkzeugaufruf.
@@ -103,9 +121,17 @@ def lesen(screen: str) -> list[dict]:
             aktuell["zeilen"] += 1
             continue
 
-        # Alles andere ist Claudes Text.
+        # Alles andere ist Text — von Claude, oder die Fortsetzung deiner
+        # eigenen umgebrochenen Nachricht.
         sauber = re.sub(r"^[⏺●·•*]\s*", "", text)
         if not sauber:
+            continue
+
+        # Läuft gerade eine Nachricht von dir — oder eine Bildunterschrift?
+        # Dann gehört das noch dazu. Claudes Antwort beginnt immer nach einer
+        # Leerzeile, und die hat den Block längst abgeschlossen.
+        if aktuell and aktuell["typ"] in ("du", "bild"):
+            aktuell["text"] = (aktuell["text"] + " " + sauber).strip()
             continue
 
         if not aktuell or aktuell["typ"] != "claude":

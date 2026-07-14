@@ -53,7 +53,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 12
+VERSION = 13
 
 
 @app.get("/api/version")
@@ -291,16 +291,71 @@ async def session_bild(name: str, bild: UploadFile = File(...)) -> dict:
     if len(inhalt) > MAX_BILD:
         raise HTTPException(413, "Das Bild ist zu groß (mehr als 20 MB).")
 
-    BILDER.mkdir(parents=True, exist_ok=True)
-    # Der Name des Nutzers landet nicht im Dateinamen — der käme aus dem Netz.
-    ziel = BILDER / f"{int(time.time())}-{secrets.token_hex(4)}{endung}"
+    # Das Foto landet im Arbeitsordner der Sitzung.
+    #
+    # Nicht in einem eigenen Bilderordner: Claude Code fragt dann bei jedem
+    # Bild um Leseerlaubnis, und das wäre bei jedem Foto eine Rückfrage. In
+    # seinem eigenen Arbeitsordner darf er ohne Weiteres lesen.
+    sitzung = [s for s in tmux.list_sessions() if s.name == name][0]
+    ordner = Path(sitzung.cwd) / ".hetzner-bilder"
+    ordner.mkdir(parents=True, exist_ok=True)
+
+    # Damit die Fotos nicht in Git landen.
+    hinweis = ordner / ".gitignore"
+    if not hinweis.exists():
+        hinweis.write_text("*\n")
+
+    # Der Dateiname kommt von uns, nicht aus dem Netz.
+    ziel = ordner / f"{int(time.time())}-{secrets.token_hex(4)}{endung}"
     ziel.write_bytes(inhalt)
 
-    return {"ok": True, "pfad": str(ziel)}
+    # Der kurze, relative Pfad — nicht der lange absolute.
+    #
+    # Claude Code arbeitet ohnehin in diesem Ordner und findet die Datei so
+    # genauso. Der lange Pfad dagegen bricht im Terminal über zwei Zeilen um,
+    # und dann erkennt die App ihn nicht mehr als Bild, sondern zeigt dir
+    # Buchstabensalat.
+    return {"ok": True, "pfad": f".hetzner-bilder/{ziel.name}"}
+
+
+@app.get("/api/bilder/{sitzung}/{datei}", dependencies=[Depends(require_auth)])
+def bild_zeigen(sitzung: str, datei: str) -> FileResponse:
+    """Ein geschicktes Foto wieder anzeigen.
+
+    Nur Dateien aus dem Bilderordner der genannten Sitzung. Der Name kommt aus
+    dem Netz, und "../../etc/passwd" wäre sonst eine gültige Anfrage.
+    """
+    treffer = [s for s in tmux.list_sessions() if s.name == sitzung]
+    if not treffer:
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    ordner = (Path(treffer[0].cwd) / ".hetzner-bilder").resolve()
+    ziel = (ordner / datei).resolve()
+
+    # Der aufgelöste Pfad muss wirklich in diesem Ordner liegen — sonst hat
+    # jemand mit "../" die Schranke umfahren.
+    if not ziel.is_file() or ziel.parent != ordner:
+        raise HTTPException(404, "Dieses Bild gibt es nicht.")
+
+    return FileResponse(ziel)
 
 
 class Nachricht(BaseModel):
     text: str
+
+
+@app.post("/api/sessions/{name}/abbrechen", dependencies=[Depends(require_auth)])
+def session_abbrechen(name: str) -> dict:
+    """Claude anhalten.
+
+    Statt einer Antwort, die man neu erzeugen lässt: Wenn Claude in die falsche
+    Richtung läuft, hält man ihn an und sagt es anders. Bei Claude Code ist das
+    der richtige Griff — er *tut* ja Dinge, und die will man nicht doppelt.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    tmux.send_key(name, "Escape")
+    return {"ok": True}
 
 
 @app.post("/api/sessions/{name}/senden", dependencies=[Depends(require_auth)])

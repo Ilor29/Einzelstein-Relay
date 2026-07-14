@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 12;
+const VERSION = 13;
 
 const $ = (id) => document.getElementById(id);
 
@@ -349,6 +349,29 @@ function verlaufBlock(block) {
     return el;
   }
 
+  // Ein Foto, das du geschickt hast. Es steht dort als Bild, nicht als
+  // kryptischer Pfad — sonst weißt du nach zehn Minuten nicht mehr, welches.
+  if (block.typ === "bild") {
+    el.className = "foto du";
+
+    const bild = document.createElement("img");
+    bild.src = `/api/bilder/${encodeURIComponent(aktuelleSitzung.name)}`
+             + `/${encodeURIComponent(block.datei)}`;
+    bild.alt = "Geschicktes Foto";
+    bild.loading = "lazy";
+    // Antippen zeigt es groß.
+    bild.addEventListener("click", () => window.open(bild.src, "_blank"));
+    el.append(bild);
+
+    if (block.text) {
+      const unterschrift = document.createElement("div");
+      unterschrift.className = "bildunterschrift";
+      unterschrift.textContent = block.text;
+      el.append(unterschrift);
+    }
+    return el;
+  }
+
   if (block.typ === "claude") {
     el.className = "antwort";
 
@@ -356,15 +379,39 @@ function verlaufBlock(block) {
     text.className = "blase claude";
     text.textContent = block.text;
 
+    const leiste = document.createElement("div");
+    leiste.className = "antwort-leiste";
+
     // Jede Antwort hat ihren eigenen Lautsprecher. Sonst kann man immer nur
     // die letzte hören — und muss den Rest lesen, obwohl man Auto fährt.
-    const knopf = document.createElement("button");
-    knopf.className = "vorlesen-klein";
-    knopf.setAttribute("aria-label", "Diesen Absatz vorlesen");
-    knopf.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>`;
-    knopf.addEventListener("click", () => sprich(block.text, knopf));
+    const hoeren = document.createElement("button");
+    hoeren.className = "klein-knopf";
+    hoeren.setAttribute("aria-label", "Diesen Absatz vorlesen");
+    hoeren.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>`;
+    hoeren.addEventListener("click", () => sprich(block.text, hoeren));
 
-    el.append(text, knopf);
+    // Kopieren. Auf dem Handy ist Markieren mit dem Finger die Hölle — und
+    // Claude nennt einem ständig Befehle und Pfade, die man woanders braucht.
+    const kopieren = document.createElement("button");
+    kopieren.className = "klein-knopf";
+    kopieren.setAttribute("aria-label", "Text kopieren");
+    kopieren.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-kopieren"/></svg>`;
+    kopieren.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(block.text);
+        kopieren.classList.add("getan");
+        kopieren.querySelector("use").setAttribute("href", "#i-haken");
+        setTimeout(() => {
+          kopieren.classList.remove("getan");
+          kopieren.querySelector("use").setAttribute("href", "#i-kopieren");
+        }, 1600);
+      } catch {
+        alert("Kopieren hat nicht geklappt.");
+      }
+    });
+
+    leiste.append(hoeren, kopieren);
+    el.append(text, leiste);
     return el;
   }
 
@@ -417,6 +464,31 @@ async function ladeVerlauf() {
 
   if (unten) behaelter.scrollTop = behaelter.scrollHeight;
 }
+
+// Der Anhalten-Knopf zeigt sich nur, während Claude wirklich arbeitet.
+async function pruefeObClaudeArbeitet() {
+  if (!aktuelleSitzung) return;
+  try {
+    const sitzungen = await (await api("/sessions")).json();
+    const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
+    $("knopf-abbrechen-arbeit").hidden = jetzt?.state !== "running";
+  } catch {
+    // dann eben nicht
+  }
+}
+
+$("knopf-abbrechen-arbeit").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/abbrechen`, {
+      method: "POST",
+    });
+    $("knopf-abbrechen-arbeit").hidden = true;
+    setTimeout(ladeVerlauf, 600);
+  } catch (err) {
+    alert(err.message);
+  }
+});
 
 function ansichtWechseln() {
   imTerminal = !imTerminal;
@@ -488,7 +560,10 @@ function oeffneSitzung(sitzung) {
   zuletztGesehen = "";     // neue Sitzung, alles frisch
   ladeVerlauf();
   clearInterval(verlaufTakt);
-  verlaufTakt = setInterval(ladeVerlauf, 3000);
+  verlaufTakt = setInterval(() => {
+    ladeVerlauf();
+    pruefeObClaudeArbeitet();
+  }, 3000);
 }
 
 function verbinde(name) {
