@@ -47,6 +47,17 @@ class Unterschrift(BaseModel):
     unterschrift: str
 
 
+# Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
+# beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
+# stundenlang gegen einen Fehler an, der längst behoben ist.
+VERSION = 8
+
+
+@app.get("/api/version")
+def version() -> dict:
+    return {"version": VERSION}
+
+
 @app.get("/api/aufgabe")
 def aufgabe() -> dict:
     """Die Zufallsaufgabe, die das Gerät unterschreiben muss.

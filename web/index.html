@@ -12,7 +12,33 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=7">
+  <link rel="stylesheet" href="/styles.css?v=8">
+
+  <script>
+    /* Die Notbremse.
+     *
+     * Frühere Fassungen der App haben Dateien im Handy zwischengespeichert.
+     * Dadurch lief dort tagelang alter Code weiter, während der Server längst
+     * den reparierten auslieferte — man sucht dann Fehler, die es gar nicht
+     * mehr gibt. Genau das ist mit dem Diktat passiert.
+     *
+     * Diese Seite wird immer frisch geladen (Caddy schickt "no-cache"), also
+     * ist das hier der einzige Ort, von dem aus man den alten Zwischenspeicher
+     * loswerden kann. Läuft noch ein Wächter von früher, fliegt er raus.
+     */
+    (async () => {
+      if (!("serviceWorker" in navigator)) return;
+
+      const wachen = await navigator.serviceWorker.getRegistrations();
+      const namen = window.caches ? await caches.keys() : [];
+
+      if (namen.length === 0) return;    // nichts Altes da, alles gut
+
+      await Promise.all(wachen.map((w) => w.unregister()));
+      await Promise.all(namen.map((n) => caches.delete(n)));
+      location.reload();
+    })();
+  </script>
 </head>
 <body>
 
@@ -122,6 +148,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=7"></script>
+<script src="/app.js?v=8"></script>
 </body>
 </html>
