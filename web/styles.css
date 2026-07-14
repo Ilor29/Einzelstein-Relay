@@ -42,6 +42,13 @@ svg {
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Versteckt heißt versteckt.
+ *
+ * Ohne das gewinnt jede Regel mit "display: flex" gegen das hidden-Merkmal —
+ * und die Sondertasten-Leiste stand mitten in der Lese-Ansicht herum, obwohl
+ * die App sie längst weggeschickt hatte. */
+[hidden] { display: none !important; }
+
 html, body {
   height: 100%;
   overflow: hidden;              /* die Ansichten scrollen, nicht die Seite */

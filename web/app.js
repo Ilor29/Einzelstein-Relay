@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 11;
+const VERSION = 12;
 
 const $ = (id) => document.getElementById(id);
 
@@ -530,6 +530,12 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   const text = feld.value.trim();
   if (!text || !aktuelleSitzung) return;
 
+  // Erst das Mikrofon zum Schweigen bringen.
+  //
+  // Sonst hört es weiter zu, hält seinen bisherigen Satz noch fest und
+  // schreibt ihn gleich wieder ins Feld — man löscht ihn und er kommt zurück.
+  hoertStoppen?.();
+
   feld.value = "";
 
   if (imTerminal) {
@@ -607,6 +613,7 @@ $("bild-waehler").addEventListener("change", async (e) => {
 
 const Spracherkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
 let hoert = null;
+let hoertStoppen = null;   // beendet das Zuhören — von überall her aufrufbar
 
 $("knopf-diktat").addEventListener("click", () => {
   const knopf = $("knopf-diktat");
@@ -686,18 +693,19 @@ $("knopf-diktat").addEventListener("click", () => {
     erkennung.start();
   }
 
-  // Nochmal tippen heißt: aufhören.
-  knopf.dataset.stoppen = "1";
+  // Nochmal tippen — oder Absenden — heißt: aufhören.
   hoertStoppen = () => {
     willHoeren = false;
+    fertig = "";           // nichts aufheben, was gleich wieder auftauchen könnte
     hoert?.stop();
+    hoert = null;
+    knopf.classList.remove("hoert");
+    feld.placeholder = "Nachricht an Claude …";
+    hoertStoppen = null;
   };
 
   lauschen();
 });
-
-// Damit ein zweiter Tipp aufs Mikrofon das Zuhören beendet.
-let hoertStoppen = null;
 
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();
