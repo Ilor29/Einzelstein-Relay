@@ -404,6 +404,46 @@ class Nachricht(BaseModel):
     text: str
 
 
+class Modell(BaseModel):
+    name: str
+
+
+# Was Claude Code versteht — und was ein Mensch darunter versteht.
+MODELLE = {
+    "opus": ("Opus", "am stärksten, am teuersten"),
+    "sonnet": ("Sonnet", "guter Mittelweg"),
+    "haiku": ("Haiku", "schnell und günstig"),
+}
+
+
+@app.get("/api/modelle", dependencies=[Depends(require_auth)])
+def modelle() -> list[dict]:
+    return [
+        {"name": name, "anzeige": anzeige, "art": art}
+        for name, (anzeige, art) in MODELLE.items()
+    ]
+
+
+@app.post("/api/sessions/{name}/modell", dependencies=[Depends(require_auth)])
+async def modell_wechseln(name: str, body: Modell) -> dict:
+    """Das Modell dieser Sitzung wechseln.
+
+    Für eine schnelle Frage braucht es kein Opus. Claude Code kennt dafür den
+    Befehl /model — wir tippen ihn nur, statt dass du es unterwegs tun musst.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    if body.name not in MODELLE:
+        raise HTTPException(400, "Dieses Modell kenne ich nicht.")
+
+    tmux.send_text(name, f"/model {body.name}")
+    await asyncio.sleep(0.4)
+    tmux.send_key(name, "Enter")
+
+    state.update(name, modell=body.name)
+    return {"ok": True, "modell": body.name}
+
+
 @app.post("/api/sessions/{name}/sichern", dependencies=[Depends(require_auth)])
 def session_sichern(name: str) -> dict:
     """Den Stand dieses Projekts sichern — auf Knopfdruck.

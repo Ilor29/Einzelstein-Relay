@@ -27,6 +27,9 @@ class Meta:
     pinned: bool = False
     notify_when_done: bool = False
     created_prompt: str = ""
+    # Welches Modell wir zuletzt gewählt haben. Claude Code sagt es uns nicht,
+    # also merken wir es uns selbst.
+    modell: str = ""
     # Zuletzt gesehener Zustand — damit wir merken, wenn RUNNING zu WAITING
     # wird, und dann eine Benachrichtigung schicken können.
     last_state: str = IDLE
@@ -157,6 +160,7 @@ def overview() -> list[dict]:
             # Fremde Sitzungen — etwa die, in der Claude Code selbst läuft —
             # darf man ansehen und bedienen, aber nicht beenden.
             "eigen": session.eigen,
+            "modell": meta.modell,
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.

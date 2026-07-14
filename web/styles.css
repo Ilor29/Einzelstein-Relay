@@ -109,6 +109,35 @@ html, body {
   background: currentColor;
 }
 
+/* --- Welches Modell gerade denkt --- */
+.modell-leiste {
+  display: flex;
+  justify-content: flex-end;
+  padding: .5rem 1rem;
+  border-bottom: 1px solid var(--linie);
+  flex: none;
+}
+.modell-knopf {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  border-radius: 999px;
+  padding: .3rem .75rem;
+  font-family: var(--mono);
+  font-size: .72rem;
+  letter-spacing: .02em;
+  color: var(--schrift-schwach);
+}
+/* Steht ein Modell fest, tritt die Pille aus dem Hintergrund hervor. */
+.modell-knopf.gesetzt {
+  color: var(--akzent);
+  border-color: var(--akzent-weich);
+  background: var(--akzent-weich);
+}
+.modell-knopf:active { filter: brightness(1.2); }
+
 /* --- Knöpfe --- */
 .knopf-voll {
   display: flex;

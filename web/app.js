@@ -580,6 +580,9 @@ function oeffneSitzung(sitzung) {
   $("sitzung-name").textContent = lesbar(sitzung.name);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
   $("knopf-melden").classList.toggle("an", sitzung.notifyWhenDone);
+  // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
+  // Öffnen "Modell wählen", obwohl längst eines gesetzt ist.
+  modelleHolen().then(() => zeigeModell(sitzung.modell));
   zeige("sitzung");
 
   // Zum Lesen aufmachen, nicht ins Terminal. Das ist der Normalfall.
@@ -873,6 +876,49 @@ $("knopf-anheften").addEventListener("click", async () => {
   });
   aktuelleSitzung.pinned = neu;
   $("knopf-anheften").classList.toggle("an", neu);
+});
+
+// --- Das Modell wechseln -----------------------------------------------------
+//
+// Für eine schnelle Frage braucht es kein Opus. Claude Code kennt dafür den
+// Befehl /model — wir tippen ihn nur, damit man unterwegs nicht diktieren muss.
+
+let modelle = [];
+
+async function modelleHolen() {
+  if (!modelle.length) {
+    modelle = await (await api("/modelle")).json();
+  }
+  return modelle;
+}
+
+function zeigeModell(name) {
+  const treffer = modelle.find((m) => m.name === name);
+  $("modell-name").textContent = treffer ? treffer.anzeige : "Modell wählen";
+  $("knopf-modell").classList.toggle("gesetzt", Boolean(treffer));
+}
+
+$("knopf-modell").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+
+  const liste = await modelleHolen();
+  // Reihum durchschalten — ein Tipp, ein Wechsel. Kein Menü, das man im Auto
+  // erst treffen müsste.
+  const jetzt = liste.findIndex((m) => m.name === aktuelleSitzung.modell);
+  const naechstes = liste[(jetzt + 1) % liste.length];
+
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modell`, {
+      method: "POST",
+      body: JSON.stringify({ name: naechstes.name }),
+    });
+    aktuelleSitzung.modell = naechstes.name;
+    zeigeModell(naechstes.name);
+    melde(`${naechstes.anzeige} — ${naechstes.art}`);
+    setTimeout(ladeVerlauf, 800);
+  } catch (err) {
+    melde(err.message);
+  }
 });
 
 // Den Stand sichern — auf Knopfdruck, nicht durch einen Zeitgeber, der
