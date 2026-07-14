@@ -193,7 +193,8 @@ async function ladeListe() {
   }
 
   const angeheftet = sitzungen.filter((s) => s.pinned);
-  const rest = sitzungen.filter((s) => !s.pinned);
+  const eigene = sitzungen.filter((s) => !s.pinned && s.eigen);
+  const fremde = sitzungen.filter((s) => !s.pinned && !s.eigen);
 
   const gruppe = (titel, eintraege) => {
     if (eintraege.length === 0) return;
@@ -205,7 +206,11 @@ async function ladeListe() {
   };
 
   gruppe("Angeheftet", angeheftet);
-  gruppe("Zuletzt benutzt", rest);
+  gruppe("Zuletzt benutzt", eigene);
+  // Sitzungen, die nicht von dieser App stammen — allen voran die, in der
+  // Claude Code gerade selbst läuft. Auch die kann man hier öffnen und sich
+  // vorlesen lassen.
+  gruppe("Läuft auch auf dem Server", fremde);
 }
 
 let listenTakt = null;

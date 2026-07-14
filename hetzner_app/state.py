@@ -154,6 +154,9 @@ def overview() -> list[dict]:
             "lastActivity": session.last_activity,
             "idleSeconds": now - session.last_activity,
             "attached": session.attached,
+            # Fremde Sitzungen — etwa die, in der Claude Code selbst läuft —
+            # darf man ansehen und bedienen, aber nicht beenden.
+            "eigen": session.eigen,
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.

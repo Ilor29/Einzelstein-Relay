@@ -13,6 +13,7 @@ import shlex
 import subprocess
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 # tmux-Sitzungen dieser App tragen alle dieses Präfix, damit wir fremde
 # tmux-Sitzungen des Benutzers nicht anfassen.
@@ -26,7 +27,7 @@ PREFIX = "hz-"
 # ist die App zuerst gescheitert: Die Sitzungen waren da, nur eben woanders.
 #
 # Mit einem festen Namen sehen Dienst, Skripte und Handy immer dasselbe.
-SERVER = ["-L", "hz"]
+SOCKET = "hz"
 
 # Trennt die Felder in der tmux-Ausgabe. Ein Zeichen, das in Sitzungsnamen
 # und Pfaden nicht vorkommt.
@@ -39,16 +40,43 @@ class TmuxError(RuntimeError):
 
 @dataclass
 class TmuxSession:
-    name: str          # ohne Präfix, so wie der Benutzer sie nennt
+    name: str          # so, wie die App sie nennt (die "Kennung")
     cwd: str
     created: int       # Unix-Zeit
     last_activity: int
     attached: bool
+    eigen: bool = True  # von dieser App angelegt — oder eine fremde Sitzung?
 
 
-def _run(*args: str) -> str:
+def _sockets() -> list[str]:
+    """Alle tmux-Server dieses Benutzers.
+
+    Nicht nur unserer: Auf dem Server laufen auch andere tmux-Sitzungen — die,
+    in der Claude Code selbst sitzt, zum Beispiel. Die will man am Handy
+    genauso öffnen und vorlesen lassen können.
+    """
+    ordner = Path(f"/tmp/tmux-{os.getuid()}")
+    if not ordner.is_dir():
+        return []
+    return sorted(p.name for p in ordner.iterdir() if p.is_socket())
+
+
+def _zerlegen(kennung: str) -> tuple[str, str]:
+    """Aus der Kennung der App wird ein tmux-Server und ein Sitzungsname.
+
+    Eigene Sitzungen heißen schlicht "willkommen" und liegen auf unserem
+    Server unter "hz-willkommen". Fremde tragen ihren Server im Namen:
+    "hetzner-app:claude".
+    """
+    if ":" in kennung:
+        socket, name = kennung.split(":", 1)
+        return socket, name
+    return SOCKET, PREFIX + kennung
+
+
+def _run(*args: str, socket: str = SOCKET) -> str:
     result = subprocess.run(
-        ["tmux", *SERVER, *args],
+        ["tmux", "-L", socket, *args],
         capture_output=True,
         text=True,
     )
@@ -64,7 +92,12 @@ def _run(*args: str) -> str:
     return result.stdout
 
 
-def list_sessions() -> list[TmuxSession]:
+def list_sessions(auch_fremde: bool = True) -> list[TmuxSession]:
+    """Alle Sitzungen — unsere eigenen und, wenn gewünscht, auch die fremden.
+
+    Fremd sind zum Beispiel die Sitzungen, in denen Claude Code selbst läuft.
+    Auch die will man am Handy öffnen und sich vorlesen lassen können.
+    """
     fmt = SEP.join([
         "#{session_name}",
         "#{session_path}",
@@ -72,22 +105,41 @@ def list_sessions() -> list[TmuxSession]:
         "#{session_activity}",
         "#{session_attached}",
     ])
-    out = _run("list-sessions", "-F", fmt)
 
-    sessions = []
-    for line in out.splitlines():
-        if not line.strip():
+    sessions: list[TmuxSession] = []
+    sockets = _sockets() if auch_fremde else [SOCKET]
+
+    for socket in sockets:
+        try:
+            out = _run("list-sessions", "-F", fmt, socket=socket)
+        except TmuxError:
             continue
-        name, path, created, activity, attached = line.split(SEP)
-        if not name.startswith(PREFIX):
-            continue
-        sessions.append(TmuxSession(
-            name=name[len(PREFIX):],
-            cwd=path,
-            created=int(created),
-            last_activity=int(activity),
-            attached=attached != "0",
-        ))
+
+        for line in out.splitlines():
+            if not line.strip():
+                continue
+            try:
+                name, path, created, activity, attached = line.split(SEP)
+            except ValueError:
+                continue
+
+            eigen = socket == SOCKET and name.startswith(PREFIX)
+            if eigen:
+                kennung = name[len(PREFIX):]
+            elif socket == SOCKET:
+                continue           # auf unserem Server nur unsere Sitzungen
+            else:
+                kennung = f"{socket}:{name}"
+
+            sessions.append(TmuxSession(
+                name=kennung,
+                cwd=path,
+                created=int(created),
+                last_activity=int(activity),
+                attached=attached != "0",
+                eigen=eigen,
+            ))
+
     return sessions
 
 
@@ -115,12 +167,12 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
 
     # Damit mehrere Zuschauer (Handy und Rechner) unterschiedlich große
     # Fenster haben dürfen, ohne dass der kleinste alle anderen erdrosselt.
-    _run("set-option", "-t", PREFIX + name, "aggressive-resize", "on")
+    _run("set-option", "-t", PREFIX + name, "aggressive-resize", "on", socket=SOCKET)
 
     # tmux' eigene Statusleiste ausblenden. Auf dem Handy ist jede Zeile
     # kostbar, und was sie anzeigt — Sitzungsname und Uhrzeit — steht in der
     # App ohnehin schon oben drüber.
-    _run("set-option", "-t", PREFIX + name, "status", "off")
+    _run("set-option", "-t", PREFIX + name, "status", "off", socket=SOCKET)
 
     if first_prompt:
         # Claude Code braucht einen Moment, bis es Eingaben annimmt.
@@ -130,7 +182,8 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
 
 
 def kill(name: str) -> None:
-    _run("kill-session", "-t", PREFIX + name)
+    socket, sitzung = _zerlegen(name)
+    _run("kill-session", "-t", sitzung, socket=socket)
 
 
 def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
@@ -153,12 +206,14 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
 
 def send_text(name: str, text: str) -> None:
     """Schickt Text an die Sitzung, so als hätte man ihn getippt."""
-    _run("send-keys", "-t", PREFIX + name, "-l", text)
+    socket, sitzung = _zerlegen(name)
+    _run("send-keys", "-t", sitzung, "-l", text, socket=socket)
 
 
 def send_key(name: str, key: str) -> None:
     """Schickt eine Sondertaste, z.B. 'Enter', 'Escape', 'C-c', 'Up'."""
-    _run("send-keys", "-t", PREFIX + name, key)
+    socket, sitzung = _zerlegen(name)
+    _run("send-keys", "-t", sitzung, key, socket=socket)
 
 
 def capture(name: str, lines: int | None = 200) -> str:
@@ -170,10 +225,11 @@ def capture(name: str, lines: int | None = 200) -> str:
     gerade arbeitet. Im Verlauf stehen alte Kreisel-Zeilen für immer herum
     und würden jede Sitzung auf ewig als "läuft" ausweisen.
     """
-    args = ["capture-pane", "-p", "-t", PREFIX + name]
+    socket, sitzung = _zerlegen(name)
+    args = ["capture-pane", "-p", "-t", sitzung]
     if lines is not None:
         args += ["-S", f"-{lines}"]
-    return _run(*args)
+    return _run(*args, socket=socket)
 
 
 async def attach(name: str, cols: int, rows: int) -> asyncio.subprocess.Process:
@@ -182,11 +238,13 @@ async def attach(name: str, cols: int, rows: int) -> asyncio.subprocess.Process:
     Die Ein- und Ausgabe läuft über Pipes; der Aufrufer verbindet sie mit dem
     WebSocket. Jeder Zuschauer bekommt seinen eigenen Anbindungs-Prozess.
     """
+    socket, sitzung = _zerlegen(name)
+
     # Ohne echtes Terminal wüsste tmux die Fenstergröße nicht. Wir schummeln
     # eins herbei, indem wir die Größe explizit mitgeben.
     cmd = (
         f"stty cols {int(cols)} rows {int(rows)}; "
-        f"exec tmux {' '.join(SERVER)} attach-session -t {shlex.quote(PREFIX + name)}"
+        f"exec tmux -L {shlex.quote(socket)} attach-session -t {shlex.quote(sitzung)}"
     )
 
     # TERM sagt tmux, was für ein Terminal am anderen Ende sitzt. Fehlt es,
@@ -206,4 +264,9 @@ async def attach(name: str, cols: int, rows: int) -> asyncio.subprocess.Process:
 
 
 def resize(name: str, cols: int, rows: int) -> None:
-    _run("resize-window", "-t", PREFIX + name, "-x", str(cols), "-y", str(rows))
+    socket, sitzung = _zerlegen(name)
+    # Fremde Sitzungen nicht umgrößen: Dort sitzt womöglich noch jemand am
+    # Rechner davor, und dem würde der Bildschirm unter den Händen wegrutschen.
+    if socket != SOCKET:
+        return
+    _run("resize-window", "-t", sitzung, "-x", str(cols), "-y", str(rows), socket=socket)

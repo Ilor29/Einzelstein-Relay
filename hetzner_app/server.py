@@ -156,8 +156,16 @@ def patch_session(name: str, body: Patch) -> dict:
 
 @app.delete("/api/sessions/{name}", dependencies=[Depends(require_auth)])
 def delete_session(name: str) -> dict:
-    if not tmux.exists(name):
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    # Fremde Sitzungen — etwa die, in der Claude Code selbst läuft — darf man
+    # ansehen und bedienen, aber nicht abschießen. Sonst legt man sich mit
+    # einem Fingertipp die eigene Arbeitsumgebung lahm.
+    if not treffer[0].eigen:
+        raise HTTPException(403, "Diese Sitzung gehört nicht der App — sie bleibt.")
+
     tmux.kill(name)
     state.forget(name)
     return {"ok": True}
