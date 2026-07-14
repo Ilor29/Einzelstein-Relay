@@ -1,6 +1,6 @@
 {
-  "name": "Hetzner",
-  "short_name": "Hetzner",
+  "name": "Einzelstein Relay",
+  "short_name": "Relay",
   "description": "Deine Claude-Code-Sitzungen auf dem Server — mit Übersicht und Anheften.",
   "start_url": "/",
   "display": "standalone",
