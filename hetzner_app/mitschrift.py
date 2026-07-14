@@ -8,12 +8,16 @@ Neustart war er weg.
 Dabei schreibt Claude Code jede Sitzung ohnehin mit — vollständig und sauber
 getrennt nach Sprecher, unter ~/.claude/projects/. Das ist die richtige Quelle.
 Nichts wird geraten, nichts geht verloren, und der Verlauf überlebt alles.
+
+Bleibt die eine schwierige Frage: Welche der vielen Mitschriften in einem
+Projektordner gehört zu der Sitzung, die gerade auf dem Handy offen ist?
+Darum geht es weiter unten, bei `finden`.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import re
 from pathlib import Path
 
 PROJEKTE = Path.home() / ".claude" / "projects"
@@ -30,13 +34,7 @@ def _ordnername(cwd: str) -> str:
 
 
 def datei_finden(cwd: str, kennung: str | None = None) -> Path | None:
-    """Die Mitschrift der Sitzung, die in diesem Ordner läuft.
-
-    Mit `kennung` — der Sitzungskennung des laufenden Claude — ist es eindeutig.
-    Ohne sie bleibt nur die zuletzt beschriebene Datei, und das geht schief,
-    sobald in demselben Projektordner ein zweites Gespräch läuft: Der Verlauf
-    springt dann auf das fremde Gespräch um. Genau das ist passiert.
-    """
+    """Die Mitschrift mit dieser Kennung — oder notfalls die jüngste im Ordner."""
     ordner = PROJEKTE / _ordnername(cwd)
     if not ordner.is_dir():
         return None
@@ -51,6 +49,119 @@ def datei_finden(cwd: str, kennung: str | None = None) -> Path | None:
         return None
 
     return max(dateien, key=lambda p: p.stat().st_mtime)
+
+
+# --- Welche Mitschrift gehört zu dieser Sitzung? -----------------------------
+#
+# Die schwierigste Frage der ganzen App. In einem Projektordner liegen Dutzende
+# Mitschriften — jedes Gespräch, das je in diesem Ordner lief. Welche davon
+# gehört zu dem Terminal, das gerade auf dem Handy offen ist?
+#
+# Zweimal haben wir es falsch beantwortet. Erst nahmen wir die zuletzt
+# beschriebene Datei; dann sprang der Verlauf in ein fremdes Gespräch, sobald
+# im selben Ordner ein zweites lief. Dann fragten wir den Claude-Prozess nach
+# seiner Kennung in der Umgebung — aber die setzt Claude Code nicht für sich
+# selbst, sondern nur für Programme, die es startet. Also fanden wir entweder
+# gar nichts (und rieten wieder) oder die Kennung des fremden Claude, der das
+# Terminal einst gestartet hatte. Der Verlauf war weg.
+#
+# Jetzt fragen wir niemanden mehr. Wir vergleichen: Auf dem Bildschirm der
+# Sitzung steht die Unterhaltung — und in der richtigen Mitschrift stehen
+# dieselben Sätze. Die Datei, deren letzte Sätze auf dem Schirm wiederzufinden
+# sind, ist die richtige. Das ist keine Vermutung, das ist ein Beweis.
+
+# Zum Vergleichen lassen wir alles weg, was das Terminal verändert: Umbrüche
+# mitten im Satz, doppelte Leerzeichen, Rahmen, Groß- und Kleinschreibung.
+def _verdichtet(text: str) -> str:
+    return re.sub(r"[^a-z0-9äöüß]", "", text.lower())
+
+
+# Kurze Sätze taugen nicht als Beweis: "Ja." oder "Weiter" steht in jedem
+# zweiten Gespräch. Erst ab dieser Länge ist ein Satz eindeutig genug.
+_BEWEISLAENGE = 30
+
+
+def _letzte_saetze(datei: Path, wieviele: int = 4) -> list[str]:
+    """Die letzten gesprochenen Sätze einer Mitschrift.
+
+    Nur das Ende der Datei wird gelesen — sie werden viele Megabyte groß, und
+    das Handy fragt alle drei Sekunden nach.
+    """
+    try:
+        groesse = datei.stat().st_size
+        with datei.open("rb") as f:
+            f.seek(max(0, groesse - 200_000))
+            schwanz = f.read().decode(errors="replace")
+    except OSError:
+        return []
+
+    saetze: list[str] = []
+    # Die erste Zeile ist nach dem Sprung meist angeschnitten — die überspringt
+    # der JSON-Fehler von selbst.
+    for zeile in reversed(schwanz.splitlines()):
+        try:
+            eintrag = json.loads(zeile)
+        except json.JSONDecodeError:
+            continue
+
+        nachricht = eintrag.get("message")
+        if not isinstance(nachricht, dict):
+            continue
+        if nachricht.get("role") not in ("user", "assistant"):
+            continue
+
+        text = _text_aus(nachricht.get("content")).strip()
+        if len(_verdichtet(text)) >= _BEWEISLAENGE:
+            saetze.append(text)
+        if len(saetze) >= wieviele:
+            break
+
+    return saetze
+
+
+def _steht_auf_dem_schirm(datei: Path, schirm: str) -> bool:
+    """Findet sich diese Mitschrift auf dem Bildschirm der Sitzung wieder?"""
+    for satz in _letzte_saetze(datei):
+        # Ein Ausschnitt genügt: Lange Nachrichten kürzt das Terminal, und die
+        # ersten Zeichen stehen immer da.
+        probe = _verdichtet(satz)[:60]
+        if len(probe) >= _BEWEISLAENGE and probe in schirm:
+            return True
+    return False
+
+
+def finden(cwd: str, schirm: str, zuletzt: str = "") -> str | None:
+    """Die Kennung der Mitschrift, die zu diesem Bildschirm gehört.
+
+    `zuletzt` ist die Kennung, bei der wir letztes Mal gelandet sind. Sie ist
+    fast immer noch richtig — also prüfen wir sie zuerst und lesen im Normalfall
+    nur eine einzige Datei an.
+    """
+    ordner = PROJEKTE / _ordnername(cwd)
+    if not ordner.is_dir():
+        return None
+
+    verdichtet = _verdichtet(schirm)
+
+    if zuletzt:
+        datei = ordner / f"{zuletzt}.jsonl"
+        if datei.is_file() and _steht_auf_dem_schirm(datei, verdichtet):
+            return zuletzt
+
+    # Die bekannte Kennung passt nicht mehr — etwa nach /clear, nach einem
+    # Neustart der Sitzung, oder weil wir sie noch nie kannten. Also suchen wir
+    # von vorn, die zuletzt beschriebenen Dateien zuerst.
+    dateien = sorted(
+        ordner.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
+    for datei in dateien[:20]:
+        if _steht_auf_dem_schirm(datei, verdichtet):
+            return datei.stem
+
+    # Nichts passt. Das ist der Normalfall bei einer frischen Sitzung: Es steht
+    # noch nichts auf dem Schirm, was man wiederfinden könnte. Dann bleibt es
+    # bei dem, was wir wissen — und lieber gar nichts als ein fremdes Gespräch.
+    return zuletzt or None
 
 
 def _text_aus(inhalt) -> str:

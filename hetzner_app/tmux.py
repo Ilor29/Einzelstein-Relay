@@ -12,6 +12,7 @@ import os
 import shlex
 import subprocess
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -150,10 +151,18 @@ def exists(name: str) -> bool:
     return any(s.name == name for s in list_sessions())
 
 
-def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
-    """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung."""
+def create(name: str, cwd: str, first_prompt: str | None = None) -> str:
+    """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
+
+    Gibt die Kennung zurück, unter der Claude Code diese Unterhaltung mitschreibt.
+    Wir geben sie ihm vor, statt sie hinterher zu suchen: So wissen wir vom
+    ersten Augenblick an, welche der vielen Mitschriften im Projektordner zu
+    dieser Sitzung gehört.
+    """
     if exists(name):
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
+
+    kennung = str(uuid.uuid4())
 
     _run(
         "new-session",
@@ -165,7 +174,7 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
         # gerade arbeitet oder auf eine Antwort wartet.
         "-x", "120",
         "-y", "40",
-        "claude",
+        "claude", "--session-id", kennung,
     )
 
     # Damit mehrere Zuschauer (Handy und Rechner) unterschiedlich große
@@ -187,6 +196,8 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
         # Das erledigt der Aufrufer über send_text(), nicht wir hier —
         # siehe server.py, wo darauf gewartet wird.
         pass
+
+    return kennung
 
 
 def kill(name: str) -> None:
@@ -210,51 +221,6 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
             pass
         time.sleep(0.4)
     return False
-
-
-def sitzungs_id(name: str) -> str | None:
-    """Welche Mitschrift gehört zu dieser Sitzung?
-
-    Claude Code legt jedes Gespräch unter einer eigenen Kennung ab. In einem
-    Projektordner können mehrere liegen — etwa weil dasselbe Projekt auch in
-    der offiziellen Claude-App offen war. Bisher nahm die App einfach die
-    zuletzt geänderte Datei, und dann sprang der Verlauf ohne Vorwarnung auf
-    ein fremdes Gespräch um.
-
-    Der laufende Claude-Prozess weiß es selbst: Er trägt seine Kennung in der
-    Umgebung. Wir fragen also ihn, statt zu raten.
-    """
-    socket, sitzung = _zerlegen(name)
-    try:
-        wurzel = _run(
-            "display-message", "-p", "-t", sitzung, "#{pane_pid}", socket=socket
-        ).strip()
-    except TmuxError:
-        return None
-    if not wurzel.isdigit():
-        return None
-
-    # Claude läuft irgendwo unter dem Prozess, den tmux gestartet hat — mal
-    # direkt darunter, mal noch eine Schale tiefer. Also gehen wir hinab.
-    zu_pruefen = [wurzel]
-    while zu_pruefen:
-        pid = zu_pruefen.pop(0)
-        try:
-            umgebung = Path(f"/proc/{pid}/environ").read_bytes().decode(errors="replace")
-        except OSError:
-            umgebung = ""
-
-        for eintrag in umgebung.split("\0"):
-            if eintrag.startswith("CLAUDE_CODE_SESSION_ID="):
-                return eintrag.split("=", 1)[1] or None
-
-        try:
-            kinder = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
-        except OSError:
-            kinder = []
-        zu_pruefen.extend(kinder)
-
-    return None
 
 
 def send_text(name: str, text: str) -> None:

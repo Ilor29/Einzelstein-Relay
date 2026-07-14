@@ -30,6 +30,11 @@ class Meta:
     # Welches Modell wir zuletzt gewählt haben. Claude Code sagt es uns nicht,
     # also merken wir es uns selbst.
     modell: str = ""
+    # Welche Mitschrift zu dieser Sitzung gehört. Bei eigenen Sitzungen geben
+    # wir sie Claude Code beim Start vor; bei fremden finden wir sie über den
+    # Bildschirm heraus und schreiben sie hier fest, damit der Verlauf nicht
+    # bei jedem Nachfragen neu gesucht werden muss.
+    kennung: str = ""
     # Wie die Sitzung im Handy heißen soll. Leer heißt: ihr technischer Name.
     # Der bleibt unangetastet — an ihm hängen tmux, der Ordner und die
     # Mitschrift. Wir benennen nur das Schild an der Tür um, nicht das Haus.

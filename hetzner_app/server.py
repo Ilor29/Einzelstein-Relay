@@ -130,7 +130,7 @@ async def create_session(body: NewSession) -> dict:
         raise HTTPException(400, f"Den Ordner {body.cwd} gibt es nicht.")
 
     try:
-        tmux.create(body.name, str(cwd))
+        kennung = tmux.create(body.name, str(cwd))
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
@@ -139,6 +139,8 @@ async def create_session(body: NewSession) -> dict:
         pinned=body.pinned,
         notify_when_done=body.notify_when_done,
         created_prompt=body.first_prompt,
+        # Die Mitschrift steht schon fest, bevor das erste Wort gesagt ist.
+        kennung=kennung,
     )
 
     if body.first_prompt:
@@ -277,6 +279,26 @@ def stimme_waehlen(body: Stimme) -> dict:
     return {"ok": True, "stimme": body.name}
 
 
+def _kennung(name: str, cwd: str) -> str | None:
+    """Welche Mitschrift gehört zu dieser Sitzung?
+
+    Die Antwort steht auf dem Bildschirm der Sitzung: Dort läuft die
+    Unterhaltung, und in der richtigen Mitschrift stehen dieselben Sätze. Was
+    wir dabei herausfinden, schreiben wir fest — beim nächsten Mal genügt dann
+    ein Blick in eine einzige Datei.
+    """
+    zuletzt = state.get(name).kennung
+    try:
+        schirm = tmux.capture(name, lines=3000)
+    except tmux.TmuxError:
+        return zuletzt or None
+
+    kennung = mitschrift.finden(cwd, schirm, zuletzt)
+    if kennung and kennung != zuletzt:
+        state.update(name, kennung=kennung)
+    return kennung
+
+
 @app.get("/api/sessions/{name}/text", dependencies=[Depends(require_auth)])
 def session_text(name: str) -> dict:
     """Claudes letzte Antwort, zum Vorlesen."""
@@ -286,14 +308,12 @@ def session_text(name: str) -> dict:
 
     # Aus der Mitschrift, nicht vom Bildschirm: Dort steht die Antwort ganz,
     # nicht nur der Teil, der gerade zu sehen ist.
-    # Welches Gespräch gemeint ist, sagt uns der laufende Claude selbst. Ohne
-    # diese Kennung nähmen wir die zuletzt beschriebene Datei im Projektordner
-    # — und landeten in einem fremden Gespräch, sobald dasselbe Projekt noch
-    # anderswo offen ist.
-    bloecke = mitschrift.lesen(treffer[0].cwd, kennung=tmux.sitzungs_id(name))
-    for block in reversed(bloecke):
-        if block["typ"] == "claude" and block["text"].strip():
-            return {"text": block["text"]}
+    kennung = _kennung(name, treffer[0].cwd)
+    if kennung:
+        bloecke = mitschrift.lesen(treffer[0].cwd, kennung=kennung)
+        for block in reversed(bloecke):
+            if block["typ"] == "claude" and block["text"].strip():
+                return {"text": block["text"]}
 
     # Keine Mitschrift? Dann eben doch vom Bildschirm.
     return {"text": tts.for_speech(tmux.capture(name, lines=200))}
@@ -303,20 +323,17 @@ def session_text(name: str) -> dict:
 def session_verlauf(name: str) -> list[dict]:
     """Die Unterhaltung, so wie sie wirklich stattfand.
 
-    Nicht mehr vom Terminal-Bildschirm abgelesen und geraten: Claude Code
-    schreibt jede Sitzung ohnehin mit, vollständig und sauber getrennt nach
-    Sprecher. Das ist die richtige Quelle. Sie überlebt jeden Neustart, reicht
-    beliebig weit zurück, und niemand verwechselt mehr, wer was gesagt hat.
+    Nicht vom Terminal-Bildschirm abgelesen und geraten: Claude Code schreibt
+    jede Sitzung ohnehin mit, vollständig und sauber getrennt nach Sprecher.
+    Das ist die richtige Quelle. Sie überlebt jeden Neustart, reicht beliebig
+    weit zurück, und niemand verwechselt mehr, wer was gesagt hat.
     """
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
-    # Welches Gespräch gemeint ist, sagt uns der laufende Claude selbst. Ohne
-    # diese Kennung nähmen wir die zuletzt beschriebene Datei im Projektordner
-    # — und landeten in einem fremden Gespräch, sobald dasselbe Projekt noch
-    # anderswo offen ist.
-    bloecke = mitschrift.lesen(treffer[0].cwd, kennung=tmux.sitzungs_id(name))
+    kennung = _kennung(name, treffer[0].cwd)
+    bloecke = mitschrift.lesen(treffer[0].cwd, kennung=kennung) if kennung else []
 
     # Findet sich keine Mitschrift — etwa bei einer ganz frischen Sitzung —,
     # lesen wir notfalls doch den Bildschirm ab. Besser als eine leere Seite.
