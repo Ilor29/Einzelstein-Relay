@@ -212,6 +212,51 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
     return False
 
 
+def sitzungs_id(name: str) -> str | None:
+    """Welche Mitschrift gehört zu dieser Sitzung?
+
+    Claude Code legt jedes Gespräch unter einer eigenen Kennung ab. In einem
+    Projektordner können mehrere liegen — etwa weil dasselbe Projekt auch in
+    der offiziellen Claude-App offen war. Bisher nahm die App einfach die
+    zuletzt geänderte Datei, und dann sprang der Verlauf ohne Vorwarnung auf
+    ein fremdes Gespräch um.
+
+    Der laufende Claude-Prozess weiß es selbst: Er trägt seine Kennung in der
+    Umgebung. Wir fragen also ihn, statt zu raten.
+    """
+    socket, sitzung = _zerlegen(name)
+    try:
+        wurzel = _run(
+            "display-message", "-p", "-t", sitzung, "#{pane_pid}", socket=socket
+        ).strip()
+    except TmuxError:
+        return None
+    if not wurzel.isdigit():
+        return None
+
+    # Claude läuft irgendwo unter dem Prozess, den tmux gestartet hat — mal
+    # direkt darunter, mal noch eine Schale tiefer. Also gehen wir hinab.
+    zu_pruefen = [wurzel]
+    while zu_pruefen:
+        pid = zu_pruefen.pop(0)
+        try:
+            umgebung = Path(f"/proc/{pid}/environ").read_bytes().decode(errors="replace")
+        except OSError:
+            umgebung = ""
+
+        for eintrag in umgebung.split("\0"):
+            if eintrag.startswith("CLAUDE_CODE_SESSION_ID="):
+                return eintrag.split("=", 1)[1] or None
+
+        try:
+            kinder = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
+        except OSError:
+            kinder = []
+        zu_pruefen.extend(kinder)
+
+    return None
+
+
 def send_text(name: str, text: str) -> None:
     """Schickt Text an die Sitzung, so als hätte man ihn getippt."""
     socket, sitzung = _zerlegen(name)

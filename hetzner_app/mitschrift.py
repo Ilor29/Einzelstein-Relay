@@ -29,15 +29,22 @@ def _ordnername(cwd: str) -> str:
     return "".join(c if c.isalnum() or c == "-" else "-" for c in cwd)
 
 
-def datei_finden(cwd: str) -> Path | None:
+def datei_finden(cwd: str, kennung: str | None = None) -> Path | None:
     """Die Mitschrift der Sitzung, die in diesem Ordner läuft.
 
-    Es kann mehrere geben — dann nehmen wir die zuletzt beschriebene, denn das
-    ist die, an der gerade gearbeitet wird.
+    Mit `kennung` — der Sitzungskennung des laufenden Claude — ist es eindeutig.
+    Ohne sie bleibt nur die zuletzt beschriebene Datei, und das geht schief,
+    sobald in demselben Projektordner ein zweites Gespräch läuft: Der Verlauf
+    springt dann auf das fremde Gespräch um. Genau das ist passiert.
     """
     ordner = PROJEKTE / _ordnername(cwd)
     if not ordner.is_dir():
         return None
+
+    if kennung:
+        genannt = ordner / f"{kennung}.jsonl"
+        if genannt.is_file():
+            return genannt
 
     dateien = list(ordner.glob("*.jsonl"))
     if not dateien:
@@ -60,12 +67,12 @@ def _text_aus(inhalt) -> str:
     return "\n\n".join(s for s in stuecke if s.strip())
 
 
-def lesen(cwd: str, hoechstens: int = 400) -> list[dict]:
+def lesen(cwd: str, hoechstens: int = 400, kennung: str | None = None) -> list[dict]:
     """Die Unterhaltung als Blöcke — so, wie sie wirklich stattfand.
 
     Typen: du, claude, werkzeug, bild.
     """
-    datei = datei_finden(cwd)
+    datei = datei_finden(cwd, kennung)
     if datei is None:
         return []
 

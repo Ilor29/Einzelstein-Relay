@@ -274,7 +274,11 @@ def session_text(name: str) -> dict:
 
     # Aus der Mitschrift, nicht vom Bildschirm: Dort steht die Antwort ganz,
     # nicht nur der Teil, der gerade zu sehen ist.
-    bloecke = mitschrift.lesen(treffer[0].cwd)
+    # Welches Gespräch gemeint ist, sagt uns der laufende Claude selbst. Ohne
+    # diese Kennung nähmen wir die zuletzt beschriebene Datei im Projektordner
+    # — und landeten in einem fremden Gespräch, sobald dasselbe Projekt noch
+    # anderswo offen ist.
+    bloecke = mitschrift.lesen(treffer[0].cwd, kennung=tmux.sitzungs_id(name))
     for block in reversed(bloecke):
         if block["typ"] == "claude" and block["text"].strip():
             return {"text": block["text"]}
@@ -296,7 +300,11 @@ def session_verlauf(name: str) -> list[dict]:
     if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
-    bloecke = mitschrift.lesen(treffer[0].cwd)
+    # Welches Gespräch gemeint ist, sagt uns der laufende Claude selbst. Ohne
+    # diese Kennung nähmen wir die zuletzt beschriebene Datei im Projektordner
+    # — und landeten in einem fremden Gespräch, sobald dasselbe Projekt noch
+    # anderswo offen ist.
+    bloecke = mitschrift.lesen(treffer[0].cwd, kennung=tmux.sitzungs_id(name))
 
     # Findet sich keine Mitschrift — etwa bei einer ganz frischen Sitzung —,
     # lesen wir notfalls doch den Bildschirm ab. Besser als eine leere Seite.
