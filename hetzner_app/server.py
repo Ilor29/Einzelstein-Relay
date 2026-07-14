@@ -297,7 +297,19 @@ async def session_bild(name: str, bild: UploadFile = File(...)) -> dict:
     # Bild um Leseerlaubnis, und das wäre bei jedem Foto eine Rückfrage. In
     # seinem eigenen Arbeitsordner darf er ohne Weiteres lesen.
     sitzung = [s for s in tmux.list_sessions() if s.name == name][0]
-    ordner = Path(sitzung.cwd) / ".hetzner-bilder"
+    arbeitsordner = Path(sitzung.cwd)
+
+    # Sicherheitsnetz: Meldet eine Sitzung einen unbrauchbaren Arbeitsordner —
+    # etwa "/" —, legen wir dort nichts an. Dort haben wir nichts zu suchen,
+    # und es scheiterte auch nur mit einer kryptischen Fehlermeldung.
+    if not arbeitsordner.is_dir() or not os.access(arbeitsordner, os.W_OK):
+        raise HTTPException(
+            400,
+            "In den Ordner dieser Sitzung darf ich nicht schreiben. "
+            "Schick das Bild aus einer Sitzung, die in einem Projektordner läuft.",
+        )
+
+    ordner = arbeitsordner / ".hetzner-bilder"
     ordner.mkdir(parents=True, exist_ok=True)
 
     # Damit die Fotos nicht in Git landen.

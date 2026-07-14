@@ -100,7 +100,10 @@ def list_sessions(auch_fremde: bool = True) -> list[TmuxSession]:
     """
     fmt = SEP.join([
         "#{session_name}",
-        "#{session_path}",
+        # Der Ordner, in dem gerade gearbeitet wird — nicht der, in dem die
+        # Sitzung einst erzeugt wurde. Bei fremden Sitzungen ist Letzterer
+        # oft schlicht "/", und dann legt man Dateien im Wurzelverzeichnis an.
+        "#{pane_current_path}",
         "#{session_created}",
         "#{session_activity}",
         "#{session_attached}",
