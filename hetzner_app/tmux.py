@@ -12,7 +12,6 @@ import os
 import shlex
 import subprocess
 import time
-import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -151,18 +150,10 @@ def exists(name: str) -> bool:
     return any(s.name == name for s in list_sessions())
 
 
-def create(name: str, cwd: str, first_prompt: str | None = None) -> str:
-    """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
-
-    Gibt die Kennung zurück, unter der Claude Code diese Unterhaltung mitschreibt.
-    Wir geben sie ihm vor, statt sie hinterher zu suchen: So wissen wir vom
-    ersten Augenblick an, welche der vielen Mitschriften im Projektordner zu
-    dieser Sitzung gehört.
-    """
+def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
+    """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung."""
     if exists(name):
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
-
-    kennung = str(uuid.uuid4())
 
     _run(
         "new-session",
@@ -174,7 +165,7 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> str:
         # gerade arbeitet oder auf eine Antwort wartet.
         "-x", "120",
         "-y", "40",
-        "claude", "--session-id", kennung,
+        "claude",
     )
 
     # Damit mehrere Zuschauer (Handy und Rechner) unterschiedlich große
@@ -196,8 +187,6 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> str:
         # Das erledigt der Aufrufer über send_text(), nicht wir hier —
         # siehe server.py, wo darauf gewartet wird.
         pass
-
-    return kennung
 
 
 def kill(name: str) -> None:

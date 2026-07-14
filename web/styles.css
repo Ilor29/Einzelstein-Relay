@@ -412,6 +412,13 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Steht rechts außen und nur dann da, wenn im Projekt mehr als ein Terminal
+   läuft. Eine Fußnote, kein Etikett — sie soll die Karte nicht beschweren. */
+.karte .terminals {
+  margin-left: auto;
+  opacity: .6;
+}
+
 .etikett {
   display: inline-flex;
   align-items: center;

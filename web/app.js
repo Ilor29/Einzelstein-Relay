@@ -191,11 +191,19 @@ function karte(sitzung) {
     <div class="angaben">
       <span class="etikett ${sitzung.state}">${ETIKETT[sitzung.state]}</span>
       <span class="wann"></span>
+      <span class="terminals"></span>
     </div>
   `;
   // Über textContent gesetzt, nicht über innerHTML — ein Sitzungsname oder
   // eine Terminalzeile darf kein HTML in die Seite schmuggeln.
   el.querySelector(".name").textContent = benannt(sitzung);
+
+  // Ein Schild, mehrere Terminals: Im selben Projekt läuft Claude womöglich
+  // auch am Rechner. Der Verlauf zeigt alles davon; getippt wird in eines.
+  // Das soll man wenigstens sehen können.
+  if (sitzung.terminals > 1) {
+    el.querySelector(".terminals").textContent = `${sitzung.terminals} Terminals`;
+  }
   el.querySelector(".vorschau").textContent = sitzung.preview || "—";
   el.querySelector(".wann").textContent = alter(sitzung.idleSeconds);
 

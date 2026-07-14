@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 from . import tmux, tts
@@ -30,11 +30,6 @@ class Meta:
     # Welches Modell wir zuletzt gewählt haben. Claude Code sagt es uns nicht,
     # also merken wir es uns selbst.
     modell: str = ""
-    # Welche Mitschrift zu dieser Sitzung gehört. Bei eigenen Sitzungen geben
-    # wir sie Claude Code beim Start vor; bei fremden finden wir sie über den
-    # Bildschirm heraus und schreiben sie hier fest, damit der Verlauf nicht
-    # bei jedem Nachfragen neu gesucht werden muss.
-    kennung: str = ""
     # Wie die Sitzung im Handy heißen soll. Leer heißt: ihr technischer Name.
     # Der bleibt unangetastet — an ihm hängen tmux, der Ordner und die
     # Mitschrift. Wir benennen nur das Schild an der Tür um, nicht das Haus.
@@ -53,7 +48,15 @@ def _load() -> dict[str, Meta]:
     except (json.JSONDecodeError, OSError):
         # Kaputte Datei darf die App nicht lahmlegen; wir fangen neu an.
         return {}
-    return {name: Meta(**values) for name, values in raw.items()}
+
+    # Felder, die es einmal gab und nicht mehr gibt, überlesen wir. Sonst
+    # brächte eine alte Zustandsdatei die neue App zu Fall — ausgerechnet beim
+    # Aufräumen.
+    erlaubt = {f.name for f in fields(Meta)}
+    return {
+        name: Meta(**{k: v for k, v in values.items() if k in erlaubt})
+        for name, values in raw.items()
+    }
 
 
 def _save(metas: dict[str, Meta]) -> None:
@@ -214,30 +217,61 @@ def preview(name: str, max_len: int = 90) -> str:
 
 
 def overview() -> list[dict]:
-    """Alles, was die Sitzungsübersicht im Handy braucht — in einem Rutsch."""
+    """Alles, was die Sitzungsübersicht im Handy braucht — in einem Rutsch.
+
+    Ein Eintrag je Projekt, nicht je Terminal. Im selben Ordner laufen leicht
+    mehrere Sitzungen — eine am Rechner, eine per Fernsteuerung, eine aus dem
+    Handy —, und dann stand dasselbe Projekt dreimal untereinander, jedes mit
+    einem Bruchstück der Arbeit. Es ist aber ein Projekt und eine Unterhaltung
+    (siehe mitschrift.py). Also ein Schild in der Liste.
+
+    Bedient wird darunter ein bestimmtes Terminal: das eigene, sonst das
+    zuletzt benutzte. Sein technischer Name steht in "name" — daran hängen alle
+    weiteren Aufrufe, vom Tippen bis zum Abbrechen.
+    """
     metas = _load()
     now = int(time.time())
-    result = []
 
+    projekte: dict[str, list] = {}
     for session in tmux.list_sessions():
-        meta = metas.get(session.name, Meta())
-        state = detect(session.name)
+        projekte.setdefault(session.cwd, []).append(session)
+
+    result = []
+    for cwd, sitzungen in projekte.items():
+        # Wer das Wort führt: unsere eigene Sitzung, sonst die zuletzt benutzte.
+        sitzungen.sort(key=lambda s: (not s.eigen, -s.last_activity))
+        fuehrend = sitzungen[0]
+        eigene_metas = [metas.get(s.name, Meta()) for s in sitzungen]
+        meta = eigene_metas[0]
+
+        # Arbeitet irgendwo im Projekt gerade Claude, arbeitet das Projekt.
+        zustaende = [detect(s.name) for s in sitzungen]
+        zustand = (
+            RUNNING if RUNNING in zustaende
+            else WAITING if WAITING in zustaende
+            else IDLE
+        )
 
         result.append({
-            "name": session.name,
-            "cwd": session.cwd,
-            "pinned": meta.pinned,
-            "notifyWhenDone": meta.notify_when_done,
-            "state": state,
-            "preview": preview(session.name),
-            "lastActivity": session.last_activity,
-            "idleSeconds": now - session.last_activity,
-            "attached": session.attached,
+            "name": fuehrend.name,
+            "cwd": cwd,
+            # Angeheftet ist ein Projekt, sobald eines seiner Terminals es ist.
+            "pinned": any(m.pinned for m in eigene_metas),
+            "notifyWhenDone": any(m.notify_when_done for m in eigene_metas),
+            "state": zustand,
+            "preview": preview(fuehrend.name),
+            "lastActivity": max(s.last_activity for s in sitzungen),
+            "idleSeconds": now - max(s.last_activity for s in sitzungen),
+            "attached": any(s.attached for s in sitzungen),
             # Fremde Sitzungen — etwa die, in der Claude Code selbst läuft —
             # darf man ansehen und bedienen, aber nicht beenden.
-            "eigen": session.eigen,
+            "eigen": fuehrend.eigen,
             "modell": meta.modell,
-            "anzeige": meta.anzeige,
+            # Ohne eigenen Namen heißt der Kanal wie das Projekt, an dem er
+            # arbeitet — nicht wie das Terminal, in dem er zufällig läuft.
+            "anzeige": meta.anzeige or Path(cwd).name,
+            # Wie viele Terminals hinter dem einen Schild stecken.
+            "terminals": len(sitzungen),
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.

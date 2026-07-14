@@ -1,23 +1,30 @@
-"""Der Verlauf — aus den Mitschriften, die Claude Code selbst führt.
+"""Der Verlauf — ein Strang pro Projekt.
 
-Bisher las die App den Terminal-Bildschirm ab und riet, wer was gesagt hat.
-Das ging schief: Roli sah seine eigenen Sätze als Claudes Antworten, der
-Verlauf reichte nur so weit zurück wie der Bildschirmspeicher, und nach einem
-Neustart war er weg.
+Claude Code schreibt jede Sitzung mit: vollständig, sauber getrennt nach
+Sprecher, unter ~/.claude/projects/. Das ist die richtige Quelle — sie überlebt
+jeden Neustart und reicht beliebig weit zurück.
 
-Dabei schreibt Claude Code jede Sitzung ohnehin mit — vollständig und sauber
-getrennt nach Sprecher, unter ~/.claude/projects/. Das ist die richtige Quelle.
-Nichts wird geraten, nichts geht verloren, und der Verlauf überlebt alles.
+Nur legt Claude Code für jedes Gespräch eine eigene Datei an, und in einem
+Projektordner liegen darum Dutzende. Welche gehört zu dem Terminal, das gerade
+auf dem Handy offen ist? Zweimal haben wir versucht, das zu beantworten, und
+zweimal falsch: Erst nahmen wir die zuletzt beschriebene Datei — dann sprang
+der Verlauf in ein fremdes Gespräch. Dann fragten wir den Claude-Prozess nach
+seiner Kennung — die kennt er für sich selbst gar nicht, und der Verlauf war
+ganz weg.
 
-Bleibt die eine schwierige Frage: Welche der vielen Mitschriften in einem
-Projektordner gehört zu der Sitzung, die gerade auf dem Handy offen ist?
-Darum geht es weiter unten, bei `finden`.
+Jetzt stellen wir die Frage nicht mehr. Sie war von Anfang an die falsche:
+Roli arbeitet nicht an Gesprächen, er arbeitet an Projekten. Ob er gestern am
+Rechner, heute früh per Fernsteuerung und jetzt im Handy geredet hat, ist ihm
+gleich — es ist dieselbe Arbeit am selben Ordner.
+
+Also ziehen wir alle Mitschriften eines Ordners zu einem einzigen Strang
+zusammen, chronologisch. Ein Projekt, ein Verlauf. Damit kann er gar nicht
+mehr verschwinden: Es gibt nichts mehr zu verwechseln.
 """
 
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 PROJEKTE = Path.home() / ".claude" / "projects"
@@ -31,137 +38,6 @@ def _ordnername(cwd: str) -> str:
     wird zum Bindestrich.
     """
     return "".join(c if c.isalnum() or c == "-" else "-" for c in cwd)
-
-
-def datei_finden(cwd: str, kennung: str | None = None) -> Path | None:
-    """Die Mitschrift mit dieser Kennung — oder notfalls die jüngste im Ordner."""
-    ordner = PROJEKTE / _ordnername(cwd)
-    if not ordner.is_dir():
-        return None
-
-    if kennung:
-        genannt = ordner / f"{kennung}.jsonl"
-        if genannt.is_file():
-            return genannt
-
-    dateien = list(ordner.glob("*.jsonl"))
-    if not dateien:
-        return None
-
-    return max(dateien, key=lambda p: p.stat().st_mtime)
-
-
-# --- Welche Mitschrift gehört zu dieser Sitzung? -----------------------------
-#
-# Die schwierigste Frage der ganzen App. In einem Projektordner liegen Dutzende
-# Mitschriften — jedes Gespräch, das je in diesem Ordner lief. Welche davon
-# gehört zu dem Terminal, das gerade auf dem Handy offen ist?
-#
-# Zweimal haben wir es falsch beantwortet. Erst nahmen wir die zuletzt
-# beschriebene Datei; dann sprang der Verlauf in ein fremdes Gespräch, sobald
-# im selben Ordner ein zweites lief. Dann fragten wir den Claude-Prozess nach
-# seiner Kennung in der Umgebung — aber die setzt Claude Code nicht für sich
-# selbst, sondern nur für Programme, die es startet. Also fanden wir entweder
-# gar nichts (und rieten wieder) oder die Kennung des fremden Claude, der das
-# Terminal einst gestartet hatte. Der Verlauf war weg.
-#
-# Jetzt fragen wir niemanden mehr. Wir vergleichen: Auf dem Bildschirm der
-# Sitzung steht die Unterhaltung — und in der richtigen Mitschrift stehen
-# dieselben Sätze. Die Datei, deren letzte Sätze auf dem Schirm wiederzufinden
-# sind, ist die richtige. Das ist keine Vermutung, das ist ein Beweis.
-
-# Zum Vergleichen lassen wir alles weg, was das Terminal verändert: Umbrüche
-# mitten im Satz, doppelte Leerzeichen, Rahmen, Groß- und Kleinschreibung.
-def _verdichtet(text: str) -> str:
-    return re.sub(r"[^a-z0-9äöüß]", "", text.lower())
-
-
-# Kurze Sätze taugen nicht als Beweis: "Ja." oder "Weiter" steht in jedem
-# zweiten Gespräch. Erst ab dieser Länge ist ein Satz eindeutig genug.
-_BEWEISLAENGE = 30
-
-
-def _letzte_saetze(datei: Path, wieviele: int = 4) -> list[str]:
-    """Die letzten gesprochenen Sätze einer Mitschrift.
-
-    Nur das Ende der Datei wird gelesen — sie werden viele Megabyte groß, und
-    das Handy fragt alle drei Sekunden nach.
-    """
-    try:
-        groesse = datei.stat().st_size
-        with datei.open("rb") as f:
-            f.seek(max(0, groesse - 200_000))
-            schwanz = f.read().decode(errors="replace")
-    except OSError:
-        return []
-
-    saetze: list[str] = []
-    # Die erste Zeile ist nach dem Sprung meist angeschnitten — die überspringt
-    # der JSON-Fehler von selbst.
-    for zeile in reversed(schwanz.splitlines()):
-        try:
-            eintrag = json.loads(zeile)
-        except json.JSONDecodeError:
-            continue
-
-        nachricht = eintrag.get("message")
-        if not isinstance(nachricht, dict):
-            continue
-        if nachricht.get("role") not in ("user", "assistant"):
-            continue
-
-        text = _text_aus(nachricht.get("content")).strip()
-        if len(_verdichtet(text)) >= _BEWEISLAENGE:
-            saetze.append(text)
-        if len(saetze) >= wieviele:
-            break
-
-    return saetze
-
-
-def _steht_auf_dem_schirm(datei: Path, schirm: str) -> bool:
-    """Findet sich diese Mitschrift auf dem Bildschirm der Sitzung wieder?"""
-    for satz in _letzte_saetze(datei):
-        # Ein Ausschnitt genügt: Lange Nachrichten kürzt das Terminal, und die
-        # ersten Zeichen stehen immer da.
-        probe = _verdichtet(satz)[:60]
-        if len(probe) >= _BEWEISLAENGE and probe in schirm:
-            return True
-    return False
-
-
-def finden(cwd: str, schirm: str, zuletzt: str = "") -> str | None:
-    """Die Kennung der Mitschrift, die zu diesem Bildschirm gehört.
-
-    `zuletzt` ist die Kennung, bei der wir letztes Mal gelandet sind. Sie ist
-    fast immer noch richtig — also prüfen wir sie zuerst und lesen im Normalfall
-    nur eine einzige Datei an.
-    """
-    ordner = PROJEKTE / _ordnername(cwd)
-    if not ordner.is_dir():
-        return None
-
-    verdichtet = _verdichtet(schirm)
-
-    if zuletzt:
-        datei = ordner / f"{zuletzt}.jsonl"
-        if datei.is_file() and _steht_auf_dem_schirm(datei, verdichtet):
-            return zuletzt
-
-    # Die bekannte Kennung passt nicht mehr — etwa nach /clear, nach einem
-    # Neustart der Sitzung, oder weil wir sie noch nie kannten. Also suchen wir
-    # von vorn, die zuletzt beschriebenen Dateien zuerst.
-    dateien = sorted(
-        ordner.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True
-    )
-    for datei in dateien[:20]:
-        if _steht_auf_dem_schirm(datei, verdichtet):
-            return datei.stem
-
-    # Nichts passt. Das ist der Normalfall bei einer frischen Sitzung: Es steht
-    # noch nichts auf dem Schirm, was man wiederfinden könnte. Dann bleibt es
-    # bei dem, was wir wissen — und lieber gar nichts als ein fremdes Gespräch.
-    return zuletzt or None
 
 
 def _text_aus(inhalt) -> str:
@@ -178,117 +54,205 @@ def _text_aus(inhalt) -> str:
     return "\n\n".join(s for s in stuecke if s.strip())
 
 
-def lesen(cwd: str, hoechstens: int = 400, kennung: str | None = None) -> list[dict]:
-    """Die Unterhaltung als Blöcke — so, wie sie wirklich stattfand.
+def _bloecke_aus(eintrag: dict) -> list[dict]:
+    """Aus einem Eintrag der Mitschrift werden die Blöcke, die im Handy stehen.
 
     Typen: du, claude, werkzeug, bild.
     """
-    datei = datei_finden(cwd, kennung)
-    if datei is None:
+    # Was ein Untergebener von Claude mit sich selbst bespricht, ist nicht Teil
+    # der Unterhaltung — es ist sein innerer Monolog.
+    if eintrag.get("isSidechain"):
         return []
 
-    bloecke: list[dict] = []
+    nachricht = eintrag.get("message")
+    if not isinstance(nachricht, dict):
+        return []
 
-    with datei.open(errors="replace") as f:
-        for zeile in f:
-            try:
-                eintrag = json.loads(zeile)
-            except json.JSONDecodeError:
+    zeit = eintrag.get("timestamp", "")
+    uuid = eintrag.get("uuid", "")
+    rolle = nachricht.get("role")
+    inhalt = nachricht.get("content")
+
+    def block(typ: str, text: str, datei: str = "") -> dict:
+        return {
+            "typ": typ,
+            "text": text,
+            "datei": datei,
+            "zeilen": 0,
+            "zeit": zeit,
+            "uuid": uuid,
+        }
+
+    # --- Was du gesagt hast ---
+    if rolle == "user":
+        # Werkzeug-Ergebnisse kommen ebenfalls als "user" herein — das sind
+        # aber keine Nachrichten von dir, sondern Rückmeldungen an Claude.
+        if isinstance(inhalt, list) and any(
+            isinstance(t, dict) and t.get("type") == "tool_result" for t in inhalt
+        ):
+            return []
+
+        bloecke = []
+
+        # Ein Bild, das du geschickt hast.
+        if isinstance(inhalt, list):
+            for teil in inhalt:
+                if isinstance(teil, dict) and teil.get("type") == "image":
+                    bloecke.append(block("bild", ""))
+                    break
+
+        text = _text_aus(inhalt).strip()
+        if not text:
+            return bloecke
+
+        # Hinweise, die das System einstreut, sind nicht von dir:
+        # Bild-Beschreibungen, Erinnerungen, Werkzeug-Rückmeldungen.
+        if (
+            text.startswith("<")
+            or text.startswith("[Image:")
+            or text.startswith("[Request interrupted")
+            or "system-reminder" in text[:80]
+            or "Called the Read tool" in text[:80]
+        ):
+            return bloecke
+
+        # Ein Foto, das du über die App geschickt hast: Der Pfad steht als Text
+        # da. Wir zeigen das Bild statt des Pfades.
+        bild = ""
+        for wort in text.split():
+            if ".hetzner-bilder/" in wort:
+                bild = wort.split(".hetzner-bilder/")[-1]
+                text = text.replace(wort, "").strip()
+                break
+
+        bloecke.append(block("bild", text, bild) if bild else block("du", text))
+        return bloecke
+
+    # --- Was Claude geantwortet hat ---
+    if rolle == "assistant" and isinstance(inhalt, list):
+        bloecke = []
+        for teil in inhalt:
+            if not isinstance(teil, dict):
                 continue
 
-            nachricht = eintrag.get("message")
-            if not isinstance(nachricht, dict):
+            # Sein Nachdenken gehört ihm, nicht in den Verlauf.
+            if teil.get("type") == "thinking":
                 continue
 
-            rolle = nachricht.get("role")
-            inhalt = nachricht.get("content")
+            if teil.get("type") == "text":
+                text = teil.get("text", "").strip()
+                if text:
+                    bloecke.append(block("claude", text))
 
-            # --- Was du gesagt hast ---
-            if rolle == "user":
-                # Werkzeug-Ergebnisse kommen ebenfalls als "user" herein — das
-                # sind aber keine Nachrichten von dir, sondern Rückmeldungen an
-                # Claude. Die gehören nicht in den Verlauf.
-                if isinstance(inhalt, list) and any(
-                    isinstance(t, dict) and t.get("type") == "tool_result" for t in inhalt
-                ):
-                    continue
-
-                # Ein Bild, das du geschickt hast.
-                if isinstance(inhalt, list):
-                    for teil in inhalt:
-                        if isinstance(teil, dict) and teil.get("type") == "image":
-                            bloecke.append({"typ": "bild", "text": "", "datei": "", "zeilen": 0})
+            elif teil.get("type") == "tool_use":
+                werkzeug = teil.get("name", "?")
+                # Der wichtigste Hinweis darauf, was das Werkzeug tat — meist
+                # eine Datei oder ein Befehl.
+                eingabe = teil.get("input", {})
+                womit = ""
+                if isinstance(eingabe, dict):
+                    for schluessel in ("file_path", "command", "pattern", "path", "description"):
+                        if eingabe.get(schluessel):
+                            womit = str(eingabe[schluessel])
                             break
 
-                text = _text_aus(inhalt).strip()
-                if not text:
+                # Lange Befehle abschneiden — sie sollen den Verlauf nicht
+                # überschwemmen.
+                if len(womit) > 70:
+                    womit = womit[:67] + "…"
+
+                bloecke.append(block("werkzeug", f"{werkzeug}({womit})" if womit else werkzeug))
+        return bloecke
+
+    return []
+
+
+# --- Die Mitschriften lesen, ohne sie jedes Mal ganz zu lesen ----------------
+#
+# Das Handy fragt alle drei Sekunden nach dem Verlauf, und die Mitschriften
+# eines langen Projekts sind zusammen viele Megabyte groß. Sie jedes Mal
+# vollständig durchzukauen, hieße den Server im Leerlauf glühen zu lassen.
+#
+# Mitschriften werden nur hinten angehängt, nie umgeschrieben. Also merken wir
+# uns pro Datei, bis wohin wir gelesen haben, und holen beim nächsten Mal nur
+# das Neue nach.
+
+_gemerkt: dict[Path, dict] = {}
+
+# Mehr als so viele Blöcke zeigt das Handy ohnehin nie an. Was älter ist,
+# dürfen wir aus dem Gedächtnis werfen — nachlesen könnten wir es notfalls
+# wieder von der Platte.
+_HOECHSTENS = 400
+
+
+def _aus_datei(datei: Path) -> list[dict]:
+    """Die Blöcke einer Mitschrift — frisch gelesen wird nur, was dazukam."""
+    try:
+        groesse = datei.stat().st_size
+    except OSError:
+        return []
+
+    stand = _gemerkt.get(datei, {"gelesen": 0, "bloecke": []})
+
+    # Ist die Datei kürzer als beim letzten Mal, ist sie nicht gewachsen,
+    # sondern eine andere geworden. Dann fangen wir von vorne an.
+    if groesse < stand["gelesen"]:
+        stand = {"gelesen": 0, "bloecke": []}
+
+    if groesse > stand["gelesen"]:
+        try:
+            with datei.open("rb") as f:
+                f.seek(stand["gelesen"])
+                neu = f.read()
+        except OSError:
+            return stand["bloecke"]
+
+        # Claude schreibt womöglich gerade mitten in einer Zeile. Die nehmen
+        # wir noch nicht — beim nächsten Mal ist sie fertig.
+        schluss = neu.rfind(b"\n")
+        if schluss >= 0:
+            for zeile in neu[: schluss + 1].decode(errors="replace").splitlines():
+                try:
+                    eintrag = json.loads(zeile)
+                except json.JSONDecodeError:
                     continue
+                stand["bloecke"].extend(_bloecke_aus(eintrag))
 
-                # Hinweise, die das System einstreut, sind nicht von dir:
-                # Bild-Beschreibungen, Erinnerungen, Werkzeug-Rückmeldungen.
-                if (
-                    text.startswith("<")
-                    or text.startswith("[Image:")
-                    or text.startswith("[Request interrupted")
-                    or "system-reminder" in text[:80]
-                    or "Called the Read tool" in text[:80]
-                ):
-                    continue
+            stand["gelesen"] += schluss + 1
+            stand["bloecke"] = stand["bloecke"][-_HOECHSTENS:]
 
-                # Ein Foto, das du über die App geschickt hast: Der Pfad steht
-                # als Text da. Wir zeigen das Bild statt des Pfades.
-                bild = None
-                for wort in text.split():
-                    if ".hetzner-bilder/" in wort:
-                        bild = wort.split(".hetzner-bilder/")[-1]
-                        text = text.replace(wort, "").strip()
-                        break
+        _gemerkt[datei] = stand
 
-                if bild:
-                    bloecke.append({"typ": "bild", "text": text, "datei": bild, "zeilen": 0})
-                else:
-                    bloecke.append({"typ": "du", "text": text, "datei": "", "zeilen": 0})
-                continue
+    return stand["bloecke"]
 
-            # --- Was Claude geantwortet hat ---
-            if rolle == "assistant" and isinstance(inhalt, list):
-                for teil in inhalt:
-                    if not isinstance(teil, dict):
-                        continue
 
-                    # Sein Nachdenken gehört ihm, nicht in den Verlauf.
-                    if teil.get("type") == "thinking":
-                        continue
+def lesen(cwd: str, hoechstens: int = _HOECHSTENS) -> list[dict]:
+    """Die Unterhaltung dieses Projekts — alle Gespräche, in einer Zeitleiste."""
+    ordner = PROJEKTE / _ordnername(cwd)
+    if not ordner.is_dir():
+        return []
 
-                    if teil.get("type") == "text":
-                        text = teil.get("text", "").strip()
-                        if text:
-                            bloecke.append(
-                                {"typ": "claude", "text": text, "datei": "", "zeilen": 0}
-                            )
+    alle: list[dict] = []
+    for datei in ordner.glob("*.jsonl"):
+        alle.extend(_aus_datei(datei))
 
-                    elif teil.get("type") == "tool_use":
-                        werkzeug = teil.get("name", "?")
-                        # Der wichtigste Hinweis darauf, was das Werkzeug tat —
-                        # meist eine Datei oder ein Befehl.
-                        eingabe = teil.get("input", {})
-                        womit = ""
-                        if isinstance(eingabe, dict):
-                            for schluessel in ("file_path", "command", "pattern", "path", "description"):
-                                if eingabe.get(schluessel):
-                                    womit = str(eingabe[schluessel])
-                                    break
+    # Chronologisch. Der Zeitstempel steht in jedem Eintrag und ist überall
+    # derselbe — auch über Gespräche und Rechner hinweg.
+    alle.sort(key=lambda b: b["zeit"])
 
-                        # Lange Befehle abschneiden — sie sollen den Verlauf
-                        # nicht überschwemmen.
-                        if len(womit) > 70:
-                            womit = womit[:67] + "…"
+    # Wird ein Gespräch fortgesetzt oder zusammengefasst, schreibt Claude Code
+    # das Bisherige in die neue Datei mit. Sonst stünde jeder Satz zweimal da.
+    # Wir erkennen dieselbe Aussage an ihrer Kennung — und, falls die neu
+    # vergeben wurde, an Zeitpunkt und Wortlaut.
+    gesehen: set = set()
+    strang: list[dict] = []
+    for block in alle:
+        merkmale = {(block["zeit"], block["typ"], block["text"][:80])}
+        if block["uuid"]:
+            merkmale.add(block["uuid"])
+        if merkmale & gesehen:
+            continue
+        gesehen |= merkmale
+        strang.append(block)
 
-                        bloecke.append({
-                            "typ": "werkzeug",
-                            "text": f"{werkzeug}({womit})" if womit else werkzeug,
-                            "datei": "",
-                            "zeilen": 0,
-                        })
-
-    return bloecke[-hoechstens:]
+    return strang[-hoechstens:]
