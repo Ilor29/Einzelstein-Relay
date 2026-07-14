@@ -8,6 +8,7 @@ am Handy weitermachen.
 from __future__ import annotations
 
 import asyncio
+import os
 import shlex
 import subprocess
 import time
@@ -116,6 +117,11 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
     # Fenster haben dürfen, ohne dass der kleinste alle anderen erdrosselt.
     _run("set-option", "-t", PREFIX + name, "aggressive-resize", "on")
 
+    # tmux' eigene Statusleiste ausblenden. Auf dem Handy ist jede Zeile
+    # kostbar, und was sie anzeigt — Sitzungsname und Uhrzeit — steht in der
+    # App ohnehin schon oben drüber.
+    _run("set-option", "-t", PREFIX + name, "status", "off")
+
     if first_prompt:
         # Claude Code braucht einen Moment, bis es Eingaben annimmt.
         # Das erledigt der Aufrufer über send_text(), nicht wir hier —
@@ -182,11 +188,20 @@ async def attach(name: str, cols: int, rows: int) -> asyncio.subprocess.Process:
         f"stty cols {int(cols)} rows {int(rows)}; "
         f"exec tmux {' '.join(SERVER)} attach-session -t {shlex.quote(PREFIX + name)}"
     )
+
+    # TERM sagt tmux, was für ein Terminal am anderen Ende sitzt. Fehlt es,
+    # weiß tmux nicht, wie es den Bildschirm zeichnen soll, und bricht mit
+    # "terminal does not support clear" ab — der Dienst läuft nämlich unter
+    # systemd, und das setzt kein TERM. Im Browser sitzt xterm.js, also sagen
+    # wir genau das.
+    umgebung = {**os.environ, "TERM": "xterm-256color"}
+
     return await asyncio.create_subprocess_exec(
         "script", "-q", "-c", cmd, "/dev/null",
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
+        env=umgebung,
     )
 
 
