@@ -129,6 +129,13 @@
       <rect x="9" y="9" width="6" height="6" rx="1"/>
     </g>
 
+    <!-- Ein schlichtes Kreuz: das Diktat wegwerfen. Kräftiger gezeichnet als
+         die übrigen Symbole — es muss im Auto mit einem Blick zu treffen sein. -->
+    <g id="i-kreuz" fill="none" stroke="currentColor" stroke-width="2.2"
+       stroke-linecap="round">
+      <path d="M7 7l10 10M17 7L7 17"/>
+    </g>
+
     <!-- Eine Uhr mit Pfeil: den Stand festhalten, damit man später zurück kann. -->
     <g id="i-sichern" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
@@ -234,6 +241,11 @@
     <input type="file" id="bild-waehler" accept="image/*" hidden>
     <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
       <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
+    </button>
+    <!-- Verwirft das Diktat. Erscheint nur, während zugehört wird. -->
+    <button type="button" id="knopf-diktat-weg" class="knopf-diktat verwerfen"
+            aria-label="Diktat verwerfen" hidden>
+      <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
     </button>
     <!-- Welches Modell gerade denkt. Antippen öffnet die Auswahl. -->
     <button type="button" id="knopf-modell" class="modell-knopf">

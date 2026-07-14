@@ -18,6 +18,9 @@
   --laeuft: #6BB899;
   --wartet: #D9A441;
   --ruht: #7A766E;
+  /* Wegwerfen — gedämpftes Rot, damit es sich vom orangen Akzent absetzt. */
+  --verwerfen: #C96A5E;
+  --verwerfen-weich: #3A2220;
 
   --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
@@ -716,6 +719,19 @@ html, body {
 }
 .knopf-diktat:active { background: var(--erhoben-2); }
 .knopf-diktat svg { width: 18px; height: 18px; }
+
+/* Das Kreuz neben dem laufenden Mikrofon: wirft das Diktat weg.
+   Das Mikrofon leuchtet währenddessen orange — das Kreuz braucht deshalb einen
+   eigenen Ton, sonst verschwimmen die beiden zu einem Knubbel. Ein warnendes
+   Rot, umrandet: erkennbar auf einen Blick, ohne zu schreien. */
+.knopf-diktat.verwerfen {
+  background: var(--verwerfen-weich);
+  border: 1px solid var(--verwerfen);
+  color: var(--verwerfen);
+}
+.knopf-diktat.verwerfen[hidden] { display: none; }
+.knopf-diktat.verwerfen:active { background: var(--verwerfen); color: #fff; }
+.knopf-diktat.verwerfen svg { width: 16px; height: 16px; }
 
 /* Während das Bild hochgeht, blinkt der Knopf leise. */
 .knopf-diktat.laedt {

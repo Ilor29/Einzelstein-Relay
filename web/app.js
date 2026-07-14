@@ -816,7 +816,8 @@ eingabeFeld.addEventListener("keydown", (e) => {
 
 const Spracherkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
 let hoert = null;
-let hoertStoppen = null;   // beendet das Zuhören — von überall her aufrufbar
+let hoertStoppen = null;    // beendet das Zuhören — von überall her aufrufbar
+let hoertVerwerfen = null;  // beendet es und wirft das Diktierte weg
 
 $("knopf-diktat").addEventListener("click", () => {
   const knopf = $("knopf-diktat");
@@ -918,12 +919,27 @@ $("knopf-diktat").addEventListener("click", () => {
     }
 
     knopf.classList.remove("hoert");
+    $("knopf-diktat-weg").hidden = true;
     feld.placeholder = "Nachricht an Claude …";
     hoertStoppen = null;
+    hoertVerwerfen = null;
   };
 
+  // Das Kreuz: zu spät gestartet, verhaspelt, Unsinn geredet — weg damit.
+  //
+  // Es stellt das Feld auf den Stand vor dem Diktat zurück. Was du vorher
+  // getippt hattest, bleibt also stehen; nur das Gesprochene verschwindet.
+  hoertVerwerfen = () => {
+    hoertStoppen?.();
+    feld.value = vorher.trimEnd();
+    feldAnpassen();
+  };
+
+  $("knopf-diktat-weg").hidden = false;
   lauschen();
 });
+
+$("knopf-diktat-weg").addEventListener("click", () => hoertVerwerfen?.());
 
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();
