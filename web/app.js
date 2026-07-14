@@ -390,8 +390,38 @@ function verlaufBlock(block) {
   const el = document.createElement("div");
 
   if (block.typ === "du") {
-    el.className = "blase du";
-    el.textContent = block.text;
+    el.className = "gesagt";
+
+    const blase = document.createElement("div");
+    blase.className = "blase du";
+    blase.textContent = block.text;
+
+    // Nochmal senden. Genau für den Fall, dass ein Diktat verloren ging oder
+    // Claude nicht antwortete: einmal tippen, statt alles neu zu sprechen.
+    const leiste = document.createElement("div");
+    leiste.className = "gesagt-leiste";
+
+    const nochmal = document.createElement("button");
+    nochmal.className = "klein-knopf";
+    nochmal.setAttribute("aria-label", "Nochmal an Claude senden");
+    nochmal.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-nochmal"/></svg>`;
+    nochmal.addEventListener("click", async () => {
+      if (!confirm("Diese Nachricht nochmal an Claude senden?")) return;
+      try {
+        await sendeInSitzung(block.text);
+        nochmal.classList.add("getan");
+        nochmal.querySelector("use").setAttribute("href", "#i-haken");
+        setTimeout(() => {
+          nochmal.classList.remove("getan");
+          nochmal.querySelector("use").setAttribute("href", "#i-nochmal");
+        }, 1600);
+      } catch (err) {
+        alert(err.message || "Senden hat nicht geklappt.");
+      }
+    });
+
+    leiste.append(nochmal);
+    el.append(blase, leiste);
     return el;
   }
 
@@ -713,6 +743,24 @@ function setzeVerbindung(verbunden) {
   anzeige.lastChild.textContent = verbunden ? "verbunden" : "getrennt";
 }
 
+// Text an die Sitzung schicken — von der Eingabezeile oder aus dem Verlauf.
+// In der Lese-Ansicht gibt es keine offene Verbindung; der Text geht über den
+// Server hinein und erscheint gleich als deine Blase im Verlauf.
+async function sendeInSitzung(text) {
+  if (!text || !aktuelleSitzung) return;
+
+  if (imTerminal) {
+    steckdose?.send(text + "\r");
+    return;
+  }
+
+  await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+  setTimeout(ladeVerlauf, 600);
+}
+
 // Eingabezeile: bequemer als direkt ins Terminal zu tippen, weil die
 // Handytastatur so ihre Autokorrektur und das Diktieren anbieten kann.
 $("eingabe-formular").addEventListener("submit", async (e) => {
@@ -729,19 +777,8 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 
   feld.value = "";
 
-  if (imTerminal) {
-    steckdose?.send(text + "\r");
-    return;
-  }
-
-  // In der Lese-Ansicht gibt es keine offene Verbindung. Der Text geht über
-  // den Server hinein — und erscheint gleich als deine Blase im Verlauf.
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
-      method: "POST",
-      body: JSON.stringify({ text }),
-    });
-    setTimeout(ladeVerlauf, 600);
+    await sendeInSitzung(text);
   } catch (err) {
     feld.value = text;      // nichts verloren
     alert(err.message);

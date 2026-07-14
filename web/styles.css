@@ -463,7 +463,7 @@ html, body {
 /* Wo der Sprecher wechselt, wird die Luft größer.
    Ein neuer Gedanke von dir soll sich vom vorigen Absatz abheben — sonst
    verschwimmt die Unterhaltung zu einer einzigen Textwand. */
-.blase.du,
+.gesagt,
 .foto {
   margin-top: 1.1rem;
 }
@@ -474,10 +474,17 @@ html, body {
   overflow-wrap: anywhere;    /* lange Pfade sprengen nicht das Layout */
 }
 
+/* Was du gesagt hast: die Blase rechts, darunter der Nochmal-Knopf. Beides
+   zusammen rutscht nach rechts, damit die Blase bleibt, wo man sie erwartet. */
+.gesagt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 /* Was du gesagt hast — rechts, in einer Blase, wie man es erwartet.
    Der Akzentrand macht auf einen Blick klar, dass hier du sprichst. */
 .blase.du {
-  align-self: flex-end;
   max-width: 85%;
   background: var(--erhoben-2);
   color: var(--schrift);
@@ -528,6 +535,15 @@ html, body {
   gap: .15rem;
   margin-top: -.15rem;
 }
+
+/* Der Nochmal-Knopf unter deiner Blase. Halb durchscheinend, bis man ihn
+   braucht — er soll die eigene Nachricht nicht überstrahlen. */
+.gesagt-leiste {
+  display: flex;
+  margin-top: -.1rem;
+  opacity: .55;
+}
+.gesagt-leiste:hover { opacity: 1; }
 
 .klein-knopf {
   display: flex;
