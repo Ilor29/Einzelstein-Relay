@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=18">
+  <link rel="stylesheet" href="/styles.css?v=19">
 
   <script>
     /* Die Notbremse.
@@ -128,6 +128,12 @@
       <circle cx="12" cy="12" r="9"/>
       <rect x="9" y="9" width="6" height="6" rx="1"/>
     </g>
+
+    <g id="i-zahnrad" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </g>
   </defs>
 </svg>
 
@@ -164,6 +170,9 @@
   <header class="kopf">
     <h1>Sitzungen</h1>
     <span id="verbindung" class="verbindung"><span class="punkt"></span>verbunden</span>
+    <button id="knopf-einstellungen" class="knopf-blank" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24"><use href="#i-zahnrad"/></svg>
+    </button>
   </header>
   <div id="liste" class="liste"></div>
   <div class="fuss">
@@ -260,10 +269,28 @@
   </form>
 </section>
 
+<!-- Einstellungen -->
+<section id="ansicht-einstellungen" class="ansicht" hidden>
+  <header class="kopf">
+    <button id="knopf-einst-zurueck" class="knopf-blank" aria-label="Zurück">
+      <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
+    </button>
+    <h1>Einstellungen</h1>
+  </header>
+  <div class="formular">
+    <div class="feld">
+      <span class="marke">Stimme zum Vorlesen</span>
+      <p class="hinweis">Antippen zum Anhören. Die gewählte Stimme liest dir
+         künftig alles vor.</p>
+      <div id="stimmen-liste" class="wahl"></div>
+    </div>
+  </div>
+</section>
+
 <audio id="stimme" hidden></audio>
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=18"></script>
+<script src="/app.js?v=19"></script>
 </body>
 </html>

@@ -632,6 +632,16 @@ html, body {
   flex: none;
   border: 1.5px solid var(--schrift-schwach);
 }
+/* Die Stimmenauswahl benutzt dieselben Zeilen wie die Ordnerwahl. */
+.ordner .stimme-name { font-family: var(--sans); font-size: .92rem; }
+.ordner .sub {
+  margin-left: auto;
+  font-size: .72rem;
+  color: var(--schrift-schwach);
+  font-family: var(--sans);
+}
+.ordner .klein-knopf { margin-left: .5rem; }
+
 .ordner.gewaehlt .punkt-wahl {
   border-color: var(--akzent);
   border-width: 4px;

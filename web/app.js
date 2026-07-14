@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 18;
+const VERSION = 19;
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,7 +29,7 @@ async function versionPruefen() {
   }
 }
 
-const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu"];
+const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen"];
 
 function zeige(name) {
   for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
@@ -918,7 +918,7 @@ function stille() {
 
 /** Liest einen Text vor. Ein zweiter Druck — auf denselben oder einen anderen
  *  Knopf — hört sofort auf. Es spricht immer nur eine Stimme. */
-async function sprich(text, knopf) {
+async function sprich(text, knopf, stimmeName = null) {
   // Läuft schon etwas? Dann erst mal Ruhe.
   const derselbe = sprecherKnopf === knopf;
   if (spricht) {
@@ -936,7 +936,8 @@ async function sprich(text, knopf) {
   try {
     const antwort = await api("/speak", {
       method: "POST",
-      body: JSON.stringify({ text }),
+      // stimmeName nur bei der Hörprobe — sonst spricht die gewählte.
+      body: JSON.stringify(stimmeName ? { text, stimme: stimmeName } : { text }),
     });
     const klang = await antwort.blob();
 
@@ -1024,6 +1025,62 @@ navigator.serviceWorker?.addEventListener("message", async (e) => {
   } catch {
     // dann eben nicht
   }
+});
+
+// --- Einstellungen: die Stimme ------------------------------------------------
+
+const PROBE = "Hallo Roli. So klinge ich, wenn ich dir vorlese, was Claude geschrieben hat.";
+
+$("knopf-einstellungen").addEventListener("click", async () => {
+  stoppeListe();
+  zeige("einstellungen");
+
+  const liste = $("stimmen-liste");
+  liste.replaceChildren();
+
+  const stimmen = await (await api("/stimmen")).json();
+
+  for (const s of stimmen) {
+    const el = document.createElement("div");
+    el.className = "ordner" + (s.gewaehlt ? " gewaehlt" : "");
+    el.innerHTML = `
+      <span class="punkt-wahl"></span>
+      <span class="stimme-name"></span>
+      <span class="sub"></span>
+      <button class="klein-knopf" aria-label="Anhören">
+        <svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>
+      </button>`;
+    el.querySelector(".stimme-name").textContent = s.anzeige;
+    el.querySelector(".sub").textContent = s.art;
+
+    // Anhören, ohne zu wählen.
+    el.querySelector("button").addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const knopf = e.currentTarget;
+      if (spricht && sprecherKnopf === knopf) {
+        stille();
+        return;
+      }
+      await sprich(PROBE, knopf, s.name);
+    });
+
+    // Wählen.
+    el.addEventListener("click", async () => {
+      await api("/stimmen", {
+        method: "POST",
+        body: JSON.stringify({ name: s.name }),
+      });
+      liste.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
+      el.classList.add("gewaehlt");
+    });
+
+    liste.append(el);
+  }
+});
+
+$("knopf-einst-zurueck").addEventListener("click", () => {
+  stille();
+  starteListe();
 });
 
 // --- Neue Sitzung ------------------------------------------------------------

@@ -14,11 +14,54 @@ import shutil
 import sys
 from pathlib import Path
 
-# Wo das Sprachmodell liegt. Wird beim Einrichten heruntergeladen.
-MODELL = Path(os.environ.get(
-    "HETZNER_APP_PIPER_MODEL",
-    Path.home() / ".hetzner-app" / "stimmen" / "de_DE-thorsten-medium.onnx",
-))
+STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
+EINSTELLUNG = Path.home() / ".hetzner-app" / "stimme.txt"
+
+# Die Stimmen, die wir kennen — mit Namen, die ein Mensch versteht.
+KATALOG = {
+    "de_DE-thorsten-medium": ("Thorsten", "männlich, ruhig"),
+    "de_DE-karlsson-low": ("Karlsson", "männlich, hell"),
+    "de_DE-eva_k-x_low": ("Eva", "weiblich, weich"),
+    "de_DE-kerstin-low": ("Kerstin", "weiblich, klar"),
+    "de_DE-ramona-low": ("Ramona", "weiblich, warm"),
+}
+
+STANDARD = "de_DE-thorsten-medium"
+
+
+def stimmen() -> list[dict]:
+    """Welche Stimmen auf diesem Server bereitliegen."""
+    gewaehlt = gewaehlte_stimme()
+    liste = []
+    for datei in sorted(STIMMEN.glob("*.onnx")):
+        name = datei.stem
+        anzeige, art = KATALOG.get(name, (name, ""))
+        liste.append({
+            "name": name,
+            "anzeige": anzeige,
+            "art": art,
+            "gewaehlt": name == gewaehlt,
+        })
+    return liste
+
+
+def gewaehlte_stimme() -> str:
+    if EINSTELLUNG.exists():
+        name = EINSTELLUNG.read_text().strip()
+        if (STIMMEN / f"{name}.onnx").is_file():
+            return name
+    return STANDARD
+
+
+def stimme_waehlen(name: str) -> None:
+    if not (STIMMEN / f"{name}.onnx").is_file():
+        raise ValueError("Diese Stimme gibt es nicht.")
+    EINSTELLUNG.parent.mkdir(parents=True, exist_ok=True)
+    EINSTELLUNG.write_text(name)
+
+
+def modell(name: str | None = None) -> Path:
+    return STIMMEN / f"{name or gewaehlte_stimme()}.onnx"
 
 
 class TTSError(RuntimeError):
@@ -37,21 +80,21 @@ def _finde_piper() -> str | None:
     return shutil.which("piper")
 
 
-async def synthesize(text: str) -> bytes:
-    """Macht aus Text eine WAV-Datei."""
+async def synthesize(text: str, stimme: str | None = None) -> bytes:
+    """Macht aus Text eine WAV-Datei — mit der gewählten Stimme."""
     piper = _finde_piper()
     if not piper:
         raise TTSError(
             "Piper ist nicht installiert. Führe scripts/install-piper.sh aus."
         )
-    if not MODELL.exists():
-        raise TTSError(
-            f"Die Stimme fehlt: {MODELL}. Führe scripts/install-piper.sh aus."
-        )
+
+    datei = modell(stimme)
+    if not datei.exists():
+        raise TTSError(f"Die Stimme fehlt: {datei.stem}")
 
     process = await asyncio.create_subprocess_exec(
         piper,
-        "--model", str(MODELL),
+        "--model", str(datei),
         "--output_file", "-",       # WAV auf die Standardausgabe
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,

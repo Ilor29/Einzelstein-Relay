@@ -53,7 +53,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 18
+VERSION = 19
 
 
 @app.get("/api/version")
@@ -231,12 +231,32 @@ def melden_probe() -> dict:
 
 class Speak(BaseModel):
     text: str
+    stimme: str | None = None      # nur für die Hörprobe
+
+
+class Stimme(BaseModel):
+    name: str
 
 
 @app.post("/api/speak", dependencies=[Depends(require_auth)])
 async def speak(body: Speak) -> Response:
-    audio = await tts.synthesize(body.text)
+    audio = await tts.synthesize(body.text, body.stimme)
     return Response(content=audio, media_type="audio/wav")
+
+
+@app.get("/api/stimmen", dependencies=[Depends(require_auth)])
+def stimmen() -> list[dict]:
+    """Welche Stimmen bereitliegen — und welche gerade spricht."""
+    return tts.stimmen()
+
+
+@app.post("/api/stimmen", dependencies=[Depends(require_auth)])
+def stimme_waehlen(body: Stimme) -> dict:
+    try:
+        tts.stimme_waehlen(body.name)
+    except ValueError as fehler:
+        raise HTTPException(400, str(fehler))
+    return {"ok": True, "stimme": body.name}
 
 
 @app.get("/api/sessions/{name}/text", dependencies=[Depends(require_auth)])
