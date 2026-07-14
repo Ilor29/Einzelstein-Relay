@@ -19,13 +19,20 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import geraete, state, tmux, tts
+from . import geraete, melden, state, tmux, tts
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
 COOKIE = "hetzner_app_anmeldung"
 
 app = FastAPI(title="Hetzner-App")
+
+
+@app.on_event("startup")
+async def waechter_starten() -> None:
+    """Der Wächter behält die Sitzungen im Auge und meldet sich, wenn eine
+    fertig ist oder eine Rückfrage hat."""
+    asyncio.create_task(melden.waechter())
 
 
 # --- Zugangsschutz -----------------------------------------------------------
@@ -172,6 +179,30 @@ def list_dirs() -> list[str]:
         reverse=True,
     )
     return [str(d) for d in dirs[:20]]
+
+
+# --- Benachrichtigungen ------------------------------------------------------
+
+@app.get("/api/melden/schluessel", dependencies=[Depends(require_auth)])
+def melden_schluessel() -> dict:
+    """Den der Browser braucht, um sich beim Push-Dienst anzumelden."""
+    return {"schluessel": melden.oeffentlicher_schluessel()}
+
+
+@app.post("/api/melden/eintragen", dependencies=[Depends(require_auth)])
+async def melden_eintragen(anmeldung: dict) -> dict:
+    melden.eintragen(anmeldung)
+    return {"ok": True}
+
+
+@app.post("/api/melden/probe", dependencies=[Depends(require_auth)])
+def melden_probe() -> dict:
+    """Eine Probenachricht — damit du siehst, dass es wirklich ankommt."""
+    zugestellt = melden.schicken(
+        "Probe",
+        "Die Benachrichtigungen funktionieren. Ab jetzt meldet sich dein Handy, wenn Claude fertig ist.",
+    )
+    return {"ok": True, "zugestellt": zugestellt}
 
 
 # --- Vorlesen ----------------------------------------------------------------

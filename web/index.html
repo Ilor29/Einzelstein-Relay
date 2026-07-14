@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=2">
+  <link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body>
 
@@ -62,6 +62,7 @@
     <button id="knopf-zurueck" class="knopf-blank" aria-label="Zurück zur Übersicht">←</button>
     <h1 id="sitzung-name" class="mono"></h1>
     <button id="knopf-vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">🔊</button>
+    <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn fertig">🔔</button>
     <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">📌</button>
   </header>
   <div id="terminal" class="terminal"></div>
@@ -103,6 +104,12 @@
       <span class="schalter"></span>
     </label>
 
+    <label class="schalterzeile">
+      <span>Melden, wenn fertig</span>
+      <input type="checkbox" id="neu-melden" checked>
+      <span class="schalter"></span>
+    </label>
+
     <button type="submit" class="knopf-voll">Sitzung starten</button>
     <p id="neu-fehler" class="fehler" hidden></p>
   </form>
@@ -112,6 +119,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=2"></script>
+<script src="/app.js?v=3"></script>
 </body>
 </html>

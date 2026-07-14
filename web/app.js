@@ -268,6 +268,7 @@ function oeffneSitzung(sitzung) {
 
   $("sitzung-name").textContent = sitzung.name;
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
+  $("knopf-melden").classList.toggle("an", sitzung.notifyWhenDone);
   zeige("sitzung");
 
   if (!term) {
@@ -356,6 +357,27 @@ $("knopf-anheften").addEventListener("click", async () => {
   $("knopf-anheften").classList.toggle("an", neu);
 });
 
+$("knopf-melden").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  const neu = !aktuelleSitzung.notifyWhenDone;
+
+  if (neu) {
+    try {
+      await meldenEinschalten();
+    } catch (err) {
+      alert(err.message);
+      return;
+    }
+  }
+
+  await api(`/sessions/${aktuelleSitzung.name}`, {
+    method: "PATCH",
+    body: JSON.stringify({ notify_when_done: neu }),
+  });
+  aktuelleSitzung.notifyWhenDone = neu;
+  $("knopf-melden").classList.toggle("an", neu);
+});
+
 // --- Vorlesen ----------------------------------------------------------------
 
 const stimme = $("stimme");
@@ -402,6 +424,55 @@ $("knopf-vorlesen").addEventListener("click", async () => {
   }
 });
 
+// --- Benachrichtigungen ------------------------------------------------------
+
+function rohSchluessel(base64) {
+  const gefuellt = (base64 + "===").slice(0, base64.length + (4 - (base64.length % 4)) % 4)
+    .replace(/-/g, "+").replace(/_/g, "/");
+  const roh = atob(gefuellt);
+  return Uint8Array.from([...roh].map((z) => z.charCodeAt(0)));
+}
+
+async function meldenEinschalten() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    throw new Error("Dieses Handy kann keine Benachrichtigungen empfangen.");
+  }
+
+  const erlaubnis = await Notification.requestPermission();
+  if (erlaubnis !== "granted") {
+    throw new Error("Ohne deine Erlaubnis kann sich das Handy nicht melden.");
+  }
+
+  const wache = await navigator.serviceWorker.ready;
+  const { schluessel } = await (await api("/melden/schluessel")).json();
+
+  let anmeldung = await wache.pushManager.getSubscription();
+  if (!anmeldung) {
+    anmeldung = await wache.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: rohSchluessel(schluessel),
+    });
+  }
+
+  await api("/melden/eintragen", {
+    method: "POST",
+    body: JSON.stringify(anmeldung.toJSON()),
+  });
+}
+
+// Tippt man eine Benachrichtigung an, springt die App in die Sitzung.
+navigator.serviceWorker?.addEventListener("message", async (e) => {
+  const name = e.data?.oeffne;
+  if (!name) return;
+  try {
+    const sitzungen = await (await api("/sessions")).json();
+    const treffer = sitzungen.find((s) => s.name === name);
+    if (treffer) oeffneSitzung(treffer);
+  } catch {
+    // dann eben nicht
+  }
+});
+
 // --- Neue Sitzung ------------------------------------------------------------
 
 let gewaehlterOrdner = null;
@@ -444,7 +515,20 @@ $("neu-formular").addEventListener("submit", async (e) => {
     return;
   }
 
+  const melden = $("neu-melden").checked;
+
   try {
+    // Erst die Erlaubnis holen — danach wäre das Fenster weg, weil wir
+    // schon in die Liste gesprungen sind.
+    if (melden) {
+      try {
+        await meldenEinschalten();
+      } catch (err) {
+        // Kein Grund, die Sitzung deswegen platzen zu lassen.
+        console.warn("Benachrichtigungen aus:", err.message);
+      }
+    }
+
     await api("/sessions", {
       method: "POST",
       body: JSON.stringify({
@@ -452,6 +536,7 @@ $("neu-formular").addEventListener("submit", async (e) => {
         cwd: gewaehlterOrdner,
         first_prompt: $("neu-auftrag").value,
         pinned: $("neu-anheften").checked,
+        notify_when_done: melden,
       }),
     });
     $("neu-formular").reset();
