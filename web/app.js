@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 9;
+const VERSION = 10;
 
 const $ = (id) => document.getElementById(id);
 
@@ -350,8 +350,21 @@ function verlaufBlock(block) {
   }
 
   if (block.typ === "claude") {
-    el.className = "blase claude";
-    el.textContent = block.text;
+    el.className = "antwort";
+
+    const text = document.createElement("div");
+    text.className = "blase claude";
+    text.textContent = block.text;
+
+    // Jede Antwort hat ihren eigenen Lautsprecher. Sonst kann man immer nur
+    // die letzte hören — und muss den Rest lesen, obwohl man Auto fährt.
+    const knopf = document.createElement("button");
+    knopf.className = "vorlesen-klein";
+    knopf.setAttribute("aria-label", "Diesen Absatz vorlesen");
+    knopf.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>`;
+    knopf.addEventListener("click", () => sprich(block.text, knopf));
+
+    el.append(text, knopf);
     return el;
   }
 
@@ -375,6 +388,8 @@ function verlaufBlock(block) {
   return el;
 }
 
+let zuletztGesehen = "";
+
 async function ladeVerlauf() {
   if (!aktuelleSitzung || imTerminal) return;
 
@@ -385,10 +400,18 @@ async function ladeVerlauf() {
     return;
   }
 
+  // Hat sich überhaupt etwas geändert?
+  //
+  // Sonst bauen wir den Verlauf alle drei Sekunden neu auf — und reißen dich
+  // dabei jedes Mal aus dem Text, den du gerade liest. Genau daran scheiterte
+  // das Scrollen: Nicht die Rolle fehlte, sie wurde nur ständig zurückgesetzt.
+  const abdruck = JSON.stringify(bloecke);
+  if (abdruck === zuletztGesehen) return;
+  zuletztGesehen = abdruck;
+
   const behaelter = $("verlauf");
-  // Stand der Rolle merken: Wer oben liest, soll nicht nach unten gerissen
-  // werden, bloß weil eine Aktualisierung kam.
-  const unten = behaelter.scrollHeight - behaelter.scrollTop - behaelter.clientHeight < 60;
+  // Wer unten steht, wird mitgenommen. Wer oben liest, bleibt, wo er ist.
+  const unten = behaelter.scrollHeight - behaelter.scrollTop - behaelter.clientHeight < 80;
 
   behaelter.replaceChildren(...bloecke.map(verlaufBlock));
 
@@ -462,6 +485,7 @@ function oeffneSitzung(sitzung) {
   $("knopf-ansicht").querySelector("use").setAttribute("href", "#i-terminal");
 
   $("verlauf").replaceChildren();
+  zuletztGesehen = "";     // neue Sitzung, alles frisch
   ladeVerlauf();
   clearInterval(verlaufTakt);
   verlaufTakt = setInterval(ladeVerlauf, 3000);
@@ -547,50 +571,85 @@ $("knopf-diktat").addEventListener("click", () => {
 
   // Nochmal tippen heißt: aufhören.
   if (hoert) {
-    hoert.stop();
+    hoertStoppen?.();
     return;
   }
 
-  hoert = new Spracherkennung();
-  hoert.lang = "de-DE";
-  hoert.interimResults = true;      // schon beim Sprechen mitschreiben
-  hoert.continuous = true;          // nicht nach dem ersten Satz aufhören
-
   // Was schon im Feld stand, bleibt stehen; das Diktat kommt dahinter.
   const vorher = feld.value ? feld.value.trimEnd() + " " : "";
+  let fertig = "";        // die abgeschlossenen Sätze
+  let willHoeren = true;  // erst ein zweiter Tipp beendet es
 
-  hoert.onstart = () => {
-    knopf.classList.add("hoert");
-    feld.placeholder = "Ich höre …";
-  };
+  function lauschen() {
+    const erkennung = new Spracherkennung();
+    hoert = erkennung;
 
-  hoert.onresult = (e) => {
-    // Jedes Mal den ganzen Satz neu zusammensetzen, nicht anhängen.
+    erkennung.lang = "de-DE";
+    erkennung.interimResults = true;
+
+    // NICHT durchgehend zuhören.
     //
-    // Die Erkennung liefert dieselben Wörter mehrfach: erst als Vermutung,
-    // dann korrigiert, dann endgültig. Wer da anhängt, bekommt "soso dasso
-    // dasso das istso das ist" — jedes Wort so oft, wie es überarbeitet wurde.
-    let text = "";
-    for (const ergebnis of e.results) {
-      text += ergebnis[0].transcript;
-    }
-    feld.value = (vorher + text).trimStart();
+    // Chrome auf Android hält sich hier nicht an die Erwartung: Statt ein
+    // Ergebnis laufend zu überarbeiten, hängt es jeden Zwischenstand als
+    // neues Ergebnis an — "ich", "ich bin", "ich bin sehr". Wer die
+    // aneinanderreiht, bekommt "ichich binich bin sehr".
+    //
+    // Also lassen wir es je einen Satz erkennen und starten danach neu. Dann
+    // gibt es immer nur ein Ergebnis, und die Frage stellt sich nicht.
+    erkennung.continuous = false;
+
+    erkennung.onstart = () => {
+      knopf.classList.add("hoert");
+      feld.placeholder = "Ich höre …";
+    };
+
+    erkennung.onresult = (e) => {
+      // Nur das jüngste Ergebnis zählt — alles davor ist schon in `fertig`.
+      const letztes = e.results[e.results.length - 1];
+      const stueck = letztes[0].transcript;
+
+      if (letztes.isFinal) {
+        fertig += stueck.trim() + " ";
+        feld.value = (vorher + fertig).trimStart();
+      } else {
+        feld.value = (vorher + fertig + stueck).trimStart();
+      }
+    };
+
+    erkennung.onerror = (e) => {
+      if (e.error === "not-allowed") {
+        willHoeren = false;
+        alert("Ohne Zugriff aufs Mikrofon kann ich nicht zuhören. Erlaube es in den Browser-Einstellungen.");
+      }
+      // "no-speech" heißt nur: gerade war Stille. Kein Grund aufzuhören.
+    };
+
+    erkennung.onend = () => {
+      // Ein Satz ist durch. Weiter zuhören, bis du das Mikrofon ausschaltest.
+      if (willHoeren) {
+        lauschen();
+        return;
+      }
+      hoert = null;
+      knopf.classList.remove("hoert");
+      feld.placeholder = "Nachricht an Claude …";
+    };
+
+    erkennung.start();
+  }
+
+  // Nochmal tippen heißt: aufhören.
+  knopf.dataset.stoppen = "1";
+  hoertStoppen = () => {
+    willHoeren = false;
+    hoert?.stop();
   };
 
-  hoert.onerror = (e) => {
-    if (e.error === "not-allowed") {
-      alert("Ohne Zugriff aufs Mikrofon kann ich nicht zuhören. Erlaube es in den Browser-Einstellungen.");
-    }
-  };
-
-  hoert.onend = () => {
-    hoert = null;
-    knopf.classList.remove("hoert");
-    feld.placeholder = "Nachricht an Claude …";
-  };
-
-  hoert.start();
+  lauschen();
 });
+
+// Damit ein zweiter Tipp aufs Mikrofon das Zuhören beendet.
+let hoertStoppen = null;
 
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();
@@ -637,53 +696,82 @@ $("knopf-melden").addEventListener("click", async () => {
 
 const stimme = $("stimme");
 let spricht = false;
+let sprecherKnopf = null;     // welcher Knopf gerade "spricht" anzeigt
 
-$("knopf-vorlesen").addEventListener("click", async () => {
-  const knopf = $("knopf-vorlesen");
+function zeichen(knopf, name) {
+  knopf?.querySelector("use")?.setAttribute("href", name);
+}
 
-  const zeichen = (name) => knopf.querySelector("use").setAttribute("href", name);
+function stille() {
+  stimme.pause();
+  stimme.currentTime = 0;
+  if (stimme.src) URL.revokeObjectURL(stimme.src);
+  spricht = false;
+  sprecherKnopf?.classList.remove("spricht");
+  zeichen(sprecherKnopf, "#i-lautsprecher");
+  sprecherKnopf = null;
+}
 
+/** Liest einen Text vor. Ein zweiter Druck — auf denselben oder einen anderen
+ *  Knopf — hört sofort auf. Es spricht immer nur eine Stimme. */
+async function sprich(text, knopf) {
+  // Läuft schon etwas? Dann erst mal Ruhe.
+  const derselbe = sprecherKnopf === knopf;
   if (spricht) {
-    stimme.pause();
-    stimme.currentTime = 0;
-    spricht = false;
-    knopf.classList.remove("spricht");
-    zeichen("#i-lautsprecher");
-    return;
+    stille();
+    if (derselbe) return;    // derselbe Knopf: das war der Stopp
   }
-  if (!aktuelleSitzung) return;
 
-  knopf.classList.add("spricht");
-  zeichen("#i-stopp");     // während es spricht, hält derselbe Knopf an
+  if (!text?.trim()) return;
+
   spricht = true;
+  sprecherKnopf = knopf;
+  knopf.classList.add("spricht");
+  zeichen(knopf, "#i-stopp");
 
   try {
-    // Erst den Bildschirminhalt holen, schon aufbereitet: ohne Code, ohne
-    // Werkzeugaufrufe, ohne Rahmen.
-    const { text } = await (await api(`/sessions/${aktuelleSitzung.name}/text`)).json();
-    if (!text) throw new Error("Da ist nichts zum Vorlesen.");
-
     const antwort = await api("/speak", {
       method: "POST",
       body: JSON.stringify({ text }),
     });
     const klang = await antwort.blob();
 
+    // Zwischenzeitlich gestoppt? Dann nicht doch noch losplappern.
+    if (!spricht || sprecherKnopf !== knopf) return;
+
     stimme.src = URL.createObjectURL(klang);
-    stimme.onended = () => {
-      spricht = false;
-      knopf.classList.remove("spricht");
-      zeichen("#i-lautsprecher");
-      URL.revokeObjectURL(stimme.src);
-    };
+    stimme.onended = stille;
     await stimme.play();
   } catch (err) {
-    spricht = false;
-    knopf.classList.remove("spricht");
-    zeichen("#i-lautsprecher");
+    stille();
+    alert(err.message);
+  }
+}
+
+// Der Lautsprecher oben liest die letzte Antwort — der schnelle Griff.
+$("knopf-vorlesen").addEventListener("click", async () => {
+  const knopf = $("knopf-vorlesen");
+
+  if (spricht && sprecherKnopf === knopf) {
+    stille();
+    return;
+  }
+  if (!aktuelleSitzung) return;
+
+  try {
+    const { text } = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+    )).json();
+    if (!text) throw new Error("Da ist nichts zum Vorlesen.");
+    await sprich(text, knopf);
+  } catch (err) {
+    stille();
     alert(err.message);
   }
 });
+
+// Zurück zur Liste heißt auch: Ruhe.
+$("knopf-zurueck").addEventListener("click", stille);
 
 // --- Benachrichtigungen ------------------------------------------------------
 

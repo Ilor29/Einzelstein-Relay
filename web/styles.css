@@ -305,15 +305,39 @@ html, body {
 /* Was Claude geantwortet hat — keine Blase, sondern Text. Volle Breite,
    Serifenschrift, luftig gesetzt: gebaut zum Lesen, nicht zum Überfliegen.
    Genau so macht es die Claude-App, und aus gutem Grund. */
-.blase.claude {
+.antwort {
   align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+}
+.blase.claude {
   background: none;
   color: var(--schrift);
   font-family: var(--serif);
   font-size: 1.02rem;
   line-height: 1.68;
-  padding: .1rem .1rem .3rem;
+  padding: .1rem .1rem .2rem;
 }
+
+/* Jede Antwort hat ihren eigenen Lautsprecher. Sonst hört man immer nur die
+   letzte — und muss den Rest lesen, obwohl man am Steuer sitzt. */
+.vorlesen-klein {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--schrift-schwach);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.vorlesen-klein svg { width: 16px; height: 16px; }
+.vorlesen-klein:active { background: var(--erhoben-2); }
+.vorlesen-klein.spricht { color: var(--laeuft); }
 
 /* Werkzeuge und Code: da, aber leise. Sie sollen den Text nicht überstimmen. */
 .notiz {
