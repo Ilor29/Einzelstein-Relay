@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 20;
+const VERSION = 21;
 
 const $ = (id) => document.getElementById(id);
 
@@ -953,12 +953,36 @@ function zeichen(knopf, name) {
 
 function stille() {
   stimme.pause();
+  stimme.onended = null;
+  stimme.onerror = null;
   stimme.currentTime = 0;
-  if (stimme.src) URL.revokeObjectURL(stimme.src);
   spricht = false;
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
   sprecherKnopf = null;
+}
+
+/** Zerlegt einen Text in Häppchen, die sich gut sprechen lassen.
+ *
+ *  Ein langer Absatz am Stück braucht Sekunden, bis der erste Ton kommt — man
+ *  drückt und es passiert nichts. Satzweise beginnt das Sprechen sofort,
+ *  während der Rest im Hintergrund nachproduziert wird.
+ */
+function haeppchen(text, mindestens = 90) {
+  const saetze = text.split(/(?<=[.!?:])\s+/);
+  const stuecke = [];
+  let aktuell = "";
+
+  for (const satz of saetze) {
+    aktuell += (aktuell ? " " : "") + satz;
+    // Sehr kurze Sätze sammeln wir, sonst zerhackt es den Vortrag.
+    if (aktuell.length >= mindestens) {
+      stuecke.push(aktuell);
+      aktuell = "";
+    }
+  }
+  if (aktuell.trim()) stuecke.push(aktuell);
+  return stuecke;
 }
 
 /** Liest einen Text vor. Ein zweiter Druck — auf denselben oder einen anderen
@@ -978,23 +1002,54 @@ async function sprich(text, knopf, stimmeName = null) {
   knopf.classList.add("spricht");
   zeichen(knopf, "#i-stopp");
 
-  try {
+  const meins = knopf;       // um zu merken, ob wir zwischendurch gestoppt wurden
+  const stuecke = haeppchen(text);
+
+  async function hole(stueck) {
     const antwort = await api("/speak", {
       method: "POST",
       // stimmeName nur bei der Hörprobe — sonst spricht die gewählte.
-      body: JSON.stringify(stimmeName ? { text, stimme: stimmeName } : { text }),
+      body: JSON.stringify(
+        stimmeName ? { text: stueck, stimme: stimmeName } : { text: stueck }
+      ),
     });
-    const klang = await antwort.blob();
+    return URL.createObjectURL(await antwort.blob());
+  }
 
-    // Zwischenzeitlich gestoppt? Dann nicht doch noch losplappern.
-    if (!spricht || sprecherKnopf !== knopf) return;
+  function spiele(quelle) {
+    return new Promise((fertig, fehler) => {
+      stimme.src = quelle;
+      stimme.onended = fertig;
+      stimme.onerror = fehler;
+      stimme.play().catch(fehler);
+    });
+  }
 
-    stimme.src = URL.createObjectURL(klang);
-    stimme.onended = stille;
-    await stimme.play();
+  try {
+    // Das erste Häppchen holen und sofort abspielen — während das nächste
+    // schon unterwegs ist.
+    let naechstes = hole(stuecke[0]);
+
+    for (let i = 0; i < stuecke.length; i++) {
+      const quelle = await naechstes;
+      if (!spricht || sprecherKnopf !== meins) {
+        URL.revokeObjectURL(quelle);
+        return;
+      }
+
+      // Das übernächste schon anfordern, solange dieses noch läuft.
+      naechstes = i + 1 < stuecke.length ? hole(stuecke[i + 1]) : null;
+
+      await spiele(quelle);
+      URL.revokeObjectURL(quelle);
+
+      if (!spricht || sprecherKnopf !== meins) return;
+    }
+
+    stille();
   } catch (err) {
     stille();
-    alert(err.message);
+    melde("Das Vorlesen hat nicht geklappt.");
   }
 }
 

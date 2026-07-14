@@ -8,11 +8,12 @@ Also: Fließtext wird vorgelesen, Code und Werkzeugaufrufe werden nur angesagt.
 from __future__ import annotations
 
 import asyncio
+import io
 import os
 import re
 import shutil
 import sys
-import tempfile
+import wave
 from pathlib import Path
 
 STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
@@ -69,6 +70,27 @@ class TTSError(RuntimeError):
     pass
 
 
+# Die geladenen Stimmen. Das Modell einmal von der Platte zu holen dauert
+# Sekunden — und Piper tat das bei JEDEM Vorlesen neu. Deshalb kam der Ton erst
+# nach vier Sekunden, egal wie kurz der Satz war. Einmal geladen, spricht es in
+# Sekundenbruchteilen.
+_geladen: dict[str, object] = {}
+
+
+def _stimme_laden(name: str):
+    if name in _geladen:
+        return _geladen[name]
+
+    from piper import PiperVoice   # erst hier: der Import selbst dauert
+
+    datei = STIMMEN / f"{name}.onnx"
+    if not datei.exists():
+        raise TTSError(f"Die Stimme fehlt: {name}")
+
+    _geladen[name] = PiperVoice.load(str(datei))
+    return _geladen[name]
+
+
 def _finde_piper() -> str | None:
     """Sucht Piper — auch dort, wo pip es hinlegt.
 
@@ -81,42 +103,31 @@ def _finde_piper() -> str | None:
     return shutil.which("piper")
 
 
+def _sprechen(text: str, name: str) -> bytes:
+    """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
+    weiter antwortet, während gesprochen wird."""
+    voice = _stimme_laden(name)
+
+    puffer = io.BytesIO()
+    with wave.open(puffer, "wb") as wav:
+        voice.synthesize_wav(text, wav)
+    return puffer.getvalue()
+
+
+def vorladen() -> None:
+    """Die gewählte Stimme beim Start in den Speicher holen."""
+    try:
+        _stimme_laden(gewaehlte_stimme())
+    except Exception:
+        # Fehlt die Stimme, merkt man es beim ersten Vorlesen — der Dienst darf
+        # daran nicht scheitern.
+        pass
+
+
 async def synthesize(text: str, stimme: str | None = None) -> bytes:
     """Macht aus Text eine WAV-Datei — mit der gewählten Stimme."""
-    piper = _finde_piper()
-    if not piper:
-        raise TTSError(
-            "Piper ist nicht installiert. Führe scripts/install-piper.sh aus."
-        )
-
-    datei = modell(stimme)
-    if not datei.exists():
-        raise TTSError(f"Die Stimme fehlt: {datei.stem}")
-
-    # In eine Datei schreiben lassen, nicht auf die Standardausgabe.
-    #
-    # Piper nimmt "--output_file -" zwar an und läuft fehlerfrei durch, liefert
-    # dabei aber nichts — man bekommt eine leere Antwort und keinen Hinweis
-    # warum. In eine Datei schreibt es zuverlässig.
-    with tempfile.TemporaryDirectory() as ordner:
-        ziel = Path(ordner) / "gesprochen.wav"
-
-        process = await asyncio.create_subprocess_exec(
-            piper,
-            "--model", str(datei),
-            "--output_file", str(ziel),
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        _, fehler = await process.communicate(text.encode())
-
-        if process.returncode != 0:
-            raise TTSError(f"Piper ist ausgestiegen: {fehler.decode(errors='replace')}")
-        if not ziel.exists():
-            raise TTSError("Piper hat nichts gesprochen.")
-
-        return ziel.read_bytes()
+    name = stimme or gewaehlte_stimme()
+    return await asyncio.to_thread(_sprechen, text, name)
 
 
 # --- Aufbereitung ------------------------------------------------------------

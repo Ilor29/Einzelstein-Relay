@@ -38,6 +38,11 @@ async def waechter_starten() -> None:
     fertig ist oder eine Rückfrage hat."""
     asyncio.create_task(melden.waechter())
 
+    # Die Stimme schon mal in den Speicher holen. Sonst wartet man beim ersten
+    # Vorlesen drei Sekunden auf ein Modell, das man auch vorher hätte laden
+    # können.
+    asyncio.create_task(asyncio.to_thread(tts.vorladen))
+
 
 # --- Zugangsschutz -----------------------------------------------------------
 
@@ -54,7 +59,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 20
+VERSION = 21
 
 
 @app.get("/api/version")
