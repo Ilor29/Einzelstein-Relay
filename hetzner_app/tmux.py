@@ -17,6 +17,16 @@ from dataclasses import dataclass
 # tmux-Sitzungen des Benutzers nicht anfassen.
 PREFIX = "hz-"
 
+# Unser eigener tmux-Server.
+#
+# Ohne das erbt tmux den Server dessen, der es gerade aufruft — und Claude Code
+# läuft selbst in tmux. Ruft man tmux von dort aus auf, landet die Sitzung auf
+# einem ganz anderen Server als dem, in dem der Dienst nachsieht. Genau daran
+# ist die App zuerst gescheitert: Die Sitzungen waren da, nur eben woanders.
+#
+# Mit einem festen Namen sehen Dienst, Skripte und Handy immer dasselbe.
+SERVER = ["-L", "hz"]
+
 # Trennt die Felder in der tmux-Ausgabe. Ein Zeichen, das in Sitzungsnamen
 # und Pfaden nicht vorkommt.
 SEP = "\x1f"
@@ -37,14 +47,17 @@ class TmuxSession:
 
 def _run(*args: str) -> str:
     result = subprocess.run(
-        ["tmux", *args],
+        ["tmux", *SERVER, *args],
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
         stderr = result.stderr.strip()
-        # "no server running" ist kein Fehler, sondern heißt: keine Sitzungen.
-        if "no server running" in stderr or "no such file" in stderr:
+        # Läuft noch kein tmux-Server, ist das kein Fehler, sondern heißt
+        # schlicht: keine Sitzungen. Beim ersten Start ist das der Normalfall.
+        # Kleingeschrieben verglichen — tmux formuliert es mal so, mal so.
+        harmlos = ("no server running", "no such file or directory")
+        if any(satz in stderr.lower() for satz in harmlos):
             return ""
         raise TmuxError(f"tmux {' '.join(args)}: {stderr}")
     return result.stdout
@@ -167,7 +180,7 @@ async def attach(name: str, cols: int, rows: int) -> asyncio.subprocess.Process:
     # eins herbei, indem wir die Größe explizit mitgeben.
     cmd = (
         f"stty cols {int(cols)} rows {int(rows)}; "
-        f"exec tmux attach-session -t {shlex.quote(PREFIX + name)}"
+        f"exec tmux {' '.join(SERVER)} attach-session -t {shlex.quote(PREFIX + name)}"
     )
     return await asyncio.create_subprocess_exec(
         "script", "-q", "-c", cmd, "/dev/null",
