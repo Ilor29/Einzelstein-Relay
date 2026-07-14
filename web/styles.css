@@ -291,12 +291,22 @@ html, body {
   gap: .8rem;
 }
 
+/* Wo der Sprecher wechselt, wird die Luft größer.
+   Ein neuer Gedanke von dir soll sich vom vorigen Absatz abheben — sonst
+   verschwimmt die Unterhaltung zu einer einzigen Textwand. */
+.blase.du,
+.foto {
+  margin-top: 1.1rem;
+}
+.verlauf > :first-child { margin-top: 0; }
+
 .blase {
   white-space: pre-wrap;      /* Absätze bleiben Absätze */
   overflow-wrap: anywhere;    /* lange Pfade sprengen nicht das Layout */
 }
 
-/* Was du gesagt hast — rechts, in einer Blase, wie man es erwartet. */
+/* Was du gesagt hast — rechts, in einer Blase, wie man es erwartet.
+   Der Akzentrand macht auf einen Blick klar, dass hier du sprichst. */
 .blase.du {
   align-self: flex-end;
   max-width: 85%;
@@ -304,6 +314,7 @@ html, body {
   color: var(--schrift);
   border-radius: 16px;
   border-bottom-right-radius: 5px;
+  border-right: 2px solid var(--akzent);
   padding: .65rem .85rem;
   font-size: .92rem;
   line-height: 1.55;
