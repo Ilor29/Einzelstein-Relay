@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=3">
+  <link rel="stylesheet" href="/styles.css?v=4">
 </head>
 <body>
 
@@ -68,6 +68,7 @@
   <div id="terminal" class="terminal"></div>
   <div class="sondertasten" id="sondertasten"></div>
   <form id="eingabe-formular" class="eingabezeile">
+    <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">🎤</button>
     <input type="text" id="eingabe" class="eingabe mono" placeholder="Nachricht an Claude …"
            autocomplete="off" autocapitalize="sentences" enterkeyhint="send">
     <button type="submit" class="knopf-senden" aria-label="Senden">↑</button>
@@ -119,6 +120,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=3"></script>
+<script src="/app.js?v=4"></script>
 </body>
 </html>

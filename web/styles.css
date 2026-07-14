@@ -296,6 +296,30 @@ html, body {
 }
 .knopf-senden:active { filter: brightness(.9); }
 
+/* Das Mikrofon. Im Auto der wichtigste Knopf der App. */
+.knopf-diktat {
+  width: 38px; height: 38px;
+  flex: none;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  font-size: .95rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.knopf-diktat:active { background: var(--akzent-weich); }
+
+/* Während es zuhört, pulsiert es — sonst weiß man nicht, ob es lauscht. */
+.knopf-diktat.hoert {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  animation: pochen 1.4s ease-in-out infinite;
+}
+@keyframes pochen {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--akzent) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--akzent) 0%, transparent); }
+}
+
 /* --- Eingabefelder --- */
 .eingabe {
   width: 100%;

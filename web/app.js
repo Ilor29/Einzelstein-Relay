@@ -339,6 +339,69 @@ $("eingabe-formular").addEventListener("submit", (e) => {
   feld.value = "";
 });
 
+// --- Diktieren ---------------------------------------------------------------
+//
+// Im Auto ist Tippen keine Option. Ein Druck auf das Mikrofon, sprechen, und
+// der Text steht im Feld — abgeschickt wird erst, wenn du es willst, damit ein
+// Verhörer nicht sofort bei Claude landet.
+
+const Spracherkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
+let hoert = null;
+
+$("knopf-diktat").addEventListener("click", () => {
+  const knopf = $("knopf-diktat");
+  const feld = $("eingabe");
+
+  if (!Spracherkennung) {
+    alert("Dieser Browser kann nicht zuhören. Nimm das Mikrofon auf der Tastatur.");
+    return;
+  }
+
+  // Nochmal tippen heißt: aufhören.
+  if (hoert) {
+    hoert.stop();
+    return;
+  }
+
+  hoert = new Spracherkennung();
+  hoert.lang = "de-DE";
+  hoert.interimResults = true;      // schon beim Sprechen mitschreiben
+  hoert.continuous = true;          // nicht nach dem ersten Satz aufhören
+
+  // Was schon feststeht, bleibt stehen; der Rest wird noch überschrieben.
+  const vorher = feld.value ? feld.value.trimEnd() + " " : "";
+  let sicher = "";
+
+  hoert.onstart = () => {
+    knopf.classList.add("hoert");
+    feld.placeholder = "Ich höre …";
+  };
+
+  hoert.onresult = (e) => {
+    let vorlaeufig = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const stueck = e.results[i][0].transcript;
+      if (e.results[i].isFinal) sicher += stueck;
+      else vorlaeufig += stueck;
+    }
+    feld.value = (vorher + sicher + vorlaeufig).trimStart();
+  };
+
+  hoert.onerror = (e) => {
+    if (e.error === "not-allowed") {
+      alert("Ohne Zugriff aufs Mikrofon kann ich nicht zuhören. Erlaube es in den Browser-Einstellungen.");
+    }
+  };
+
+  hoert.onend = () => {
+    hoert = null;
+    knopf.classList.remove("hoert");
+    feld.placeholder = "Nachricht an Claude …";
+  };
+
+  hoert.start();
+});
+
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();
   steckdose = null;
