@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 17;
+const VERSION = 18;
 
 const $ = (id) => document.getElementById(id);
 
@@ -713,6 +713,31 @@ $("bild-waehler").addEventListener("change", async (e) => {
   }
 });
 
+// --- Das Eingabefeld wächst mit ----------------------------------------------
+//
+// Beim Diktieren lief der Text nach rechts aus dem Feld — man sprach ins Leere
+// und wusste nicht, ob überhaupt etwas ankommt. Jetzt wächst das Feld, solange
+// man spricht, und man sieht seinen Satz entstehen.
+
+const eingabeFeld = $("eingabe");
+
+function feldAnpassen() {
+  eingabeFeld.style.height = "auto";
+  // Bis zu einer Höhe, ab der es selbst scrollt — sonst frisst ein langer
+  // Monolog den halben Bildschirm.
+  eingabeFeld.style.height = Math.min(eingabeFeld.scrollHeight, 160) + "px";
+}
+
+eingabeFeld.addEventListener("input", feldAnpassen);
+
+// Enter schickt ab; Umschalt+Enter macht einen Absatz.
+eingabeFeld.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    $("eingabe-formular").requestSubmit();
+  }
+});
+
 // --- Diktieren ---------------------------------------------------------------
 //
 // Im Auto ist Tippen keine Option. Ein Druck auf das Mikrofon, sprechen, und
@@ -777,6 +802,10 @@ $("knopf-diktat").addEventListener("click", () => {
       } else {
         feld.value = (vorher + fertig + stueck).trimStart();
       }
+
+      // Mitwachsen und mitlaufen: Du sollst sehen, dass er dich hört.
+      feldAnpassen();
+      feld.scrollTop = feld.scrollHeight;
     };
 
     erkennung.onerror = (e) => {

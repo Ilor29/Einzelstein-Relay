@@ -516,8 +516,16 @@ html, body {
   border: 0;
   border-radius: 0;
   padding: .45rem .2rem;
+  /* Wächst beim Diktieren mit, bis es selbst zu rollen beginnt. */
+  resize: none;
+  max-height: 160px;
+  overflow-y: auto;
+  line-height: 1.45;
 }
 .eingabezeile .eingabe:focus { border: 0; outline: none; }
+
+/* Steht das Feld über einer Zeile, sitzen die Knöpfe unten statt mittig. */
+.eingabezeile { align-items: flex-end; }
 .knopf-senden {
   display: flex;
   align-items: center;
