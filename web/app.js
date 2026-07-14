@@ -163,7 +163,7 @@ function karte(sitzung) {
   `;
   // Über textContent gesetzt, nicht über innerHTML — ein Sitzungsname oder
   // eine Terminalzeile darf kein HTML in die Seite schmuggeln.
-  el.querySelector(".name").textContent = sitzung.name;
+  el.querySelector(".name").textContent = lesbar(sitzung.name);
   el.querySelector(".vorschau").textContent = sitzung.preview || "—";
   el.querySelector(".wann").textContent = alter(sitzung.idleSeconds);
 
@@ -200,25 +200,53 @@ async function ladeListe() {
     return;
   }
 
-  const angeheftet = sitzungen.filter((s) => s.pinned);
-  const eigene = sitzungen.filter((s) => !s.pinned && s.eigen);
-  const fremde = sitzungen.filter((s) => !s.pinned && !s.eigen);
+  // Wer auf dich wartet, kommt nach oben — egal ob angeheftet oder nicht.
+  // Das ist die eine Sache, die du sofort sehen musst.
+  const wartend = sitzungen.filter((s) => s.state === "waiting");
+  const rest = sitzungen.filter((s) => s.state !== "waiting");
 
-  const gruppe = (titel, eintraege) => {
+  const angeheftet = rest.filter((s) => s.pinned);
+  const eigene = rest.filter((s) => !s.pinned && s.eigen);
+  const fremde = rest.filter((s) => !s.pinned && !s.eigen);
+
+  const gruppe = (titel, eintraege, { zu = false } = {}) => {
     if (eintraege.length === 0) return;
+
     const kopf = document.createElement("div");
-    kopf.className = "gruppe";
-    kopf.innerHTML = `<span></span><span class="anzahl">${eintraege.length}</span>`;
-    kopf.firstElementChild.textContent = titel;
-    liste.append(kopf, ...eintraege.map(karte));
+    kopf.className = "gruppe" + (zu ? " klappbar" : "");
+    kopf.innerHTML = `
+      ${zu ? '<span class="pfeil">▸</span>' : ""}
+      <span class="titel"></span>
+      <span class="anzahl">${eintraege.length}</span>`;
+    kopf.querySelector(".titel").textContent = titel;
+    liste.append(kopf);
+
+    const karten = eintraege.map(karte);
+    if (!zu) {
+      liste.append(...karten);
+      return;
+    }
+
+    // Eingeklappt: Die fremden Sitzungen sind viele, und meistens will man
+    // sie nicht sehen. Ein Tipp auf die Zeile klappt sie auf.
+    const fach = document.createElement("div");
+    fach.className = "fach";
+    fach.hidden = true;
+    fach.append(...karten);
+    liste.append(fach);
+
+    kopf.addEventListener("click", () => {
+      fach.hidden = !fach.hidden;
+      kopf.querySelector(".pfeil").textContent = fach.hidden ? "▸" : "▾";
+    });
   };
 
+  gruppe("Wartet auf dich", wartend);
   gruppe("Angeheftet", angeheftet);
   gruppe("Zuletzt benutzt", eigene);
   // Sitzungen, die nicht von dieser App stammen — allen voran die, in der
-  // Claude Code gerade selbst läuft. Auch die kann man hier öffnen und sich
-  // vorlesen lassen.
-  gruppe("Läuft auch auf dem Server", fremde);
+  // Claude Code gerade selbst läuft. Eingeklappt, weil es viele sind.
+  gruppe("Läuft auch auf dem Server", fremde, { zu: true });
 }
 
 let listenTakt = null;
@@ -275,39 +303,139 @@ function baueSondertasten() {
   }
 }
 
+// --- Die Unterhaltung zum Lesen ----------------------------------------------
+//
+// Das Terminal ist zum Arbeiten richtig, zum Nachlesen auf dem Handy aber
+// unerträglich: Kreisel drehen, Statuszeilen blinken, Rohtext scrollt. Hier
+// steht nur, was zählt — was du gesagt hast und was Claude geantwortet hat.
+// Code und Werkzeuge sind eingeklappt, bis du sie sehen willst.
+
+let imTerminal = false;
+let verlaufTakt = null;
+
+function verlaufBlock(block) {
+  const el = document.createElement("div");
+
+  if (block.typ === "du") {
+    el.className = "blase du";
+    el.textContent = block.text;
+    return el;
+  }
+
+  if (block.typ === "claude") {
+    el.className = "blase claude";
+    el.textContent = block.text;
+    return el;
+  }
+
+  if (block.typ === "werkzeug") {
+    el.className = "notiz werkzeug";
+    el.textContent = block.text;
+    return el;
+  }
+
+  // Code: zugeklappt, mit Zeilenzahl. Antippen zeigt ihn.
+  el.className = "notiz code";
+  const zeile = block.zeilen === 1 ? "Zeile" : "Zeilen";
+  el.innerHTML = `<span class="kopfzeile">▸ Code, ${block.zeilen} ${zeile}</span><pre hidden></pre>`;
+  el.querySelector("pre").textContent = block.text;
+  el.addEventListener("click", () => {
+    const pre = el.querySelector("pre");
+    pre.hidden = !pre.hidden;
+    el.querySelector(".kopfzeile").textContent =
+      `${pre.hidden ? "▸" : "▾"} Code, ${block.zeilen} ${zeile}`;
+  });
+  return el;
+}
+
+async function ladeVerlauf() {
+  if (!aktuelleSitzung || imTerminal) return;
+
+  let bloecke;
+  try {
+    bloecke = await (await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf`)).json();
+  } catch {
+    return;
+  }
+
+  const behaelter = $("verlauf");
+  // Stand der Rolle merken: Wer oben liest, soll nicht nach unten gerissen
+  // werden, bloß weil eine Aktualisierung kam.
+  const unten = behaelter.scrollHeight - behaelter.scrollTop - behaelter.clientHeight < 60;
+
+  behaelter.replaceChildren(...bloecke.map(verlaufBlock));
+
+  if (unten) behaelter.scrollTop = behaelter.scrollHeight;
+}
+
+function ansichtWechseln() {
+  imTerminal = !imTerminal;
+
+  $("verlauf").hidden = imTerminal;
+  $("terminal").hidden = !imTerminal;
+  $("sondertasten").hidden = !imTerminal;
+  $("knopf-ansicht").textContent = imTerminal ? "💬" : "⌨";
+
+  if (imTerminal) {
+    clearInterval(verlaufTakt);
+    verlaufTakt = null;
+    baueTerminal();
+    fit.fit();
+    verbinde(aktuelleSitzung.name);
+  } else {
+    steckdose?.close();
+    steckdose = null;
+    ladeVerlauf();
+    clearInterval(verlaufTakt);
+    verlaufTakt = setInterval(ladeVerlauf, 3000);
+  }
+}
+
+$("knopf-ansicht").addEventListener("click", ansichtWechseln);
+
+function baueTerminal() {
+  if (term) return;
+
+  term = new Terminal({
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+    fontSize: 12,
+    lineHeight: 1.25,
+    cursorBlink: true,
+    convertEol: true,
+    theme: {
+      background: "#16130F",
+      foreground: "#F0EAE2",
+      cursor: "#D9764F",
+      selectionBackground: "#3A2419",
+    },
+  });
+  fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open($("terminal"));
+  term.onData((daten) => steckdose?.send(daten));
+  baueSondertasten();
+}
+
 function oeffneSitzung(sitzung) {
   stoppeListe();
   aktuelleSitzung = sitzung;
 
-  $("sitzung-name").textContent = sitzung.name;
+  $("sitzung-name").textContent = lesbar(sitzung.name);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
   $("knopf-melden").classList.toggle("an", sitzung.notifyWhenDone);
   zeige("sitzung");
 
-  if (!term) {
-    term = new Terminal({
-      fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-      fontSize: 12,
-      lineHeight: 1.25,
-      cursorBlink: true,
-      convertEol: true,
-      theme: {
-        background: "#16130F",
-        foreground: "#F0EAE2",
-        cursor: "#D9764F",
-        selectionBackground: "#3A2419",
-      },
-    });
-    fit = new FitAddon.FitAddon();
-    term.loadAddon(fit);
-    term.open($("terminal"));
-    term.onData((daten) => steckdose?.send(daten));
-    baueSondertasten();
-  }
+  // Zum Lesen aufmachen, nicht ins Terminal. Das ist der Normalfall.
+  imTerminal = false;
+  $("verlauf").hidden = false;
+  $("terminal").hidden = true;
+  $("sondertasten").hidden = true;
+  $("knopf-ansicht").textContent = "⌨";
 
-  term.reset();
-  fit.fit();
-  verbinde(sitzung.name);
+  $("verlauf").replaceChildren();
+  ladeVerlauf();
+  clearInterval(verlaufTakt);
+  verlaufTakt = setInterval(ladeVerlauf, 3000);
 }
 
 function verbinde(name) {
@@ -343,13 +471,31 @@ function setzeVerbindung(verbunden) {
 
 // Eingabezeile: bequemer als direkt ins Terminal zu tippen, weil die
 // Handytastatur so ihre Autokorrektur und das Diktieren anbieten kann.
-$("eingabe-formular").addEventListener("submit", (e) => {
+$("eingabe-formular").addEventListener("submit", async (e) => {
   e.preventDefault();
   const feld = $("eingabe");
-  const text = feld.value;
-  if (!text) return;
-  steckdose?.send(text + "\r");
+  const text = feld.value.trim();
+  if (!text || !aktuelleSitzung) return;
+
   feld.value = "";
+
+  if (imTerminal) {
+    steckdose?.send(text + "\r");
+    return;
+  }
+
+  // In der Lese-Ansicht gibt es keine offene Verbindung. Der Text geht über
+  // den Server hinein — und erscheint gleich als deine Blase im Verlauf.
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    setTimeout(ladeVerlauf, 600);
+  } catch (err) {
+    feld.value = text;      // nichts verloren
+    alert(err.message);
+  }
 });
 
 // --- Diktieren ---------------------------------------------------------------
@@ -420,6 +566,8 @@ $("knopf-diktat").addEventListener("click", () => {
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();
   steckdose = null;
+  clearInterval(verlaufTakt);
+  verlaufTakt = null;
   aktuelleSitzung = null;
   starteListe();
 });

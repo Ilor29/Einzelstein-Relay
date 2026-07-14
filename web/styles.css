@@ -148,6 +148,19 @@ html, body {
 }
 .gruppe .anzahl { margin-left: auto; font-variant-numeric: tabular-nums; }
 
+.gruppe.klappbar {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.gruppe.klappbar:active { color: var(--schrift-leise); }
+.gruppe .pfeil { font-size: .7rem; line-height: 1; }
+
+.fach {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
 .karte {
   position: relative;
   display: flex;
@@ -234,6 +247,77 @@ html, body {
   padding: .7rem .8rem calc(.7rem + var(--unten));
   border-top: 1px solid var(--linie);
   background: var(--grund);
+}
+
+/* --- Die Unterhaltung zum Lesen ---
+   Kein Terminal, kein Gewusel. Nur was gesagt wurde. */
+
+.verlauf {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem .8rem;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.blase {
+  border-radius: 14px;
+  padding: .7rem .85rem;
+  font-size: .93rem;
+  line-height: 1.6;
+  white-space: pre-wrap;      /* Absätze bleiben Absätze */
+  overflow-wrap: anywhere;    /* lange Pfade sprengen nicht das Layout */
+}
+
+/* Was du gesagt hast — rechts, im Akzent, wie man es erwartet. */
+.blase.du {
+  align-self: flex-end;
+  max-width: 85%;
+  background: var(--akzent);
+  color: #fff;
+  border-bottom-right-radius: 5px;
+}
+
+/* Was Claude geantwortet hat — links, ruhig, volle Breite zum Lesen. */
+.blase.claude {
+  align-self: stretch;
+  background: var(--erhoben-2);
+  color: var(--schrift);
+  border-bottom-left-radius: 5px;
+}
+
+/* Werkzeuge und Code: da, aber leise. Sie sollen den Text nicht überstimmen. */
+.notiz {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--schrift-schwach);
+  padding: .35rem .6rem;
+  border-left: 2px solid var(--linie);
+  align-self: stretch;
+}
+.notiz.werkzeug::before {
+  content: "⏺ ";
+  color: var(--laeuft);
+}
+
+.notiz.code {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.notiz.code .kopfzeile { display: block; }
+.notiz.code pre {
+  margin-top: .45rem;
+  padding: .6rem;
+  background: var(--grund);
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: .68rem;
+  line-height: 1.5;
+  color: var(--schrift-leise);
 }
 
 /* --- Terminal --- */

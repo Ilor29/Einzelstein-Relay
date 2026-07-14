@@ -86,6 +86,8 @@ _FUSSZEILE = re.compile(
     r"(esc to interrupt|tokens|Context left|shift\+tab|\? for shortcuts"
     r"|manual mode|auto mode|for agents|What's new|Claude Max|Opus \d|Sonnet \d"
     r"|cwd:|/help for help"
+    # Was Claude Code über sich selbst meldet, ist keine Antwort an dich.
+    r"|Running \d+ (shell |background )?command|Waiting…|Thinking…"
     # Hinweiszeilen von Claude Code hängen ihre Tipps mit Mittelpunkten
     # aneinander: "tmux detected · scroll with PgUp · or add 'set -g mouse on'".
     # Zwei Mittelpunkte in einer Zeile kommen in Fließtext praktisch nie vor.

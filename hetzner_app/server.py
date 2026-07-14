@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import geraete, melden, state, tmux, tts
+from . import geraete, melden, state, tmux, tts, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -232,6 +232,38 @@ def session_text(name: str) -> dict:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
     screen = tmux.capture(name, lines=200)
     return {"text": tts.for_speech(screen)}
+
+
+@app.get("/api/sessions/{name}/verlauf", dependencies=[Depends(require_auth)])
+def session_verlauf(name: str) -> list[dict]:
+    """Die Unterhaltung als lesbare Blöcke — statt als Terminal-Gewusel."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    # Weit genug zurück, dass man den Faden der Unterhaltung wiederfindet —
+    # nicht nur die letzten drei Sätze.
+    return verlauf.lesen(tmux.capture(name, lines=1500))
+
+
+class Nachricht(BaseModel):
+    text: str
+
+
+@app.post("/api/sessions/{name}/senden", dependencies=[Depends(require_auth)])
+async def session_senden(name: str, body: Nachricht) -> dict:
+    """Eine Nachricht an Claude — aus der Lese-Ansicht, ohne Terminal.
+
+    Im Terminal tippt man direkt; hier gibt es keine offene Verbindung, also
+    reichen wir den Text über tmux hinein, als hätte ihn jemand getippt.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    tmux.send_text(name, body.text)
+    # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt Claude
+    # Code gelegentlich.
+    await asyncio.sleep(0.3)
+    tmux.send_key(name, "Enter")
+    return {"ok": True}
 
 
 # --- Das Terminal ------------------------------------------------------------
