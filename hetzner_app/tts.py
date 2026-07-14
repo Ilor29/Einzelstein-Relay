@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
@@ -92,19 +93,30 @@ async def synthesize(text: str, stimme: str | None = None) -> bytes:
     if not datei.exists():
         raise TTSError(f"Die Stimme fehlt: {datei.stem}")
 
-    process = await asyncio.create_subprocess_exec(
-        piper,
-        "--model", str(datei),
-        "--output_file", "-",       # WAV auf die Standardausgabe
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    audio, fehler = await process.communicate(text.encode())
+    # In eine Datei schreiben lassen, nicht auf die Standardausgabe.
+    #
+    # Piper nimmt "--output_file -" zwar an und läuft fehlerfrei durch, liefert
+    # dabei aber nichts — man bekommt eine leere Antwort und keinen Hinweis
+    # warum. In eine Datei schreibt es zuverlässig.
+    with tempfile.TemporaryDirectory() as ordner:
+        ziel = Path(ordner) / "gesprochen.wav"
 
-    if process.returncode != 0:
-        raise TTSError(f"Piper ist ausgestiegen: {fehler.decode(errors='replace')}")
-    return audio
+        process = await asyncio.create_subprocess_exec(
+            piper,
+            "--model", str(datei),
+            "--output_file", str(ziel),
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, fehler = await process.communicate(text.encode())
+
+        if process.returncode != 0:
+            raise TTSError(f"Piper ist ausgestiegen: {fehler.decode(errors='replace')}")
+        if not ziel.exists():
+            raise TTSError("Piper hat nichts gesprochen.")
+
+        return ziel.read_bytes()
 
 
 # --- Aufbereitung ------------------------------------------------------------
