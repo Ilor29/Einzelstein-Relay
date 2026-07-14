@@ -41,12 +41,17 @@ def _vapid() -> dict:
 
     privat = ec.generate_private_key(ec.SECP256R1())
 
-    # Der private Schlüssel im PEM-Format, wie pywebpush ihn erwartet.
-    pem = privat.private_bytes(
-        serialization.Encoding.PEM,
+    # Der private Schlüssel als base64url-kodiertes DER.
+    #
+    # Nicht als PEM: pywebpush schiebt den String ungefragt durch eine
+    # base64-Entzifferung, und ein PEM-Text zerfällt dabei zu Unsinn — die
+    # Probenachricht scheiterte mit "Could not deserialize key data".
+    der = privat.private_bytes(
+        serialization.Encoding.DER,
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption(),
-    ).decode()
+    )
+    pem = base64.urlsafe_b64encode(der).decode().rstrip("=")
 
     # Der öffentliche Schlüssel, wie der Browser ihn erwartet: die rohen
     # Punktkoordinaten, base64-kodiert ohne Füllzeichen.

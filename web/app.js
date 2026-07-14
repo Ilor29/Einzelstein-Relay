@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 15;
+const VERSION = 17;
 
 const $ = (id) => document.getElementById(id);
 
@@ -340,6 +340,39 @@ function baueSondertasten() {
 let imTerminal = false;
 let verlaufTakt = null;
 
+/** Setzt Claudes Text — mit Fettschrift, Kursiv und Befehlen.
+ *
+ *  Claude schreibt in Markdown. Ungerendert stehen dann Sternchen und
+ *  Backticks im Text herum, und "**wichtig**" liest sich schlechter als
+ *  wichtig. Bewusst kein Framework: Wir bauen die Elemente selbst und setzen
+ *  jeden Text über textContent — so kann aus einer Antwort niemals HTML werden,
+ *  das die Seite verändert.
+ */
+function schreibe(ziel, text) {
+  // Zerlegen an **fett**, *kursiv* und `befehl` — die Klammern bleiben in den
+  // Stücken erhalten, damit wir sie unterscheiden können.
+  const teile = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g);
+
+  for (const teil of teile) {
+    if (!teil) continue;
+
+    let el;
+    if (teil.startsWith("**") && teil.endsWith("**") && teil.length > 4) {
+      el = document.createElement("strong");
+      el.textContent = teil.slice(2, -2);
+    } else if (teil.startsWith("`") && teil.endsWith("`") && teil.length > 2) {
+      el = document.createElement("code");
+      el.textContent = teil.slice(1, -1);
+    } else if (teil.startsWith("*") && teil.endsWith("*") && teil.length > 2) {
+      el = document.createElement("em");
+      el.textContent = teil.slice(1, -1);
+    } else {
+      el = document.createTextNode(teil);
+    }
+    ziel.append(el);
+  }
+}
+
 function verlaufBlock(block) {
   const el = document.createElement("div");
 
@@ -377,7 +410,7 @@ function verlaufBlock(block) {
 
     const text = document.createElement("div");
     text.className = "blase claude";
-    text.textContent = block.text;
+    schreibe(text, block.text);
 
     const leiste = document.createElement("div");
     leiste.className = "antwort-leiste";
@@ -772,8 +805,19 @@ $("knopf-diktat").addEventListener("click", () => {
   hoertStoppen = () => {
     willHoeren = false;
     fertig = "";           // nichts aufheben, was gleich wieder auftauchen könnte
-    hoert?.stop();
-    hoert = null;
+
+    if (hoert) {
+      // Ihm das Wort abschneiden, nicht nur den Mund verbieten.
+      //
+      // Nach einem stop() feuert die Erkennung noch ein letztes Ereignis — und
+      // das schrieb den alten Feldinhalt zurück, den man gerade abgeschickt
+      // hatte. Der Text stand also wieder da, obwohl er längst weg war.
+      hoert.onresult = null;
+      hoert.onend = null;
+      hoert.stop();
+      hoert = null;
+    }
+
     knopf.classList.remove("hoert");
     feld.placeholder = "Nachricht an Claude …";
     hoertStoppen = null;

@@ -337,6 +337,19 @@ html, body {
   line-height: 1.68;
   padding: .1rem .1rem .2rem;
 }
+.blase.claude strong { font-weight: 650; }
+.blase.claude em { font-style: italic; }
+
+/* Befehle und Pfade in Claudes Text: Monospace, damit man sie als solche
+   erkennt und nicht mit Fließtext verwechselt. */
+.blase.claude code {
+  font-family: var(--mono);
+  font-size: .84em;
+  background: var(--erhoben-2);
+  border-radius: 5px;
+  padding: .1em .35em;
+  overflow-wrap: anywhere;
+}
 
 /* Unter jeder Antwort: vorlesen und kopieren.
    Vorlesen, weil man am Steuer nicht lesen kann. Kopieren, weil Markieren mit
