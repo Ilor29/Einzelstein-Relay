@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 import secrets
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -18,54 +19,57 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import state, tmux, tts
+from . import geraete, state, tmux, tts
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
-# Ohne Zugangswort läuft der Dienst nicht. Eine Shell auf dem Server darf
-# nicht offen im Netz stehen — auch nicht "nur kurz zum Ausprobieren".
-TOKEN = os.environ.get("HETZNER_APP_TOKEN", "")
-
-COOKIE = "hetzner_app_token"
+COOKIE = "hetzner_app_anmeldung"
 
 app = FastAPI(title="Hetzner-App")
 
 
 # --- Zugangsschutz -----------------------------------------------------------
 
-def _token_ok(supplied: str) -> bool:
-    # Zeitkonstanter Vergleich, damit man das Zugangswort nicht Zeichen für
-    # Zeichen erraten kann.
-    return bool(supplied) and secrets.compare_digest(supplied, TOKEN)
-
-
 def require_auth(request: Request) -> None:
-    supplied = (
-        request.headers.get("x-token")
-        or request.cookies.get(COOKIE)
-        or ""
-    )
-    if not _token_ok(supplied):
+    if not geraete.anmeldung_gueltig(request.cookies.get(COOKIE, "")):
         raise HTTPException(status_code=401, detail="Nicht angemeldet.")
 
 
-class Login(BaseModel):
-    token: str
+class Unterschrift(BaseModel):
+    aufgabe: str
+    unterschrift: str
 
 
-@app.post("/api/login")
-def login(body: Login) -> Response:
-    if not _token_ok(body.token):
-        raise HTTPException(status_code=401, detail="Falsches Zugangswort.")
-    response = JSONResponse({"ok": True})
-    response.set_cookie(
-        COOKIE, body.token,
+@app.get("/api/aufgabe")
+def aufgabe() -> dict:
+    """Die Zufallsaufgabe, die das Gerät unterschreiben muss.
+
+    Sie zu kennen nützt niemandem — unterschreiben kann sie nur, wer den
+    geheimen Schlüssel hat, und der liegt im Handy.
+    """
+    return {"aufgabe": geraete.aufgabe_stellen()}
+
+
+@app.post("/api/anmelden")
+def anmelden(body: Unterschrift) -> Response:
+    geraet = geraete.unterschrift_pruefen(body.aufgabe, body.unterschrift)
+    if geraet is None:
+        raise HTTPException(401, "Dieses Gerät ist nicht freigeschaltet.")
+
+    antwort = JSONResponse({"ok": True, "geraet": geraet.name})
+    antwort.set_cookie(
+        COOKIE, geraete.anmeldung_ausstellen(),
         httponly=True,
         samesite="strict",
-        secure=True,       # nur über HTTPS — siehe Caddy-Konfiguration
-        max_age=60 * 60 * 24 * 365,
+        secure=True,        # nur über HTTPS — siehe Caddy-Konfiguration
+        max_age=geraete.ANMELDUNG_GILT,
     )
-    return response
+    return antwort
+
+
+@app.get("/api/geraete", dependencies=[Depends(require_auth)])
+def geraete_liste() -> list[dict]:
+    return [{"name": g.name, "hinzugefuegt": g.hinzugefuegt} for g in geraete.liste()]
 
 
 # --- Sitzungen ---------------------------------------------------------------
@@ -107,17 +111,25 @@ async def create_session(body: NewSession) -> dict:
     )
 
     if body.first_prompt:
-        # Erst tippen, wenn Claude Code auch zuhört. Sonst landet der Auftrag
-        # im Nichts und die Sitzung steht leer da.
-        bereit = await asyncio.to_thread(tmux.warte_bis_bereit, body.name, 30)
-        if bereit:
-            tmux.send_text(body.name, body.first_prompt)
-            # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt
-            # Claude Code gelegentlich.
-            await asyncio.sleep(0.5)
-            tmux.send_key(body.name, "Enter")
+        # Der erste Auftrag darf nicht auf die Antwort warten lassen. Claude
+        # Code braucht ein paar Sekunden, bis es Eingaben annimmt — solange
+        # dürfen wir das Handy nicht hängen lassen. Also: Sitzung sofort
+        # melden, Auftrag im Hintergrund nachschieben.
+        asyncio.create_task(_ersten_auftrag_schicken(body.name, body.first_prompt))
 
     return {"ok": True, "name": body.name}
+
+
+async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
+    """Wartet, bis Claude Code zuhört, und tippt dann den Auftrag."""
+    bereit = await asyncio.to_thread(tmux.warte_bis_bereit, name, 40)
+    if not bereit:
+        return
+    tmux.send_text(name, prompt)
+    # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt Claude
+    # Code gelegentlich.
+    await asyncio.sleep(0.5)
+    tmux.send_key(name, "Enter")
 
 
 @app.patch("/api/sessions/{name}", dependencies=[Depends(require_auth)])
@@ -192,8 +204,7 @@ async def terminal(
     cols: int = Query(80),
     rows: int = Query(24),
 ) -> None:
-    supplied = websocket.cookies.get(COOKIE, "")
-    if not _token_ok(supplied):
+    if not geraete.anmeldung_gueltig(websocket.cookies.get(COOKIE, "")):
         await websocket.close(code=1008, reason="Nicht angemeldet.")
         return
 
@@ -264,12 +275,14 @@ app.mount("/", StaticFiles(directory=WEB_DIR), name="web")
 def main() -> None:
     import uvicorn
 
-    if not TOKEN:
-        raise SystemExit(
-            "HETZNER_APP_TOKEN ist nicht gesetzt.\n"
-            "Ohne Zugangswort startet der Dienst nicht — sonst hätte jeder, "
-            "der die Adresse kennt, eine Shell auf deinem Server.\n\n"
-            "  export HETZNER_APP_TOKEN=$(openssl rand -hex 24)"
+    # Kein Zugangswort mehr, das gesetzt sein müsste. Sind keine Geräte
+    # freigeschaltet, kommt schlicht niemand herein — der Dienst ist dann zu,
+    # nicht offen. Das ist der sichere Ausgangszustand.
+    if not geraete.liste():
+        print(
+            "Noch kein Gerät freigeschaltet — es kommt niemand herein.\n"
+            "Öffne die App am Handy, sie zeigt dir deinen Geräteschlüssel.\n"
+            "Dann:  ./scripts/geraet-erlauben.sh handy <schlüssel>"
         )
 
     uvicorn.run(

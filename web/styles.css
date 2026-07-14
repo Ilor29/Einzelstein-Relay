@@ -420,6 +420,41 @@ html, body {
   color: var(--akzent);
   font-size: .85rem;
 }
+.hinweis {
+  color: var(--schrift-schwach);
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+/* Der öffentliche Schlüssel. Lang, hässlich, harmlos. */
+.schluessel {
+  font-family: var(--mono);
+  font-size: .68rem;
+  line-height: 1.5;
+  color: var(--schrift-leise);
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  padding: .7rem;
+  word-break: break-all;
+  text-align: left;
+  user-select: all;          /* ein Fingertipp markiert alles */
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.knopf-rand {
+  width: 100%;
+  background: none;
+  color: var(--schrift-leise);
+  border: 1px solid var(--linie);
+  border-radius: 11px;
+  padding: .7rem;
+  font-family: var(--sans);
+  font-size: .87rem;
+  cursor: pointer;
+}
+.knopf-rand:active { background: var(--erhoben-2); }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }

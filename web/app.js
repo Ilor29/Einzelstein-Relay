@@ -4,7 +4,7 @@
 
 const $ = (id) => document.getElementById(id);
 
-const ANSICHTEN = ["anmeldung", "liste", "sitzung", "neu"];
+const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu"];
 
 function zeige(name) {
   for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
@@ -26,24 +26,99 @@ async function api(pfad, optionen = {}) {
   return antwort;
 }
 
-// --- Anmeldung ---------------------------------------------------------------
+// --- Anmeldung mit Geräteschlüssel -------------------------------------------
+//
+// Kein Passwort. Das Gerät erzeugt sich ein Schlüsselpaar; der geheime Teil ist
+// so angelegt, dass er sich nicht auslesen lässt — auch nicht von diesem Code.
+// Angemeldet wird sich, indem das Gerät eine Zufallsaufgabe des Servers
+// unterschreibt.
 
-$("anmelde-formular").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const fehler = $("anmelde-fehler");
-  fehler.hidden = true;
+const SCHLUESSEL_LAGER = "hetzner-app-schluessel";
+
+function b64(puffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(puffer)));
+}
+
+// Der Schlüssel lebt in der IndexedDB des Browsers. Dort dürfen auch Dinge
+// liegen, die man nicht auslesen kann — im localStorage ginge das nicht.
+function lager(modus, arbeit) {
+  return new Promise((fertig, fehler) => {
+    const anfrage = indexedDB.open("hetzner-app", 1);
+    anfrage.onupgradeneeded = () => anfrage.result.createObjectStore("schluessel");
+    anfrage.onerror = () => fehler(anfrage.error);
+    anfrage.onsuccess = () => {
+      const db = anfrage.result;
+      const laden = db.transaction("schluessel", modus).objectStore("schluessel");
+      const auftrag = arbeit(laden);
+      auftrag.onsuccess = () => fertig(auftrag.result);
+      auftrag.onerror = () => fehler(auftrag.error);
+    };
+  });
+}
+
+async function schluesselHolen() {
+  let paar = await lager("readonly", (s) => s.get(SCHLUESSEL_LAGER));
+
+  if (!paar) {
+    // extractable: false — der geheime Schlüssel kann das Gerät nicht verlassen.
+    paar = await crypto.subtle.generateKey(
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign", "verify"]
+    );
+    await lager("readwrite", (s) => s.put(paar, SCHLUESSEL_LAGER));
+  }
+  return paar;
+}
+
+async function oeffentlicherSchluessel(paar) {
+  return b64(await crypto.subtle.exportKey("spki", paar.publicKey));
+}
+
+async function anmelden() {
+  const paar = await schluesselHolen();
+
+  const { aufgabe } = await (await fetch("/api/aufgabe")).json();
+
+  const unterschrift = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    paar.privateKey,
+    new TextEncoder().encode(aufgabe)
+  );
+
+  const antwort = await fetch("/api/anmelden", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ aufgabe, unterschrift: b64(unterschrift) }),
+  });
+
+  if (!antwort.ok) throw new Error("nicht freigeschaltet");
+  return antwort.json();
+}
+
+async function zeigeSchluessel() {
+  const paar = await schluesselHolen();
+  $("schluessel").textContent = await oeffentlicherSchluessel(paar);
+  zeige("geraet");
+}
+
+$("knopf-kopieren").addEventListener("click", async () => {
+  const knopf = $("knopf-kopieren");
   try {
-    await api("/login", {
-      method: "POST",
-      body: JSON.stringify({ token: $("zugangswort").value }),
-    });
-    $("zugangswort").value = "";
-    starteListe();
-  } catch (err) {
-    fehler.textContent = err.message;
-    fehler.hidden = false;
+    await navigator.clipboard.writeText($("schluessel").textContent);
+    knopf.textContent = "Kopiert ✓";
+    setTimeout(() => (knopf.textContent = "Schlüssel kopieren"), 2000);
+  } catch {
+    // Kein Zugriff auf die Zwischenablage — dann markieren wir ihn eben.
+    const bereich = document.createRange();
+    bereich.selectNodeContents($("schluessel"));
+    getSelection().removeAllRanges();
+    getSelection().addRange(bereich);
+    knopf.textContent = "Markiert — jetzt kopieren";
   }
 });
+
+$("knopf-nochmal").addEventListener("click", start);
 
 // --- Sitzungsübersicht -------------------------------------------------------
 
@@ -399,8 +474,27 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
-// Beim Start gleich versuchen, die Liste zu laden. Klappt das, sind wir noch
-// angemeldet; wenn nicht, landen wir automatisch bei der Anmeldung.
-api("/sessions")
-  .then(starteListe)
-  .catch(() => zeige("anmeldung"));
+// Beim Start: Sind wir noch angemeldet? Wenn nicht, einmal mit dem
+// Geräteschlüssel anmelden. Klappt auch das nicht, ist dieses Gerät noch nicht
+// freigeschaltet — dann zeigen wir seinen öffentlichen Schlüssel.
+async function start() {
+  zeige("anmeldung");
+  $("anmelde-fehler").hidden = true;
+
+  try {
+    await (await api("/sessions")).json();
+    starteListe();
+    return;
+  } catch {
+    // noch nicht angemeldet — weiter unten
+  }
+
+  try {
+    await anmelden();
+    starteListe();
+  } catch {
+    zeigeSchluessel();
+  }
+}
+
+start();

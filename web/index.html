@@ -13,17 +13,31 @@
 </head>
 <body>
 
-<!-- Anmeldung -->
+<!-- Anmeldung läuft (unsichtbar, dauert einen Wimpernschlag) -->
 <section id="ansicht-anmeldung" class="ansicht" hidden>
   <div class="anmeldung">
     <h1>Hetzner</h1>
-    <p>Deine Sitzungen laufen auf dem Server. Melde dich an, um sie zu sehen.</p>
-    <form id="anmelde-formular">
-      <input type="password" id="zugangswort" class="eingabe" placeholder="Zugangswort"
-             autocomplete="current-password" required>
-      <button type="submit" class="knopf-voll">Anmelden</button>
-    </form>
+    <p id="anmelde-text">Melde das Gerät an …</p>
     <p id="anmelde-fehler" class="fehler" hidden></p>
+  </div>
+</section>
+
+<!-- Gerät noch nicht freigeschaltet: Schlüssel zeigen -->
+<section id="ansicht-geraet" class="ansicht" hidden>
+  <div class="anmeldung">
+    <h1>Hetzner</h1>
+    <p>Dieses Gerät hat sich einen Schlüssel erzeugt. Der geheime Teil bleibt
+       hier im Handy und verlässt es nie.</p>
+    <p>Schick den <b>öffentlichen</b> Teil an Claude, damit er das Gerät
+       freischaltet. Er ist kein Geheimnis — er darf ruhig im Chat stehen.</p>
+
+    <div class="schluessel" id="schluessel"></div>
+
+    <button id="knopf-kopieren" class="knopf-voll">Schlüssel kopieren</button>
+    <button id="knopf-nochmal" class="knopf-rand">Ich habe ihn geschickt — nochmal versuchen</button>
+
+    <p class="hinweis">Sobald der Schlüssel eingetragen ist, kommst du ohne
+       Passwort herein — auf diesem Gerät und nur auf diesem.</p>
   </div>
 </section>
 
