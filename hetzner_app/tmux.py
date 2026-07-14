@@ -174,6 +174,11 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
     # App ohnehin schon oben drüber.
     _run("set-option", "-t", PREFIX + name, "status", "off", socket=SOCKET)
 
+    # Viel Verlauf aufheben. tmux merkt sich sonst nur 2000 Zeilen, und die
+    # sind bei Claude Code in einer halben Stunde voll — dann kann man nicht
+    # mehr nachlesen, was vorhin besprochen wurde.
+    _run("set-option", "-t", PREFIX + name, "history-limit", "50000", socket=SOCKET)
+
     if first_prompt:
         # Claude Code braucht einen Moment, bis es Eingaben annimmt.
         # Das erledigt der Aufrufer über send_text(), nicht wir hier —

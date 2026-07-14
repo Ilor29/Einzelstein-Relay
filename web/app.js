@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 10;
+const VERSION = 11;
 
 const $ = (id) => document.getElementById(id);
 
@@ -548,6 +548,54 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   } catch (err) {
     feld.value = text;      // nichts verloren
     alert(err.message);
+  }
+});
+
+// --- Ein Foto an Claude ------------------------------------------------------
+//
+// Claude Code kann Bilder von der Festplatte lesen. Also legt der Server das
+// Foto dort ab und wir reichen den Pfad in die Sitzung — genau so, wie man ihn
+// am Rechner selbst eintippen würde. Ein Screenshot erklärt oft mehr als drei
+// Absätze, und unterwegs ist ein Foto schneller als jede Beschreibung.
+
+$("knopf-bild").addEventListener("click", () => $("bild-waehler").click());
+
+$("bild-waehler").addEventListener("change", async (e) => {
+  const datei = e.target.files?.[0];
+  e.target.value = "";                 // damit dasselbe Bild nochmal ginge
+  if (!datei || !aktuelleSitzung) return;
+
+  const knopf = $("knopf-bild");
+  knopf.classList.add("laedt");
+
+  try {
+    const paket = new FormData();
+    paket.append("bild", datei);
+
+    // Kein Content-Type setzen: Der Browser muss die Grenzmarke selbst
+    // eintragen, sonst kommt das Paket zerrissen an.
+    const antwort = await fetch(
+      `/api/sessions/${encodeURIComponent(aktuelleSitzung.name)}/bild`,
+      { method: "POST", body: paket }
+    );
+    if (!antwort.ok) throw new Error("Das Bild kam nicht an.");
+
+    const { pfad } = await antwort.json();
+
+    // Der Text daneben — falls du schon etwas dazu geschrieben hast.
+    const feld = $("eingabe");
+    const dazu = feld.value.trim();
+    feld.value = "";
+
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
+      method: "POST",
+      body: JSON.stringify({ text: dazu ? `${pfad} ${dazu}` : pfad }),
+    });
+    setTimeout(ladeVerlauf, 800);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    knopf.classList.remove("laedt");
   }
 });
 

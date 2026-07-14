@@ -465,6 +465,12 @@ html, body {
 .knopf-diktat:active { background: var(--erhoben-2); }
 .knopf-diktat svg { width: 18px; height: 18px; }
 
+/* Während das Bild hochgeht, blinkt der Knopf leise. */
+.knopf-diktat.laedt {
+  color: var(--akzent);
+  animation: pochen 1.2s ease-in-out infinite;
+}
+
 /* Während es zuhört, pulsiert es — sonst weiß man nicht, ob es lauscht. */
 .knopf-diktat.hoert {
   background: var(--akzent);

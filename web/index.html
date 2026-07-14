@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=10">
+  <link rel="stylesheet" href="/styles.css?v=11">
 
   <script>
     /* Die Notbremse.
@@ -104,6 +104,13 @@
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 5v14M5 12h14"/>
     </g>
+
+    <g id="i-bild" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2.5"/>
+      <circle cx="8.5" cy="9.5" r="1.6"/>
+      <path d="M21 16l-4.5-4.5L7 21"/>
+    </g>
   </defs>
 </svg>
 
@@ -174,6 +181,10 @@
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>
   <form id="eingabe-formular" class="eingabezeile">
+    <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Foto schicken">
+      <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
+    </button>
+    <input type="file" id="bild-waehler" accept="image/*" hidden>
     <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
       <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
     </button>
@@ -230,6 +241,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=10"></script>
+<script src="/app.js?v=11"></script>
 </body>
 </html>

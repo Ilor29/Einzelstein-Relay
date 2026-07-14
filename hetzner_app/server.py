@@ -14,7 +14,10 @@ import secrets
 import time
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends, FastAPI, File, HTTPException, Query, Request, UploadFile,
+    WebSocket, WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -50,7 +53,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 10
+VERSION = 11
 
 
 @app.get("/api/version")
@@ -250,9 +253,50 @@ def session_verlauf(name: str) -> list[dict]:
     """Die Unterhaltung als lesbare Blöcke — statt als Terminal-Gewusel."""
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
-    # Weit genug zurück, dass man den Faden der Unterhaltung wiederfindet —
-    # nicht nur die letzten drei Sätze.
-    return verlauf.lesen(tmux.capture(name, lines=1500))
+    # Der ganze Verlauf, den tmux noch hat. Wer nachlesen will, was vor einer
+    # Stunde besprochen wurde, soll es finden — nicht nur die letzten Sätze.
+    return verlauf.lesen(tmux.capture(name, lines=50000))
+
+
+BILDER = Path.home() / ".hetzner-app" / "bilder"
+
+# Was wir annehmen. Alles andere fliegt raus — hier landet nichts Ausführbares.
+BILDARTEN = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "image/heic": ".heic",
+}
+
+MAX_BILD = 20 * 1024 * 1024      # 20 MB
+
+
+@app.post("/api/sessions/{name}/bild", dependencies=[Depends(require_auth)])
+async def session_bild(name: str, bild: UploadFile = File(...)) -> dict:
+    """Ein Foto an Claude schicken.
+
+    Claude Code kann Bilder von der Festplatte lesen. Also legen wir das Foto
+    dort ab und reichen den Pfad in die Sitzung — so, wie man ihn am Rechner
+    selbst eintippen würde.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    endung = BILDARTEN.get(bild.content_type or "")
+    if not endung:
+        raise HTTPException(400, "Das ist kein Bild, das ich annehmen kann.")
+
+    inhalt = await bild.read()
+    if len(inhalt) > MAX_BILD:
+        raise HTTPException(413, "Das Bild ist zu groß (mehr als 20 MB).")
+
+    BILDER.mkdir(parents=True, exist_ok=True)
+    # Der Name des Nutzers landet nicht im Dateinamen — der käme aus dem Netz.
+    ziel = BILDER / f"{int(time.time())}-{secrets.token_hex(4)}{endung}"
+    ziel.write_bytes(inhalt)
+
+    return {"ok": True, "pfad": str(ziel)}
 
 
 class Nachricht(BaseModel):
