@@ -138,6 +138,14 @@ function alter(sekunden) {
   return tage === 1 ? "gestern" : `vor ${tage} Tagen`;
 }
 
+// "krugmeister-website:krugmeister-website" ist kein Name, den ein Mensch
+// lesen will. Steht überall dasselbe, sagen wir es einmal.
+function lesbar(kennung) {
+  const [server, sitzung] = kennung.split(":");
+  if (!sitzung) return kennung;
+  return server === sitzung ? server : `${server} · ${sitzung}`;
+}
+
 function karte(sitzung) {
   const el = document.createElement("div");
   el.className = "karte" + (sitzung.pinned ? " angeheftet" : "");
@@ -373,9 +381,8 @@ $("knopf-diktat").addEventListener("click", () => {
   hoert.interimResults = true;      // schon beim Sprechen mitschreiben
   hoert.continuous = true;          // nicht nach dem ersten Satz aufhören
 
-  // Was schon feststeht, bleibt stehen; der Rest wird noch überschrieben.
+  // Was schon im Feld stand, bleibt stehen; das Diktat kommt dahinter.
   const vorher = feld.value ? feld.value.trimEnd() + " " : "";
-  let sicher = "";
 
   hoert.onstart = () => {
     knopf.classList.add("hoert");
@@ -383,13 +390,16 @@ $("knopf-diktat").addEventListener("click", () => {
   };
 
   hoert.onresult = (e) => {
-    let vorlaeufig = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const stueck = e.results[i][0].transcript;
-      if (e.results[i].isFinal) sicher += stueck;
-      else vorlaeufig += stueck;
+    // Jedes Mal den ganzen Satz neu zusammensetzen, nicht anhängen.
+    //
+    // Die Erkennung liefert dieselben Wörter mehrfach: erst als Vermutung,
+    // dann korrigiert, dann endgültig. Wer da anhängt, bekommt "soso dasso
+    // dasso das istso das ist" — jedes Wort so oft, wie es überarbeitet wurde.
+    let text = "";
+    for (const ergebnis of e.results) {
+      text += ergebnis[0].transcript;
     }
-    feld.value = (vorher + sicher + vorlaeufig).trimStart();
+    feld.value = (vorher + text).trimStart();
   };
 
   hoert.onerror = (e) => {
