@@ -200,6 +200,26 @@ def frage(name: str) -> dict | None:
     return {"text": text, "moeglichkeiten": moeglichkeiten}
 
 
+# Wie viel Kontext dem Gespräch noch bleibt. Claude Code zeigt das nur, wenn es
+# knapp wird — "Context left until auto-compact: 18%" oder "18% context left".
+# Genau dann ist die Zahl auch interessant: Sie sagt, wann das Gespräch bald
+# aufgeräumt (verdichtet) wird. Ist nichts zu sehen, ist reichlich Kontext da.
+_KONTEXT = re.compile(r"context[^%\d]{0,30}?(\d{1,3})\s*%|(\d{1,3})\s*%\s*context", re.I)
+
+
+def kontext(name: str) -> int | None:
+    """Der Kontext-Rest in Prozent — oder None, wenn Claude Code ihn nicht nennt."""
+    try:
+        screen = tmux.capture(name, lines=None)
+    except tmux.TmuxError:
+        return None
+    treffer = _KONTEXT.search(screen)
+    if not treffer:
+        return None
+    wert = int(treffer.group(1) or treffer.group(2))
+    return wert if 0 <= wert <= 100 else None
+
+
 def preview(name: str, max_len: int = 90) -> str:
     """Die eine Zeile, die in der Übersicht unter dem Sitzungsnamen steht.
 
@@ -273,6 +293,9 @@ def overview() -> list[dict]:
             # darf man ansehen und bedienen, aber nicht beenden.
             "eigen": fuehrend.eigen,
             "modell": meta.modell,
+            # Der Kontext-Rest, wenn Claude Code ihn nennt — sonst None, dann
+            # zeigt das Handy dazu schlicht nichts.
+            "kontext": kontext(fuehrend.name),
             # Ohne eigenen Namen heißt der Kanal wie das Projekt, an dem er
             # arbeitet — nicht wie das Terminal, in dem er zufällig läuft.
             "anzeige": meta.anzeige or Path(cwd).name,

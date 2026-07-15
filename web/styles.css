@@ -84,6 +84,14 @@ html, body {
   border-bottom: 1px solid var(--linie);
   flex: none;
 }
+.sitzung-info {
+  padding: .35rem 1rem;
+  font-size: .78rem;
+  color: var(--schrift-leise);
+  border-bottom: 1px solid var(--linie);
+  background: var(--erhoben);
+  flex: none;
+}
 .kopf h1 {
   font-size: 1.1rem;
   font-weight: 600;

@@ -605,6 +605,7 @@ async function pruefeObClaudeArbeitet() {
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
     const zustand = jetzt?.state;
     $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
+    zeigeSitzungInfo(jetzt);
 
     if (
       freisprech && !imTerminal &&
@@ -691,7 +692,10 @@ function oeffneSitzung(sitzung) {
   freisprechAnzeigen();
   // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
   // Öffnen "Modell wählen", obwohl längst eines gesetzt ist.
-  modelleHolen().then(() => zeigeModell(sitzung.modell));
+  modelleHolen().then(() => {
+    zeigeModell(sitzung.modell);
+    zeigeSitzungInfo(null);
+  });
   zeige("sitzung");
 
   // Zum Lesen aufmachen, nicht ins Terminal. Das ist der Normalfall.
@@ -1065,6 +1069,20 @@ function zeigeModell(name) {
   // wäre geraten. Claude Code sagt uns nicht, womit es gestartet ist.
   $("modell-name").textContent = treffer ? treffer.anzeige : "Modell";
   $("knopf-modell").classList.toggle("gesetzt", Boolean(treffer));
+}
+
+// Die schlichte Infozeile: Modell und — wenn Claude Code ihn nennt — der
+// Kontext-Rest. Nur was wirklich bekannt ist; sonst bleibt die Zeile leer.
+function zeigeSitzungInfo(jetzt) {
+  const teile = [];
+  const m = modelle.find((x) => x.name === aktuelleSitzung?.modell);
+  if (m) teile.push(m.anzeige);
+  if (jetzt && typeof jetzt.kontext === "number") {
+    teile.push(`Kontext ${jetzt.kontext}% übrig`);
+  }
+  const el = $("sitzung-info");
+  el.textContent = teile.join("  ·  ");
+  el.hidden = teile.length === 0;
 }
 
 function blattZu() {
