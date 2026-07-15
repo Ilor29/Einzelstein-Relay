@@ -9,10 +9,12 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="stylesheet" href="/vendor/xterm.css">
-  <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
-       zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
-       an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=25">
+  <!-- Die Versionsnummer im Namen zwingt den Browser, nach einer Änderung
+       wirklich neu zu laden statt seine alte Fassung weiterzubenutzen. Sie
+       kommt vom Server: Er ersetzt __VERSION__ beim Ausliefern durch seine
+       eigene Version (siehe server.py:index und VERSION). So gibt es nur noch
+       eine Stelle zum Hochzählen — hier nichts von Hand. -->
+  <link rel="stylesheet" href="/styles.css?v=__VERSION__">
 
   <script>
     /* Die Notbremse.
@@ -407,6 +409,6 @@
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=25"></script>
+<script src="/app.js?v=__VERSION__"></script>
 </body>
 </html>

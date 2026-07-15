@@ -132,7 +132,13 @@ def detect(name: str) -> str:
 _RAHMEN = re.compile(r"^[\s│┃|╭╰╮╯─━]*|[\s│┃|─━]*$")
 
 # "❯ 1. Yes" — eine Antwortmöglichkeit, wie Claude Code sie anbietet.
-_MOEGLICHKEIT = re.compile(r"^[❯>»\s]*(\d+)\.\s+(.+?)$")
+#
+# Das Leerzeichen nach dem Punkt darf fehlen: die lange "Ja, und nicht mehr
+# fragen"-Zeile rendert Claude Code als "2.Yes …", ohne Lücke. Verlangten wir
+# hier ein Leerzeichen, fiele bei genau dieser Erlaubnis-Frage eine Antwort
+# durchs Raster, es blieben zu wenige übrig — und die App zeigte gar keine
+# Knöpfe, obwohl die Sitzung händeringend auf eine Antwort wartet.
+_MOEGLICHKEIT = re.compile(r"^[❯>»\s]*(\d+)\.\s*(.+?)$")
 
 
 def frage(name: str) -> dict | None:

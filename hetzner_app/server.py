@@ -59,7 +59,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 25
+VERSION = 26
 
 
 @app.get("/api/version")
@@ -666,8 +666,25 @@ async def terminal(
 # --- Die Oberfläche ----------------------------------------------------------
 
 @app.get("/")
-def index() -> FileResponse:
-    return FileResponse(WEB_DIR / "index.html")
+def index() -> Response:
+    """Die Startseite — mit der Versionsnummer des Servers hineingeschrieben.
+
+    Hier, und nur hier, entscheidet sich, welche Fassung im Handy läuft. Der
+    Server trägt seine Version in die Seite ein; Stil und Logik hängen mit
+    dieser Nummer im Namen daran. Und er verbietet dem Browser, die Seite
+    aufzubewahren — so holt das Handy sie bei jedem Öffnen frisch und bekommt
+    damit zwangsläufig die passenden Dateien. Früher stand die Nummer ein
+    zweites Mal fest im Handy-Code; lief sie mit dem Server auseinander, warf
+    sich die App in eine Neulade-Schleife und man flog heraus. Diese zweite
+    Nummer gibt es nicht mehr.
+    """
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    html = html.replace("__VERSION__", str(VERSION))
+    return Response(
+        content=html,
+        media_type="text/html; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 app.mount("/", StaticFiles(directory=WEB_DIR), name="web")

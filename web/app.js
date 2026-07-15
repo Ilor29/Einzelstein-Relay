@@ -2,32 +2,14 @@
    Vier Ansichten, ein Terminal, ein Vorlese-Knopf. Kein Framework, kein
    Bauschritt: Datei ändern, Seite neu laden, fertig. */
 
-// Muss zu server.py:VERSION passen. Stimmt es nicht überein, läuft im Handy
-// eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
-// Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
-// alte Datei weiterbenutzte.
-const VERSION = 25;
-
+// Welche Fassung im Handy läuft, entscheidet allein der Server: Er trägt seine
+// Versionsnummer beim Ausliefern in die Seite ein und liefert die Seite nie aus
+// dem Zwischenspeicher (siehe server.py:index). Stil und Logik hängen mit
+// dieser Nummer im Namen daran — bei jedem Öffnen frisch. Darum braucht es hier
+// keinen zweiten, fest eingebauten Zähler mehr, der mit dem Server auseinander-
+// laufen und die App in eine Neulade-Schleife schicken konnte. Genau daran bist
+// du immer wieder hängengeblieben.
 const $ = (id) => document.getElementById(id);
-
-async function versionPruefen() {
-  try {
-    const { version } = await (await fetch("/api/version", { cache: "no-store" })).json();
-    if (version === VERSION) return;
-
-    // Veraltet. Alles wegwerfen, was der Browser aufbewahrt hat, und neu laden.
-    const wachen = await navigator.serviceWorker?.getRegistrations?.() ?? [];
-    await Promise.all(wachen.map((w) => w.unregister()));
-
-    const namen = await caches?.keys?.() ?? [];
-    await Promise.all(namen.map((n) => caches.delete(n)));
-
-    // Der Zusatz zwingt auch den letzten Zwischenspeicher in die Knie.
-    location.replace(location.pathname + "?neu=" + version);
-  } catch {
-    // Kein Netz, keine Antwort — dann eben weiterarbeiten.
-  }
-}
 
 const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen", "bibliothek"];
 
@@ -1750,9 +1732,6 @@ if ("serviceWorker" in navigator) {
 async function start() {
   zeige("anmeldung");
   $("anmelde-fehler").hidden = true;
-
-  // Erst nachsehen, ob wir überhaupt die aktuelle Fassung sind.
-  await versionPruefen();
 
   try {
     await (await api("/sessions")).json();
