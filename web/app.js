@@ -1063,6 +1063,44 @@ $("knopf-diktat").addEventListener("click", () => {
 
 $("knopf-diktat-weg").addEventListener("click", () => hoertVerwerfen?.());
 
+// --- Diktat glätten ----------------------------------------------------------
+//
+// Räumt den Text im Feld auf: Füllwörter, Wortdopplungen, Verhörer, dazu
+// Satzzeichen und Großschreibung. Das übernimmt das schnelle Haiku-Modell auf
+// dem Server; es dauert einen Moment, darum funkelt der Knopf solange. Das
+// Ergebnis steht im Feld — abgeschickt wird es erst, wenn du es willst.
+$("knopf-glaetten").addEventListener("click", async () => {
+  const knopf = $("knopf-glaetten");
+  const feld = $("eingabe");
+
+  // Erst das Mikrofon zur Ruhe bringen, sonst schreibt es gleich wieder rein.
+  hoertStoppen?.();
+
+  if (knopf.disabled) return;
+  const text = feld.value.trim();
+  if (!text) {
+    melde("Erst etwas diktieren oder tippen, dann glätten.");
+    return;
+  }
+
+  knopf.disabled = true;
+  knopf.classList.add("laedt");
+  try {
+    const { text: sauber } = await (await api("/glaetten", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    })).json();
+    feld.value = sauber;
+    feldAnpassen();
+    feld.focus();
+  } catch (err) {
+    melde(err.message || "Das Glätten hat gerade nicht geklappt.");
+  } finally {
+    knopf.disabled = false;
+    knopf.classList.remove("laedt");
+  }
+});
+
 // --- Die Sitzung umbenennen --------------------------------------------------
 //
 // Ein Tipp auf den Namen in der Kopfzeile. Umbenannt wird nur das Schild an der

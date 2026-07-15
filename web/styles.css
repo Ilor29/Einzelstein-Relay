@@ -128,6 +128,14 @@ html, body {
   border-radius: .5rem;
 }
 .warteschlange .wartend button:active { background: var(--erhoben-2); }
+
+/* Während geglättet wird, funkelt der Knopf im Akzent und lässt sich nicht
+   nochmal drücken. */
+.knopf-diktat.laedt {
+  color: var(--akzent);
+  animation: pochen 1.2s ease-in-out infinite;
+}
+.knopf-diktat:disabled { opacity: .55; }
 .kopf h1 {
   font-size: 1.1rem;
   font-weight: 600;

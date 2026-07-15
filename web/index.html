@@ -61,6 +61,14 @@
       <path d="M12 18v4"/>
     </g>
 
+    <!-- Zwei Funken: das Diktat glätten. Das größere Funkeln steht für die
+         Aufräumarbeit, das kleine für den Feinschliff. -->
+    <g id="i-glaetten" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 3.5l1.5 3.9 3.9 1.5-3.9 1.5L11 14.3 9.5 10.4 5.6 8.9l3.9-1.5z"/>
+      <path d="M17.5 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>
+    </g>
+
     <g id="i-senden" fill="none" stroke="currentColor" stroke-width="1.8"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 19V5"/>
@@ -294,6 +302,10 @@
       </button>
       <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
         <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
+      </button>
+      <!-- Räumt das Diktat im Feld auf: Füllwörter, Dopplungen, Verhörer. -->
+      <button type="button" id="knopf-glaetten" class="knopf-diktat" aria-label="Diktat glätten">
+        <svg viewBox="0 0 24 24"><use href="#i-glaetten"/></svg>
       </button>
       <!-- Verwirft das Diktat. Erscheint nur, während zugehört wird. -->
       <button type="button" id="knopf-diktat-weg" class="knopf-diktat verwerfen"

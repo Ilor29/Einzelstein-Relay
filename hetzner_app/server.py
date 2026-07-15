@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 import secrets
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -59,7 +60,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 31
+VERSION = 32
 
 
 @app.get("/api/version")
@@ -609,6 +610,64 @@ def session_abbrechen(name: str) -> dict:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
     tmux.send_key(name, "Escape")
     return {"ok": True}
+
+
+# --- Diktat glätten ----------------------------------------------------------
+
+class Diktat(BaseModel):
+    text: str
+
+
+_GLAETTEN_PROMPT = (
+    "Du glättest einen diktierten deutschen Text, der gleich an einen "
+    "Programmierassistenten geschickt wird. Entferne Füllwörter (ähm, äh, halt) "
+    "und Wortdopplungen, behebe offensichtliche Versprecher und Verhörer aus dem "
+    "Zusammenhang, setze Satzzeichen und Großschreibung. Bewahre Sinn und "
+    "Absicht des Sprechers; erfinde nichts dazu und beantworte den Text NICHT. "
+    "Gib ausschließlich den bereinigten Text zurück — ohne Anführungszeichen, "
+    "ohne Vorrede, ohne Erklärung."
+)
+
+
+def _glaetten(text: str) -> str:
+    """Ruft die Claude-CLI headless auf und lässt sie den Text glätten.
+
+    Kein API-Schlüssel nötig: Die CLI ist über dein Abo angemeldet. Wir schalten
+    die MCP-Server ab — sie zu laden dauert Sekunden, und für eine reine
+    Textaufgabe braucht es sie nicht. Das schnelle Haiku-Modell reicht.
+    """
+    claude = shutil.which("claude")
+    if not claude:
+        raise RuntimeError("Die claude-CLI ist nicht auffindbar.")
+
+    eingabe = f"{_GLAETTEN_PROMPT}\n\nText: {text}"
+    ergebnis = subprocess.run(
+        [claude, "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
+         "-p", "--model", "haiku"],
+        input=eingabe, capture_output=True, text=True, timeout=30,
+    )
+    if ergebnis.returncode != 0:
+        raise RuntimeError(ergebnis.stderr[:200] or "Die CLI meldete einen Fehler.")
+    return ergebnis.stdout.strip()
+
+
+@app.post("/api/glaetten", dependencies=[Depends(require_auth)])
+async def glaetten(body: Diktat) -> dict:
+    """Einen diktierten Text aufräumen — auf Knopfdruck, vor dem Absenden."""
+    text = body.text.strip()
+    if not text:
+        return {"text": ""}
+
+    try:
+        sauber = await asyncio.to_thread(_glaetten, text)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, "Das Glätten hat zu lange gedauert — versuch es nochmal.")
+    except RuntimeError:
+        raise HTTPException(502, "Das Glätten hat gerade nicht geklappt.")
+
+    # Kommt nichts Brauchbares zurück, lieber den Urtext behalten als eine leere
+    # Zeile — nichts geht verloren.
+    return {"text": sauber or text}
 
 
 @app.post("/api/sessions/{name}/senden", dependencies=[Depends(require_auth)])
