@@ -335,6 +335,13 @@ function baueSondertasten() {
 let imTerminal = false;
 let verlaufTakt = null;
 
+// Freisprech-Modus: Ist er an, liest die App eine fertige Antwort von selbst
+// vor und öffnet danach das Mikrofon — freihändig, ohne einen Knopf. Die
+// Einstellung überlebt das Neuladen; `letzterZustand` merkt sich den vorigen
+// Zustand, damit wir den Sprung von "arbeitet" zu "fertig" genau einmal treffen.
+let freisprech = localStorage.getItem("freisprech") === "1";
+let letzterZustand = null;
+
 /** Setzt Claudes Text — mit Fettschrift, Kursiv und Befehlen.
  *
  *  Claude schreibt in Markdown. Ungerendert stehen dann Sternchen und
@@ -587,12 +594,25 @@ async function antworte(nummer) {
 }
 
 // Der Anhalten-Knopf zeigt sich nur, während Claude wirklich arbeitet.
+//
+// Nebenbei erkennt diese Runde den Übergang von "arbeitet" zu "ruht" — den
+// Moment, in dem Claude fertig geworden ist. Der Freisprech-Modus hängt daran:
+// Genau dann liest die App die Antwort von selbst vor.
 async function pruefeObClaudeArbeitet() {
   if (!aktuelleSitzung) return;
   try {
     const sitzungen = await (await api("/sessions")).json();
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
-    $("knopf-abbrechen-arbeit").hidden = jetzt?.state !== "running";
+    const zustand = jetzt?.state;
+    $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
+
+    if (
+      freisprech && !imTerminal &&
+      letzterZustand === "running" && zustand === "idle"
+    ) {
+      freisprechVorlesen();
+    }
+    letzterZustand = zustand;
   } catch {
     // dann eben nicht
   }
@@ -668,6 +688,7 @@ function oeffneSitzung(sitzung) {
   $("sitzung-name").textContent = benannt(sitzung);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
   $("knopf-melden").classList.toggle("an", sitzung.notifyWhenDone);
+  freisprechAnzeigen();
   // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
   // Öffnen "Modell wählen", obwohl längst eines gesetzt ist.
   modelleHolen().then(() => zeigeModell(sitzung.modell));
@@ -684,6 +705,7 @@ function oeffneSitzung(sitzung) {
   $("frage").hidden = true;
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
+  letzterZustand = null;   // Freisprech soll nicht sofort beim Öffnen auslösen
   ladeVerlauf();
   pruefeFrage();
   clearInterval(verlaufTakt);
@@ -1295,6 +1317,52 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     alert(err.message);
   }
 });
+
+// --- Freisprech-Modus --------------------------------------------------------
+//
+// Im Auto will man weder lesen noch tippen. Ist der Modus an, liest die App die
+// fertige Antwort von selbst vor und öffnet danach das Mikrofon — du sprichst,
+// Claude arbeitet, die Antwort kommt gesprochen zurück, das Mikrofon steht schon
+// offen. Abgeschickt wird weiterhin bewusst mit Senden, damit ein Verhörer nicht
+// ungefragt bei Claude landet.
+
+function freisprechAnzeigen() {
+  $("knopf-freisprech").classList.toggle("an", freisprech);
+}
+
+$("knopf-freisprech").addEventListener("click", () => {
+  freisprech = !freisprech;
+  localStorage.setItem("freisprech", freisprech ? "1" : "0");
+  freisprechAnzeigen();
+  melde(freisprech
+    ? "Freisprech an — ich lese fertige Antworten vor und öffne danach das Mikrofon."
+    : "Freisprech aus.");
+});
+
+async function freisprechVorlesen() {
+  // Hörst du schon etwas oder diktierst gerade, misch dich nicht ein.
+  if (spricht || hoert) return;
+  if (!aktuelleSitzung) return;
+
+  try {
+    const { text } = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+    )).json();
+    if (!text) return;
+
+    await sprich(text, $("knopf-vorlesen"));
+
+    // Vorlesen durch, Modus noch an, keiner hört zu: das Mikrofon öffnen, damit
+    // du gleich antworten kannst. Manche Browser erlauben das nur nach einer
+    // Berührung — klappt es nicht, tippst du das Mikrofon eben selbst an.
+    if (freisprech && !imTerminal && !hoert && !spricht &&
+        document.visibilityState === "visible") {
+      try { $("knopf-diktat").click(); } catch { /* dann von Hand */ }
+    }
+  } catch {
+    // Kein Text, kein Netz — dann eben nicht.
+  }
+}
 
 // Zurück zur Liste heißt auch: Ruhe.
 $("knopf-zurueck").addEventListener("click", stille);
