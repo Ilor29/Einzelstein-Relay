@@ -136,6 +136,27 @@ html, body {
   animation: pochen 1.2s ease-in-out infinite;
 }
 .knopf-diktat:disabled { opacity: .55; }
+
+.schnellbefehle {
+  display: flex;
+  gap: .4rem;
+  overflow-x: auto;
+  padding: .5rem .8rem 0;
+  flex: none;
+  scrollbar-width: none;
+}
+.schnellbefehle::-webkit-scrollbar { display: none; }
+.schnellbefehle .chip {
+  flex: none;
+  font-size: .82rem;
+  color: var(--schrift);
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  border-radius: 1rem;
+  padding: .35rem .8rem;
+  white-space: nowrap;
+}
+.schnellbefehle .chip:active { background: var(--erhoben-2); }
 .kopf h1 {
   font-size: 1.1rem;
   font-weight: 600;

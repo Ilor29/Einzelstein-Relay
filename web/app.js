@@ -645,6 +645,8 @@ function ansichtWechseln() {
   $("verlauf").hidden = imTerminal;
   $("terminal").hidden = !imTerminal;
   $("sondertasten").hidden = !imTerminal;
+  // Die Schnellbefehle gehören zur Lese-Ansicht — im Terminal tippt man direkt.
+  $("schnellbefehle").hidden = imTerminal;
   // Der Knopf zeigt, wohin er führt — nicht, wo man ist.
   $("knopf-ansicht").querySelector("use")
     .setAttribute("href", imTerminal ? "#i-lesen" : "#i-terminal");
@@ -710,6 +712,7 @@ function oeffneSitzung(sitzung) {
   $("verlauf").hidden = false;
   $("terminal").hidden = true;
   $("sondertasten").hidden = true;
+  $("schnellbefehle").hidden = false;
   $("knopf-ansicht").querySelector("use").setAttribute("href", "#i-terminal");
 
   $("verlauf").replaceChildren();
@@ -855,6 +858,33 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
     feld.value = text;      // nichts verloren
     alert(err.message);
   }
+});
+
+// --- Schnellbefehle ----------------------------------------------------------
+//
+// Ein Tipp schickt einen fertigen Satz an Claude — genau denselben Weg wie die
+// Eingabezeile, also wandert er auch in die Warteschlange, wenn Claude noch
+// arbeitet.
+async function schnellbefehl(text) {
+  if (!aktuelleSitzung || imTerminal || !text) return;
+  hoertStoppen?.();
+
+  if (letzterZustand === "running") {
+    warteschlange.push(text);
+    zeigeWarteschlange();
+    return;
+  }
+  try {
+    await sendeInSitzung(text);
+    letzterZustand = "running";
+  } catch (err) {
+    melde(err.message);
+  }
+}
+
+$("schnellbefehle").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+  if (chip) schnellbefehl(chip.dataset.text);
 });
 
 // --- Ein Foto an Claude ------------------------------------------------------
