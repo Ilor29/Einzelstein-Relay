@@ -276,6 +276,10 @@
   <!-- Zwei Zeilen, wie in der offiziellen App: oben der Text über die volle
        Breite, unten die Knöpfe. Nebeneinander gedrängt blieb dem Textfeld
        nichts mehr übrig, sobald Kreuz und Modellwähler dazukamen. -->
+  <!-- Was du abgeschickt hast, während Claude noch arbeitete. Es wird der Reihe
+       nach nachgeschoben, sobald er fertig ist — und lässt sich vorher mit dem
+       Kreuz wieder herausnehmen. -->
+  <div id="warteschlange" class="warteschlange" hidden></div>
   <form id="eingabe-formular" class="eingabezeile">
     <textarea id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
               rows="1" autocomplete="off" autocapitalize="sentences"

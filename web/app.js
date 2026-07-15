@@ -342,6 +342,11 @@ let verlaufTakt = null;
 let freisprech = localStorage.getItem("freisprech") === "1";
 let letzterZustand = null;
 
+// Nachrichten, die du abgeschickt hast, während Claude noch arbeitete. Sie
+// warten hier und werden einzeln nachgeschoben, sobald er fertig ist — so
+// vermischt sich nichts und die Reihenfolge bleibt.
+let warteschlange = [];
+
 /** Setzt Claudes Text — mit Fettschrift, Kursiv und Befehlen.
  *
  *  Claude schreibt in Markdown. Ungerendert stehen dann Sternchen und
@@ -607,11 +612,13 @@ async function pruefeObClaudeArbeitet() {
     $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
     zeigeSitzungInfo(jetzt);
 
-    if (
-      freisprech && !imTerminal &&
-      letzterZustand === "running" && zustand === "idle"
-    ) {
-      freisprechVorlesen();
+    // Claude ist gerade fertig geworden.
+    if (letzterZustand === "running" && zustand === "idle") {
+      // Wartet noch etwas in der Schlange, geht das zuerst raus — du willst ja,
+      // dass es weitergeht. Erst wenn nichts mehr wartet, liest Freisprech vor.
+      if (!warteschlangeWeiter() && freisprech && !imTerminal) {
+        freisprechVorlesen();
+      }
     }
     letzterZustand = zustand;
   } catch {
@@ -710,6 +717,8 @@ function oeffneSitzung(sitzung) {
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
   letzterZustand = null;   // Freisprech soll nicht sofort beim Öffnen auslösen
+  warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
+  zeigeWarteschlange();
   ladeVerlauf();
   pruefeFrage();
   clearInterval(verlaufTakt);
@@ -769,6 +778,48 @@ async function sendeInSitzung(text) {
   setTimeout(ladeVerlauf, 600);
 }
 
+// --- Warteschlange -----------------------------------------------------------
+
+function zeigeWarteschlange() {
+  const el = $("warteschlange");
+  el.replaceChildren();
+  warteschlange.forEach((text, i) => {
+    const zeile = document.createElement("div");
+    zeile.className = "wartend";
+
+    const t = document.createElement("span");
+    t.className = "text";
+    t.textContent = text;
+
+    const weg = document.createElement("button");
+    weg.type = "button";
+    weg.setAttribute("aria-label", "Aus der Warteschlange nehmen");
+    weg.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><use href="#i-kreuz"/></svg>';
+    weg.addEventListener("click", () => {
+      warteschlange.splice(i, 1);
+      zeigeWarteschlange();
+    });
+
+    zeile.append(t, weg);
+    el.append(zeile);
+  });
+  el.hidden = warteschlange.length === 0;
+}
+
+// Die nächste wartende Nachricht nachschieben. Gibt true zurück, wenn eine
+// abging — dann hat das Vorrang vor allem anderen, was bei "fertig" passiert.
+function warteschlangeWeiter() {
+  if (!warteschlange.length) return false;
+  const text = warteschlange.shift();
+  zeigeWarteschlange();
+  sendeInSitzung(text).catch(() => {
+    // Ging nicht raus — vorne zurück in die Schlange, damit nichts verloren geht.
+    warteschlange.unshift(text);
+    zeigeWarteschlange();
+  });
+  return true;
+}
+
 // Eingabezeile: bequemer als direkt ins Terminal zu tippen, weil die
 // Handytastatur so ihre Autokorrektur und das Diktieren anbieten kann.
 $("eingabe-formular").addEventListener("submit", async (e) => {
@@ -785,8 +836,21 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 
   feld.value = "";
 
+  // Arbeitet Claude noch, wird die Nachricht nicht sofort hineingetippt — sie
+  // wartet und geht ab, sobald er fertig ist. Sonst landete sie mitten in
+  // seiner Arbeit und die Reihenfolge geriete durcheinander.
+  if (!imTerminal && letzterZustand === "running") {
+    warteschlange.push(text);
+    zeigeWarteschlange();
+    return;
+  }
+
   try {
     await sendeInSitzung(text);
+    // Ab jetzt arbeitet Claude — tippst du gleich noch etwas, wandert es in die
+    // Schlange, statt seine Arbeit zu zerschneiden. Die nächste Runde bestätigt
+    // den Zustand ohnehin.
+    if (!imTerminal) letzterZustand = "running";
   } catch (err) {
     feld.value = text;      // nichts verloren
     alert(err.message);
