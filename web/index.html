@@ -141,6 +141,14 @@
       <path d="M21 16l-4.5-4.5L7 21"/>
     </g>
 
+    <!-- Ein Blatt mit umgeknickter Ecke: eine Datei (PDF, Word, Text …). -->
+    <g id="i-datei" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+      <path d="M14 3v5h5"/>
+      <path d="M9 13h6M9 17h6"/>
+    </g>
+
     <g id="i-kopieren" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <rect x="9" y="9" width="11" height="11" rx="2"/>
@@ -309,10 +317,16 @@
               rows="1" autocomplete="off" autocapitalize="sentences"
               enterkeyhint="send"></textarea>
     <div class="eingabe-knoepfe">
-      <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Foto schicken">
+      <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Fotos schicken">
         <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
       </button>
-      <input type="file" id="bild-waehler" accept="image/*" hidden>
+      <input type="file" id="bild-waehler" accept="image/*" multiple hidden>
+      <button type="button" id="knopf-datei" class="knopf-diktat" aria-label="Dateien schicken (PDF, Word, Markdown …)">
+        <svg viewBox="0 0 24 24"><use href="#i-datei"/></svg>
+      </button>
+      <input type="file" id="datei-waehler"
+             accept=".pdf,.md,.markdown,.txt,.text,.rtf,.doc,.docx,.odt,.csv,.tsv,.xls,.xlsx,.ods,.ppt,.pptx,.json,.yaml,.yml,.log,.xml,.html"
+             multiple hidden>
       <button type="button" id="knopf-skill" class="knopf-diktat" aria-label="Skill aus der Bibliothek einfügen">
         <svg viewBox="0 0 24 24"><use href="#i-buch"/></svg>
       </button>

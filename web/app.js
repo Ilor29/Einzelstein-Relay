@@ -896,45 +896,62 @@ $("schnellbefehle").addEventListener("click", (e) => {
 // am Rechner selbst eintippen würde. Ein Screenshot erklärt oft mehr als drei
 // Absätze, und unterwegs ist ein Foto schneller als jede Beschreibung.
 
-$("knopf-bild").addEventListener("click", () => $("bild-waehler").click());
+// Mehrere Anhänge auf einmal hochladen — Fotos wie Dokumente. Jeder Anhang geht
+// einzeln an den Server, der die Datei im Projektordner ablegt und den kurzen
+// Pfad zurückgibt. Alle Pfade landen vorne im Eingabefeld; abgeschickt wird
+// erst, wenn du auf Senden tippst — so kannst du noch etwas dazuschreiben.
+async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
+  dateien = [...dateien];
+  if (!dateien.length || !aktuelleSitzung) return;
 
-$("bild-waehler").addEventListener("change", async (e) => {
-  const datei = e.target.files?.[0];
-  e.target.value = "";                 // damit dasselbe Bild nochmal ginge
-  if (!datei || !aktuelleSitzung) return;
-
-  const knopf = $("knopf-bild");
   knopf.classList.add("laedt");
-
+  const pfade = [];
   try {
-    const paket = new FormData();
-    paket.append("bild", datei);
+    for (const datei of dateien) {
+      const paket = new FormData();
+      // Kein Content-Type setzen: Der Browser muss die Grenzmarke selbst
+      // eintragen, sonst kommt das Paket zerrissen an.
+      paket.append(feldname, datei);
+      const antwort = await fetch(
+        `/api/sessions/${encodeURIComponent(aktuelleSitzung.name)}/${endpunkt}`,
+        { method: "POST", body: paket }
+      );
+      if (!antwort.ok) {
+        const koerper = await antwort.json().catch(() => ({}));
+        throw new Error(koerper.detail || "Der Anhang kam nicht an.");
+      }
+      const { pfad } = await antwort.json();
+      pfade.push(pfad);
+    }
 
-    // Kein Content-Type setzen: Der Browser muss die Grenzmarke selbst
-    // eintragen, sonst kommt das Paket zerrissen an.
-    const antwort = await fetch(
-      `/api/sessions/${encodeURIComponent(aktuelleSitzung.name)}/bild`,
-      { method: "POST", body: paket }
-    );
-    if (!antwort.ok) throw new Error("Das Bild kam nicht an.");
-
-    const { pfad } = await antwort.json();
-
-    // Nicht sofort abschicken. Der Bildpfad landet vorne im Eingabefeld, und
-    // du kannst noch etwas dazuschreiben — gesendet wird erst, wenn du auf
-    // Senden tippst. Vorher flog das Foto beim Auswählen sofort raus, und ein
-    // Satz dazu war nicht mehr möglich.
     const feld = $("eingabe");
     const bisher = feld.value.trim();
-    feld.value = bisher ? `${pfad} ${bisher}` : `${pfad} `;
+    const vorne = pfade.join(" ");
+    feld.value = bisher ? `${vorne} ${bisher}` : `${vorne} `;
     feldAnpassen();
     feld.focus();
-    melde("Foto angehängt — schreib etwas dazu und sende ab.");
+    melde(pfade.length === 1
+      ? "Anhang angehängt — schreib etwas dazu und sende ab."
+      : `${pfade.length} Anhänge angehängt — schreib etwas dazu und sende ab.`);
   } catch (err) {
     alert(err.message);
   } finally {
     knopf.classList.remove("laedt");
   }
+}
+
+$("knopf-bild").addEventListener("click", () => $("bild-waehler").click());
+$("bild-waehler").addEventListener("change", (e) => {
+  const dateien = e.target.files;
+  e.target.value = "";                 // damit dieselbe Auswahl nochmal ginge
+  anhaengeHochladen(dateien, "bild", "bild", $("knopf-bild"));
+});
+
+$("knopf-datei").addEventListener("click", () => $("datei-waehler").click());
+$("datei-waehler").addEventListener("change", (e) => {
+  const dateien = e.target.files;
+  e.target.value = "";
+  anhaengeHochladen(dateien, "datei", "datei", $("knopf-datei"));
 });
 
 // --- Das Eingabefeld wächst mit ----------------------------------------------

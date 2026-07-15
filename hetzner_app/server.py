@@ -60,7 +60,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 34
+VERSION = 35
 
 
 @app.get("/api/version")
@@ -393,6 +393,66 @@ async def session_bild(name: str, bild: UploadFile = File(...)) -> dict:
     # und dann erkennt die App ihn nicht mehr als Bild, sondern zeigt dir
     # Buchstabensalat.
     return {"ok": True, "pfad": f".hetzner-bilder/{ziel.name}"}
+
+
+# Dokumente, die wir annehmen. Ausführbares und Unbekanntes bleibt draußen —
+# gelesen wird die Datei zwar nur, aber wir legen nichts Beliebiges im Projekt
+# ab. Die Endung bleibt erhalten, damit Claude Code weiß, was es vor sich hat.
+DOK_ENDUNGEN = {
+    ".pdf", ".md", ".markdown", ".txt", ".text", ".rtf",
+    ".doc", ".docx", ".odt", ".csv", ".tsv",
+    ".xls", ".xlsx", ".ods", ".ppt", ".pptx",
+    ".json", ".yaml", ".yml", ".log", ".xml", ".html",
+}
+
+MAX_DATEI = 30 * 1024 * 1024      # 30 MB — Dokumente sind schwerer als Fotos
+
+
+@app.post("/api/sessions/{name}/datei", dependencies=[Depends(require_auth)])
+async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
+    """Ein Dokument an Claude schicken — PDF, Word, Markdown, Text, Tabellen.
+
+    Wie beim Foto: Wir legen die Datei im Arbeitsordner der Sitzung ab und
+    reichen den kurzen Pfad hinein. Claude Code liest sie dann von der Platte.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    endung = Path(datei.filename or "").suffix.lower()
+    if endung not in DOK_ENDUNGEN:
+        raise HTTPException(
+            400,
+            "Diese Dateiart nehme ich nicht an. Erlaubt sind PDF, Word, "
+            "Markdown, Text, Tabellen und ähnliche Dokumente.",
+        )
+
+    inhalt = await datei.read()
+    if len(inhalt) > MAX_DATEI:
+        raise HTTPException(413, "Die Datei ist zu groß (mehr als 30 MB).")
+
+    sitzung = [s for s in tmux.list_sessions() if s.name == name][0]
+    arbeitsordner = Path(sitzung.cwd)
+    if not arbeitsordner.is_dir() or not os.access(arbeitsordner, os.W_OK):
+        raise HTTPException(
+            400,
+            "In den Ordner dieser Sitzung darf ich nicht schreiben. "
+            "Schick die Datei aus einer Sitzung, die in einem Projektordner läuft.",
+        )
+
+    # Ein eigener Ordner für Anhänge, damit sie sich nicht mit den Projektdateien
+    # mischen — und nicht in Git landen.
+    ordner = arbeitsordner / ".hetzner-dateien"
+    ordner.mkdir(parents=True, exist_ok=True)
+    hinweis = ordner / ".gitignore"
+    if not hinweis.exists():
+        hinweis.write_text("*\n")
+
+    # Der Dateiname kommt von uns; nur die Endung stammt aus dem Netz, und die
+    # haben wir gegen die Positivliste geprüft.
+    ziel = ordner / f"{int(time.time())}-{secrets.token_hex(4)}{endung}"
+    ziel.write_bytes(inhalt)
+
+    return {"ok": True, "pfad": f".hetzner-dateien/{ziel.name}"}
 
 
 @app.get("/api/bilder/{sitzung}/{datei}", dependencies=[Depends(require_auth)])
