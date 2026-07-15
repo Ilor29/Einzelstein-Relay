@@ -150,10 +150,22 @@ def exists(name: str) -> bool:
     return any(s.name == name for s in list_sessions())
 
 
-def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
-    """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung."""
+def create(
+    name: str,
+    cwd: str,
+    first_prompt: str | None = None,
+    ohne_rueckfragen: bool = False,
+) -> None:
+    """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
+
+    Mit ohne_rueckfragen läuft Claude im Modus "fragt nie" — er führt auch
+    Befehle ohne Rückfrage aus. Das lässt sich nur beim Start setzen, nicht
+    später umschalten, darum steckt es hier.
+    """
     if exists(name):
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
+
+    befehl = "claude --dangerously-skip-permissions" if ohne_rueckfragen else "claude"
 
     _run(
         "new-session",
@@ -165,7 +177,7 @@ def create(name: str, cwd: str, first_prompt: str | None = None) -> None:
         # gerade arbeitet oder auf eine Antwort wartet.
         "-x", "120",
         "-y", "40",
-        "claude",
+        befehl,
     )
 
     # Damit mehrere Zuschauer (Handy und Rechner) unterschiedlich große

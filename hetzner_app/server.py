@@ -60,7 +60,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 33
+VERSION = 34
 
 
 @app.get("/api/version")
@@ -108,6 +108,9 @@ class NewSession(BaseModel):
     first_prompt: str = ""
     pinned: bool = False
     notify_when_done: bool = False
+    # "Fragt nie": Claude führt auch Befehle ohne Rückfrage aus. Nur beim Start
+    # setzbar, nicht später umschaltbar.
+    ohne_rueckfragen: bool = False
 
 
 class Patch(BaseModel):
@@ -131,7 +134,7 @@ async def create_session(body: NewSession) -> dict:
         raise HTTPException(400, f"Den Ordner {body.cwd} gibt es nicht.")
 
     try:
-        tmux.create(body.name, str(cwd))
+        tmux.create(body.name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
@@ -553,6 +556,21 @@ def session_antwort(name: str, body: Antwort) -> dict:
 
     tmux.send_text(name, str(body.nummer))
     return {"ok": True}
+
+
+@app.post("/api/sessions/{name}/modus", dependencies=[Depends(require_auth)])
+async def modus_wechseln(name: str) -> dict:
+    """Den Berechtigungs-Modus einen Schritt weiterschalten — wie Shift+Tab.
+
+    Der Kreis: fragt nach → Änderungen ok → nur Plan → Auto → wieder von vorn.
+    Wir tippen die Taste und lesen danach ab, wo wir gelandet sind.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    tmux.send_key(name, "BTab")
+    await asyncio.sleep(0.4)
+    return {"ok": True, "modus": state.modus(name)}
 
 
 @app.post("/api/sessions/{name}/sichern", dependencies=[Depends(require_auth)])

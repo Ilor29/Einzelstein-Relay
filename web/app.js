@@ -611,6 +611,7 @@ async function pruefeObClaudeArbeitet() {
     const zustand = jetzt?.state;
     $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
     zeigeSitzungInfo(jetzt);
+    zeigeModus(jetzt?.modus);
 
     // Claude ist gerade fertig geworden.
     if (letzterZustand === "running" && zustand === "idle") {
@@ -705,6 +706,7 @@ function oeffneSitzung(sitzung) {
     zeigeModell(sitzung.modell);
     zeigeSitzungInfo(null);
   });
+  zeigeModus(sitzung.modus);
   zeige("sitzung");
 
   // Zum Lesen aufmachen, nicht ins Terminal. Das ist der Normalfall.
@@ -1203,8 +1205,34 @@ function zeigeModell(name) {
   $("knopf-modell").classList.toggle("gesetzt", Boolean(treffer));
 }
 
-// Die schlichte Infozeile: Modell und — wenn Claude Code ihn nennt — der
-// Kontext-Rest. Nur was wirklich bekannt ist; sonst bleibt die Zeile leer.
+// Die Info-Leiste teilen sich zwei Dinge: links die Modus-Pille zum Antippen,
+// dahinter Modell und Kontext-Rest. Beide schreiben ihren Teil und lassen die
+// Leiste gemeinsam malen — verschwinden tut sie nur, wenn wirklich nichts
+// Bekanntes übrig ist.
+let _infoText = "";
+let _modus = null;
+
+// Die kurzen Aufschriften für die Modus-Pille. "bypassPermissions" — "fragt
+// nie" — lässt sich nur beim Start setzen, steht hier aber mit dabei, damit
+// auch so gestartete Sitzungen richtig beschriftet sind.
+const MODUS_KURZ = {
+  manual: "Fragt",
+  acceptEdits: "Änderungen ok",
+  plan: "Nur Plan",
+  auto: "Auto",
+  bypassPermissions: "Fragt nie",
+};
+
+function malInfoLeiste() {
+  const bekannt = _modus && MODUS_KURZ[_modus];
+  const pille = $("knopf-modus");
+  pille.textContent = bekannt ? MODUS_KURZ[_modus] : "Modus";
+  pille.classList.toggle("gesetzt", Boolean(bekannt));
+
+  $("sitzung-info-text").textContent = _infoText;
+  $("sitzung-info").hidden = !bekannt && !_infoText;
+}
+
 function zeigeSitzungInfo(jetzt) {
   const teile = [];
   const m = modelle.find((x) => x.name === aktuelleSitzung?.modell);
@@ -1212,10 +1240,28 @@ function zeigeSitzungInfo(jetzt) {
   if (jetzt && typeof jetzt.kontext === "number") {
     teile.push(`Kontext ${jetzt.kontext}% übrig`);
   }
-  const el = $("sitzung-info");
-  el.textContent = teile.join("  ·  ");
-  el.hidden = teile.length === 0;
+  _infoText = teile.join("  ·  ");
+  malInfoLeiste();
 }
+
+function zeigeModus(m) {
+  _modus = m;
+  malInfoLeiste();
+}
+
+// Ein Tipp schaltet den Berechtigungs-Modus weiter — genau wie Shift+Tab.
+$("knopf-modus").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  try {
+    const { modus } = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modus`,
+      { method: "POST" }
+    )).json();
+    zeigeModus(modus);
+  } catch (err) {
+    melde(err.message);
+  }
+});
 
 function blattZu() {
   $("modell-blatt").hidden = true;
@@ -1706,6 +1752,7 @@ $("neu-formular").addEventListener("submit", async (e) => {
         first_prompt: $("neu-auftrag").value,
         pinned: $("neu-anheften").checked,
         notify_when_done: melden,
+        ohne_rueckfragen: $("neu-ohne-rueckfragen").checked,
       }),
     });
     $("neu-formular").reset();

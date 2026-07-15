@@ -85,13 +85,29 @@ html, body {
   flex: none;
 }
 .sitzung-info {
-  padding: .35rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .35rem .8rem;
   font-size: .78rem;
   color: var(--schrift-leise);
   border-bottom: 1px solid var(--linie);
   background: var(--erhoben);
   flex: none;
 }
+.modus-pille {
+  flex: none;
+  background: var(--erhoben-2);
+  border: 0;
+  border-radius: 999px;
+  padding: .25rem .6rem;
+  font-family: var(--sans);
+  font-size: .75rem;
+  white-space: nowrap;
+  color: var(--schrift-leise);
+}
+.modus-pille.gesetzt { color: var(--schrift); }
+.modus-pille:active { filter: brightness(1.25); }
 .warteschlange {
   display: flex;
   flex-direction: column;

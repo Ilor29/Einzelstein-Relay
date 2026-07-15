@@ -264,10 +264,15 @@
       <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
     </button>
   </header>
-  <!-- Eine schlichte Zeile: welches Modell denkt und — wenn Claude Code ihn
-       nennt — wie viel Kontext noch bleibt. Kein erfundener Balken; steht nur
-       da, was wirklich bekannt ist. -->
-  <div id="sitzung-info" class="sitzung-info" hidden></div>
+  <!-- Eine schlichte Zeile: links der Berechtigungs-Modus zum Antippen (fragt
+       nach → Änderungen ok → nur Plan → Auto), dahinter welches Modell denkt
+       und — wenn Claude Code ihn nennt — wie viel Kontext noch bleibt. Kein
+       erfundener Balken; steht nur da, was wirklich bekannt ist. -->
+  <div id="sitzung-info" class="sitzung-info" hidden>
+    <button type="button" id="knopf-modus" class="modus-pille"
+            aria-label="Berechtigungs-Modus umschalten">Modus</button>
+    <span id="sitzung-info-text"></span>
+  </div>
   <div id="verlauf" class="verlauf"></div>
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>
@@ -381,6 +386,12 @@
     <label class="schalterzeile">
       <span>Melden, wenn fertig</span>
       <input type="checkbox" id="neu-melden" checked>
+      <span class="schalter"></span>
+    </label>
+
+    <label class="schalterzeile">
+      <span>Fragt nie <small>— führt auch Befehle ohne Rückfrage aus</small></span>
+      <input type="checkbox" id="neu-ohne-rueckfragen">
       <span class="schalter"></span>
     </label>
 

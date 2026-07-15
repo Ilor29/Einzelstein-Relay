@@ -207,6 +207,30 @@ def frage(name: str) -> dict | None:
 _KONTEXT = re.compile(r"context[^%\d]{0,30}?(\d{1,3})\s*%|(\d{1,3})\s*%\s*context", re.I)
 
 
+# Der Berechtigungs-Modus, den Claude Code unten in der Fußzeile anzeigt. Mit
+# Shift+Tab schaltet man ihn im Kreis: manual → acceptEdits → plan → auto.
+# "bypassPermissions" ("fragt nie") steht nicht im Kreis — das geht nur beim
+# Starten der Sitzung, nicht danach.
+_MODI = {
+    "manual mode on": "manual",
+    "accept edits on": "acceptEdits",
+    "plan mode on": "plan",
+    "auto mode on": "auto",
+}
+
+
+def modus(name: str) -> str | None:
+    """Welcher Berechtigungs-Modus gerade läuft — oder None, wenn nichts steht."""
+    try:
+        screen = tmux.capture(name, lines=None).lower()
+    except tmux.TmuxError:
+        return None
+    for marker, wert in _MODI.items():
+        if marker in screen:
+            return wert
+    return None
+
+
 def kontext(name: str) -> int | None:
     """Der Kontext-Rest in Prozent — oder None, wenn Claude Code ihn nicht nennt."""
     try:
@@ -296,6 +320,8 @@ def overview() -> list[dict]:
             # Der Kontext-Rest, wenn Claude Code ihn nennt — sonst None, dann
             # zeigt das Handy dazu schlicht nichts.
             "kontext": kontext(fuehrend.name),
+            # Der Berechtigungs-Modus (fragt / Änderungen ok / Plan / Auto).
+            "modus": modus(fuehrend.name),
             # Ohne eigenen Namen heißt der Kanal wie das Projekt, an dem er
             # arbeitet — nicht wie das Terminal, in dem er zufällig läuft.
             "anzeige": meta.anzeige or Path(cwd).name,
