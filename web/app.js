@@ -1191,8 +1191,13 @@ function haeppchen(text, mindestens = 90) {
 
   for (const satz of saetze) {
     aktuell += (aktuell ? " " : "") + satz;
-    // Sehr kurze Sätze sammeln wir, sonst zerhackt es den Vortrag.
-    if (aktuell.length >= mindestens) {
+    // Das allererste Häppchen so klein wie möglich: schon der erste ganze
+    // Satz wird gesprochen, damit der Ton ohne Wartezeit einsetzt — bei der
+    // schweren Stimme macht das den Unterschied zwischen vier Sekunden und
+    // etwa einer. Erst ab dem zweiten Häppchen sammeln wir größere Portionen,
+    // sonst zerhackt es den Vortrag.
+    const schwelle = stuecke.length === 0 ? 1 : mindestens;
+    if (aktuell.length >= schwelle) {
       stuecke.push(aktuell);
       aktuell = "";
     }
