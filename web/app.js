@@ -6,7 +6,7 @@
 // eine veraltete Fassung — und man sucht Fehler, die längst behoben sind.
 // Genau das ist passiert: Ein Diktat-Fehler blieb, weil der Browser stur die
 // alte Datei weiterbenutzte.
-const VERSION = 24;
+const VERSION = 25;
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,7 +29,7 @@ async function versionPruefen() {
   }
 }
 
-const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen"];
+const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen", "bibliothek"];
 
 function zeige(name) {
   for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
@@ -1510,6 +1510,227 @@ $("neu-formular").addEventListener("submit", async (e) => {
     fehler.hidden = false;
   }
 });
+
+// --- Die Bibliothek ----------------------------------------------------------
+//
+// Alle Skills als Karten — mit dem Namen, den du vergeben hast, deiner
+// Beschreibung und einer Kategorie. Die englischen Originale bleiben, wie sie
+// sind; dein Etikett liegt darüber und darf ruhig deutsch und einprägsam sein.
+// Von der Startseite aus zum Ordnen, aus einer Sitzung heraus zum Einfügen.
+
+let skills = [];
+let bibFach = "Alle";
+let bibZiel = null;             // die Sitzung, in die "Einfügen" schreibt
+let bearbeiteterSkill = null;
+
+const skillName = (s) => s.name || s.original_name;
+const skillText = (s) => s.beschreibung || s.original_beschreibung;
+
+function bibKategorien() {
+  const faecher = new Set(skills.map((s) => s.kategorie).filter(Boolean));
+  return [...faecher].sort((a, b) => a.localeCompare(b, "de"));
+}
+
+async function oeffneBibliothek(ziel) {
+  bibZiel = ziel;
+  // Von der Startseite: den Fünf-Sekunden-Takt der Liste anhalten. Aus einer
+  // Sitzung heraus halten wir nichts an — wir kehren gleich dorthin zurück.
+  if (!ziel) stoppeListe();
+  zeige("bibliothek");
+  try {
+    skills = await (await api("/skills")).json();
+  } catch {
+    return;   // nicht angemeldet — die Ansicht hat schon gewechselt
+  }
+  baueReiter();
+  zeigeSkills();
+  fuelleKategorien();
+}
+
+$("knopf-bibliothek").addEventListener("click", () => oeffneBibliothek(null));
+$("knopf-skill").addEventListener("click", () => oeffneBibliothek(aktuelleSitzung));
+
+$("knopf-bib-zurueck").addEventListener("click", () => {
+  const zurueckZurSitzung = Boolean(bibZiel);
+  bibZiel = null;
+  if (zurueckZurSitzung) zeige("sitzung");
+  else starteListe();
+});
+
+function baueReiter() {
+  const leiste = $("bib-reiter");
+  const faecher = ["Alle", ...bibKategorien()];
+  // Ein gewähltes Fach, das es nicht mehr gibt, fällt auf "Alle" zurück.
+  if (!faecher.includes(bibFach)) bibFach = "Alle";
+
+  leiste.replaceChildren(
+    ...faecher.map((fach) => {
+      const knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.className = "reiter" + (fach === bibFach ? " an" : "");
+      knopf.textContent = fach;
+      knopf.addEventListener("click", () => {
+        bibFach = fach;
+        baueReiter();
+        zeigeSkills();
+      });
+      return knopf;
+    })
+  );
+}
+
+function zeigeSkills() {
+  const liste = $("bib-liste");
+  const sichtbar = bibFach === "Alle"
+    ? skills
+    : skills.filter((s) => s.kategorie === bibFach);
+
+  if (sichtbar.length === 0) {
+    const leer = document.createElement("p");
+    leer.className = "leer";
+    leer.textContent = skills.length === 0
+      ? "Keine Skills gefunden."
+      : "In diesem Fach ist noch nichts.";
+    liste.replaceChildren(leer);
+    return;
+  }
+
+  liste.replaceChildren(...sichtbar.map(skillKarte));
+}
+
+function skillKarte(s) {
+  const el = document.createElement("div");
+  el.className = "bib-karte";
+  // Namen und Texte kommen aus SKILL.md und von dir — nie über innerHTML,
+  // damit daraus kein Schadcode in die Seite gerät. Nur das Gerüst ist fest.
+  el.innerHTML = `
+    <div class="bib-kopf">
+      <span class="bib-name"></span>
+      ${s.kategorie ? '<span class="bib-fach"></span>' : ""}
+    </div>
+    <div class="bib-desc"></div>
+    <div class="bib-fuss">
+      <span class="bib-herkunft"></span>
+      <span class="fueller"></span>
+      <button class="klein-knopf bib-kopie" aria-label="Befehl kopieren">
+        <svg viewBox="0 0 24 24"><use href="#i-kopieren"/></svg>
+      </button>
+      ${bibZiel ? `<button class="klein-knopf bib-einfuegen" aria-label="In die Sitzung einfügen">
+        <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
+      </button>` : ""}
+    </div>`;
+
+  el.querySelector(".bib-name").textContent = skillName(s);
+  if (s.kategorie) el.querySelector(".bib-fach").textContent = s.kategorie;
+  el.querySelector(".bib-desc").textContent = skillText(s) || "—";
+  el.querySelector(".bib-herkunft").textContent = s.herkunft;
+
+  // Ein Tipp auf die Karte: benennen.
+  el.addEventListener("click", () => skillBearbeiten(s));
+
+  el.querySelector(".bib-kopie").addEventListener("click", (e) => {
+    e.stopPropagation();   // sonst öffnet sich gleichzeitig das Benennen-Blatt
+    skillKopieren(s, e.currentTarget);
+  });
+
+  const einf = el.querySelector(".bib-einfuegen");
+  if (einf) {
+    einf.addEventListener("click", (e) => {
+      e.stopPropagation();
+      skillEinfuegen(s);
+    });
+  }
+
+  return el;
+}
+
+async function skillKopieren(s, knopf) {
+  try {
+    await navigator.clipboard.writeText(s.befehl);
+    knopf.classList.add("getan");
+    knopf.querySelector("use").setAttribute("href", "#i-haken");
+    setTimeout(() => {
+      knopf.classList.remove("getan");
+      knopf.querySelector("use").setAttribute("href", "#i-kopieren");
+    }, 1600);
+  } catch {
+    melde("Kopieren hat nicht geklappt.");
+  }
+}
+
+function skillEinfuegen(s) {
+  if (!bibZiel) return;
+  // Nicht sofort abschicken: Der Befehl landet im Eingabefeld, damit du noch
+  // etwas dahinter schreiben kannst — die meisten Skills nehmen ja einen Auftrag.
+  const feld = $("eingabe");
+  const vorher = feld.value.trim();
+  feld.value = (vorher ? vorher + " " : "") + s.befehl + " ";
+  bibZiel = null;
+  zeige("sitzung");
+  feldAnpassen();
+  feld.focus();
+  melde(`${skillName(s)} eingefügt`);
+}
+
+// --- Einen Skill benennen ---
+//
+// Dein Name, deine Beschreibung, deine Kategorie — im Blatt von unten. Das
+// Original bleibt unberührt; alles wieder leeren nimmt dein Etikett ab.
+
+function skillBearbeiten(s) {
+  bearbeiteterSkill = s;
+  $("skill-original").textContent =
+    `Original: ${s.original_name} · ${s.herkunft} · ${s.befehl}`;
+  $("skill-name").value = s.name;
+  $("skill-name").placeholder = s.original_name;
+  $("skill-beschreibung").value = s.beschreibung;
+  $("skill-beschreibung").placeholder = (s.original_beschreibung || "").slice(0, 140);
+  $("skill-kategorie").value = s.kategorie;
+  fuelleKategorien();
+  $("skill-blatt").hidden = false;
+}
+
+function skillBlattZu() {
+  $("skill-blatt").hidden = true;
+  bearbeiteterSkill = null;
+}
+
+$("skill-schatten").addEventListener("click", skillBlattZu);
+$("skill-schliessen").addEventListener("click", skillBlattZu);
+
+$("skill-speichern").addEventListener("click", async () => {
+  if (!bearbeiteterSkill) return;
+  try {
+    await api("/skills", {
+      method: "PATCH",
+      body: JSON.stringify({
+        id: bearbeiteterSkill.id,
+        name: $("skill-name").value,
+        beschreibung: $("skill-beschreibung").value,
+        kategorie: $("skill-kategorie").value,
+      }),
+    });
+    skillBlattZu();
+    // Frisch holen: Name, Fach und damit die Reiter können sich geändert haben.
+    skills = await (await api("/skills")).json();
+    baueReiter();
+    zeigeSkills();
+    fuelleKategorien();
+    melde("Gespeichert");
+  } catch (err) {
+    melde(err.message);
+  }
+});
+
+function fuelleKategorien() {
+  $("bib-kategorien").replaceChildren(
+    ...bibKategorien().map((k) => {
+      const o = document.createElement("option");
+      o.value = k;
+      return o;
+    })
+  );
+}
 
 // --- Los geht's --------------------------------------------------------------
 

@@ -12,7 +12,7 @@
   <!-- Die Versionsnummer zwingt den Browser, nach einer Änderung wirklich neu
        zu laden statt seine alte Fassung weiterzubenutzen. Bei jeder Änderung
        an styles.css oder app.js hochzählen. -->
-  <link rel="stylesheet" href="/styles.css?v=24">
+  <link rel="stylesheet" href="/styles.css?v=25">
 
   <script>
     /* Die Notbremse.
@@ -157,6 +157,13 @@
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </g>
+
+    <!-- Ein aufgeschlagenes Buch: die Skill-Bibliothek. -->
+    <g id="i-buch" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/>
+      <path d="M4 20a2 2 0 0 1 2-2h13"/>
+    </g>
   </defs>
 </svg>
 
@@ -193,6 +200,9 @@
   <header class="kopf">
     <h1>Sitzungen</h1>
     <span id="verbindung" class="verbindung"><span class="punkt"></span>verbunden</span>
+    <button id="knopf-bibliothek" class="knopf-blank" aria-label="Bibliothek">
+      <svg viewBox="0 0 24 24"><use href="#i-buch"/></svg>
+    </button>
     <button id="knopf-einstellungen" class="knopf-blank" aria-label="Einstellungen">
       <svg viewBox="0 0 24 24"><use href="#i-zahnrad"/></svg>
     </button>
@@ -254,6 +264,9 @@
         <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
       </button>
       <input type="file" id="bild-waehler" accept="image/*" hidden>
+      <button type="button" id="knopf-skill" class="knopf-diktat" aria-label="Skill aus der Bibliothek einfügen">
+        <svg viewBox="0 0 24 24"><use href="#i-buch"/></svg>
+      </button>
       <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
         <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
       </button>
@@ -346,10 +359,54 @@
   </div>
 </section>
 
+<!-- Bibliothek -->
+<!-- Deine Skills als Karten: mit dem Namen, den du vergeben hast, deiner
+     Beschreibung und einer Kategorie. Oben die Reiter zum Filtern. -->
+<section id="ansicht-bibliothek" class="ansicht" hidden>
+  <header class="kopf">
+    <button id="knopf-bib-zurueck" class="knopf-blank" aria-label="Zurück">
+      <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
+    </button>
+    <h1>Bibliothek</h1>
+  </header>
+  <div id="bib-reiter" class="bib-reiter"></div>
+  <div id="bib-liste" class="bib-liste"></div>
+</section>
+
+<!-- Einen Skill benennen — dasselbe Blatt von unten wie beim Modell. -->
+<div id="skill-blatt" class="blatt" hidden>
+  <div class="blatt-schatten" id="skill-schatten"></div>
+  <div class="blatt-inhalt">
+    <div class="blatt-kopf">
+      <button type="button" id="skill-schliessen" class="knopf-blank"
+              aria-label="Schließen">✕</button>
+      <h2>Skill benennen</h2>
+    </div>
+    <div class="skill-formular">
+      <p id="skill-original" class="hinweis"></p>
+      <label class="feld">
+        <span class="marke">Dein Name</span>
+        <input type="text" id="skill-name" class="eingabe">
+      </label>
+      <label class="feld">
+        <span class="marke">Deine Beschreibung</span>
+        <textarea id="skill-beschreibung" class="eingabe" rows="3"></textarea>
+      </label>
+      <label class="feld">
+        <span class="marke">Kategorie</span>
+        <input type="text" id="skill-kategorie" class="eingabe"
+               list="bib-kategorien" placeholder="z. B. Marketing">
+        <datalist id="bib-kategorien"></datalist>
+      </label>
+      <button type="button" id="skill-speichern" class="knopf-voll">Speichern</button>
+    </div>
+  </div>
+</div>
+
 <audio id="stimme" hidden></audio>
 
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
-<script src="/app.js?v=24"></script>
+<script src="/app.js?v=25"></script>
 </body>
 </html>

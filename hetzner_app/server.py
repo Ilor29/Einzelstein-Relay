@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import geraete, melden, mitschrift, state, tmux, tts, verlauf
+from . import bibliothek, geraete, melden, mitschrift, state, tmux, tts, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -59,7 +59,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 24
+VERSION = 25
 
 
 @app.get("/api/version")
@@ -458,6 +458,35 @@ async def modell_wechseln(name: str, body: Modell) -> dict:
 
     state.update(name, modell=body.name)
     return {"ok": True, "modell": body.name}
+
+
+# --- Die Bibliothek ----------------------------------------------------------
+
+class SkillEtikett(BaseModel):
+    id: str
+    name: str = ""
+    beschreibung: str = ""
+    kategorie: str = ""
+
+
+@app.get("/api/skills", dependencies=[Depends(require_auth)])
+def skills() -> list[dict]:
+    """Alle Skills — mit deinem deutschen Etikett, wo du eins vergeben hast."""
+    return bibliothek.liste()
+
+
+@app.patch("/api/skills", dependencies=[Depends(require_auth)])
+def skill_etikett(body: SkillEtikett) -> dict:
+    """Deinen Namen, deine Beschreibung, deine Kategorie über einen Skill legen.
+
+    Die Kennung kommt aus dem Netz — also prüfen wir, dass es den Skill
+    wirklich gibt, statt beliebige Einträge in den Speicher zu schreiben.
+    """
+    if body.id not in {s["id"] for s in bibliothek.liste()}:
+        raise HTTPException(404, "Diesen Skill gibt es nicht.")
+
+    bibliothek.setzen(body.id, body.name, body.beschreibung, body.kategorie)
+    return {"ok": True}
 
 
 class Antwort(BaseModel):

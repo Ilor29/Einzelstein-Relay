@@ -953,6 +953,126 @@ html, body {
 }
 .knopf-rand:active { background: var(--erhoben-2); }
 
+/* --- Bibliothek ---
+   Die Reiter oben zum Filtern, darunter die Skill-Karten. Ruhiger als die
+   Sitzungsliste — hier stöbert man, statt auf einen Blick etwas zu erfassen. */
+.bib-reiter {
+  flex: none;
+  display: flex;
+  gap: .4rem;
+  padding: .6rem .7rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--linie);
+}
+.bib-reiter::-webkit-scrollbar { display: none; }
+
+.reiter {
+  flex: none;
+  background: var(--erhoben-2);
+  color: var(--schrift-leise);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: .38rem .85rem;
+  font-family: var(--sans);
+  font-size: .8rem;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.reiter.an {
+  background: var(--akzent-weich);
+  border-color: var(--akzent);
+  color: var(--akzent);
+}
+.reiter:active { filter: brightness(1.15); }
+
+.bib-liste {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: .6rem .7rem calc(1rem + var(--unten));
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.bib-karte {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  background: var(--erhoben-2);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: .75rem .8rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bib-karte:active { background: var(--erhoben); }
+
+.bib-kopf { display: flex; align-items: center; gap: .5rem; }
+.bib-name {
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--schrift);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Das Fach — ein kleines Schild rechts, in der Akzentfarbe. */
+.bib-fach {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .03em;
+  color: var(--akzent);
+  background: var(--akzent-weich);
+  border-radius: 5px;
+  padding: .12rem .45rem;
+  white-space: nowrap;
+}
+
+/* Die Beschreibung: höchstens zwei Zeilen, danach wird abgeschnitten — die
+   Original-Beschreibungen der Skills sind teils absatzlang. */
+.bib-desc {
+  font-size: .82rem;
+  color: var(--schrift-leise);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bib-fuss {
+  display: flex;
+  align-items: center;
+  gap: .1rem;
+  margin-top: .05rem;
+}
+.bib-herkunft {
+  font-family: var(--mono);
+  font-size: .64rem;
+  color: var(--schrift-schwach);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Das Benennen-Blatt benutzt dasselbe Blatt von unten wie der Modellwähler;
+   nur die Felder darin brauchen eigenen Abstand. */
+.skill-formular {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  padding-bottom: .5rem;
+}
+.skill-formular .hinweis {
+  overflow-wrap: anywhere;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
