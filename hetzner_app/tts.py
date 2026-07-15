@@ -19,13 +19,18 @@ from pathlib import Path
 STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
 EINSTELLUNG = Path.home() / ".hetzner-app" / "stimme.txt"
 
-# Die Stimmen, die wir kennen — mit Namen, die ein Mensch versteht.
+# Die Stimmen, die wir kennen — mit Namen, die ein Mensch versteht statt der
+# technischen Piper-Kennungen. Die zwei "Jonas" sind dieselbe Stimme in zwei
+# Qualitäten: "Jonas" spricht schnell, "Jonas · fein" klingt etwas klarer, ist
+# aber deutlich langsamer.
 KATALOG = {
-    "de_DE-thorsten-medium": ("Thorsten", "männlich, ruhig"),
-    "de_DE-karlsson-low": ("Karlsson", "männlich, hell"),
-    "de_DE-eva_k-x_low": ("Eva", "weiblich, weich"),
-    "de_DE-kerstin-low": ("Kerstin", "weiblich, klar"),
-    "de_DE-ramona-low": ("Ramona", "weiblich, warm"),
+    "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell"),
+    "de_DE-thorsten-high": ("Jonas · fein", "ruhig, besonders klar, etwas langsamer"),
+    "de_DE-karlsson-low": ("Finn", "hell, wach"),
+    "de_DE-eva_k-x_low": ("Lena", "weich, sanft"),
+    "de_DE-kerstin-low": ("Marie", "klar, sachlich"),
+    "de_DE-ramona-low": ("Sophia", "warm, freundlich"),
+    "de_DE-thorsten_emotional-medium": ("Max", "lebhaft, betont"),
 }
 
 STANDARD = "de_DE-thorsten-medium"
