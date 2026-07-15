@@ -160,11 +160,12 @@
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </g>
 
-    <!-- Ein aufgeschlagenes Buch: die Skill-Bibliothek. -->
+    <!-- Ein aufgeschlagenes Buch: die Skill-Bibliothek. Zwei Seiten, die sich
+         in der Mitte treffen — wie das Symbol auf Rolis Tastatur. -->
     <g id="i-buch" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/>
-      <path d="M4 20a2 2 0 0 1 2-2h13"/>
+      <path d="M12 7v14"/>
+      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
     </g>
   </defs>
 </svg>
@@ -370,6 +371,9 @@
       <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
     </button>
     <h1>Bibliothek</h1>
+    <button id="knopf-neuskill" class="knopf-blank" aria-label="Neuen Skill anlegen">
+      <svg viewBox="0 0 24 24"><use href="#i-plus"/></svg>
+    </button>
   </header>
   <div id="bib-reiter" class="bib-reiter"></div>
   <div id="bib-liste" class="bib-liste"></div>
@@ -401,6 +405,44 @@
         <datalist id="bib-kategorien"></datalist>
       </label>
       <button type="button" id="skill-speichern" class="knopf-voll">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Einen neuen eigenen Skill anlegen: diktieren/tippen oder eine Datei laden. -->
+<div id="neuskill-blatt" class="blatt" hidden>
+  <div class="blatt-schatten" id="neuskill-schatten"></div>
+  <div class="blatt-inhalt">
+    <div class="blatt-kopf">
+      <button type="button" id="neuskill-schliessen" class="knopf-blank"
+              aria-label="Schließen">✕</button>
+      <h2>Neuer Skill</h2>
+    </div>
+    <div class="skill-formular">
+      <label class="feld">
+        <span class="marke">Name</span>
+        <input type="text" id="neuskill-name" class="eingabe"
+               placeholder="z. B. Gin-Tonic-Helfer">
+      </label>
+      <label class="feld">
+        <span class="marke">Wofür — wann soll Claude ihn nehmen?</span>
+        <textarea id="neuskill-beschreibung" class="eingabe" rows="2"
+                  placeholder="Wenn jemand einen Gin Tonic will …"></textarea>
+      </label>
+      <label class="feld">
+        <span class="marke">Anleitung — was soll er tun?</span>
+        <textarea id="neuskill-anleitung" class="eingabe" rows="4"
+                  placeholder="Frag nach Vorlieben, schlage drei Varianten vor …"></textarea>
+      </label>
+      <button type="button" id="neuskill-anlegen" class="knopf-voll">Anlegen</button>
+
+      <p class="hinweis" style="text-align:center">oder eine fertige Datei</p>
+      <button type="button" id="neuskill-datei-knopf" class="knopf-rand">
+        SKILL.md oder .zip hochladen
+      </button>
+      <input type="file" id="neuskill-datei" accept=".md,.zip" hidden>
+
+      <p id="neuskill-fehler" class="fehler" hidden></p>
     </div>
   </div>
 </div>

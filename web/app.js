@@ -798,16 +798,16 @@ $("bild-waehler").addEventListener("change", async (e) => {
 
     const { pfad } = await antwort.json();
 
-    // Der Text daneben — falls du schon etwas dazu geschrieben hast.
+    // Nicht sofort abschicken. Der Bildpfad landet vorne im Eingabefeld, und
+    // du kannst noch etwas dazuschreiben — gesendet wird erst, wenn du auf
+    // Senden tippst. Vorher flog das Foto beim Auswählen sofort raus, und ein
+    // Satz dazu war nicht mehr möglich.
     const feld = $("eingabe");
-    const dazu = feld.value.trim();
-    feld.value = "";
-
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
-      method: "POST",
-      body: JSON.stringify({ text: dazu ? `${pfad} ${dazu}` : pfad }),
-    });
-    setTimeout(ladeVerlauf, 800);
+    const bisher = feld.value.trim();
+    feld.value = bisher ? `${pfad} ${bisher}` : `${pfad} `;
+    feldAnpassen();
+    feld.focus();
+    melde("Foto angehängt — schreib etwas dazu und sende ab.");
   } catch (err) {
     alert(err.message);
   } finally {
@@ -1508,9 +1508,24 @@ let bearbeiteterSkill = null;
 const skillName = (s) => s.name || s.original_name;
 const skillText = (s) => s.beschreibung || s.original_beschreibung;
 
+// Ein paar Kategorien zum Anfangen — sie stehen beim Benennen gleich als
+// Vorschlag bereit, damit man nicht vor einem leeren Feld sitzt und rätselt,
+// was man eintippen könnte. Eigene Kategorien darf man trotzdem frei tippen.
+const STANDARD_KATEGORIEN = [
+  "Marketing", "Webdesign", "Entwicklung", "Recherche", "Schreiben", "Sprache",
+];
+
+// Die Fächer, die es wirklich gibt: die schon vergebenen. Nur diese werden zu
+// Reitern — leere Fächer als Reiter zu zeigen, wäre nur Verwirrung.
 function bibKategorien() {
   const faecher = new Set(skills.map((s) => s.kategorie).filter(Boolean));
   return [...faecher].sort((a, b) => a.localeCompare(b, "de"));
+}
+
+// Was beim Benennen zur Auswahl steht: die vergebenen plus die Vorschläge.
+function kategorieVorschlaege() {
+  const alle = new Set([...bibKategorien(), ...STANDARD_KATEGORIEN]);
+  return [...alle].sort((a, b) => a.localeCompare(b, "de"));
 }
 
 async function oeffneBibliothek(ziel) {
@@ -1706,13 +1721,100 @@ $("skill-speichern").addEventListener("click", async () => {
 
 function fuelleKategorien() {
   $("bib-kategorien").replaceChildren(
-    ...bibKategorien().map((k) => {
+    ...kategorieVorschlaege().map((k) => {
       const o = document.createElement("option");
       o.value = k;
       return o;
     })
   );
 }
+
+// --- Einen neuen Skill anlegen ---
+//
+// Zwei Wege ins selbe Blatt: diktieren/tippen, was der Skill tun soll — oder
+// eine fertige SKILL.md bzw. ein .zip hochladen. Danach steht der neue Skill
+// gleich im Benennen-Blatt offen, damit du Kategorie und Namen setzen kannst.
+
+function neuskillBlattZu() {
+  $("neuskill-blatt").hidden = true;
+}
+
+function neuskillFehler(text) {
+  const p = $("neuskill-fehler");
+  p.textContent = text;
+  p.hidden = false;
+}
+
+$("knopf-neuskill").addEventListener("click", () => {
+  $("neuskill-name").value = "";
+  $("neuskill-beschreibung").value = "";
+  $("neuskill-anleitung").value = "";
+  $("neuskill-fehler").hidden = true;
+  $("neuskill-blatt").hidden = false;
+});
+
+$("neuskill-schatten").addEventListener("click", neuskillBlattZu);
+$("neuskill-schliessen").addEventListener("click", neuskillBlattZu);
+
+async function nachAnlegen(id) {
+  neuskillBlattZu();
+  skills = await (await api("/skills")).json();
+  baueReiter();
+  zeigeSkills();
+  fuelleKategorien();
+  // Den frisch angelegten gleich zum Benennen öffnen — besonders bei einer
+  // hochgeladenen Datei, deren Name noch englisch ist.
+  const neu = skills.find((s) => s.id === id);
+  if (neu) skillBearbeiten(neu);
+  melde("Skill angelegt");
+}
+
+$("neuskill-anlegen").addEventListener("click", async () => {
+  const name = $("neuskill-name").value.trim();
+  if (!name) {
+    neuskillFehler("Gib dem Skill einen Namen.");
+    return;
+  }
+  try {
+    const { id } = await (await api("/skills/neu", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        beschreibung: $("neuskill-beschreibung").value,
+        anleitung: $("neuskill-anleitung").value,
+      }),
+    })).json();
+    await nachAnlegen(id);
+  } catch (err) {
+    neuskillFehler(err.message);
+  }
+});
+
+$("neuskill-datei-knopf").addEventListener("click", () => $("neuskill-datei").click());
+
+$("neuskill-datei").addEventListener("change", async (e) => {
+  const datei = e.target.files?.[0];
+  e.target.value = "";               // damit dieselbe Datei nochmal ginge
+  if (!datei) return;
+
+  try {
+    const paket = new FormData();
+    paket.append("datei", datei);
+    paket.append("name", $("neuskill-name").value.trim());
+
+    // Roher fetch, kein api(): Bei einem Datei-Paket darf man den Content-Type
+    // nicht selbst setzen, sonst kommt es zerrissen an.
+    const antwort = await fetch("/api/skills/hochladen", { method: "POST", body: paket });
+    if (!antwort.ok) {
+      const koerper = await antwort.json().catch(() => ({}));
+      throw new Error(koerper.detail || "Das Hochladen hat nicht geklappt.");
+    }
+    const { id } = await antwort.json();
+    await nachAnlegen(id);
+  } catch (err) {
+    neuskillFehler(err.message);
+  }
+});
 
 // --- Los geht's --------------------------------------------------------------
 

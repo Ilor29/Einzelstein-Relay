@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 from fastapi import (
-    Depends, FastAPI, File, HTTPException, Query, Request, UploadFile,
+    Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile,
     WebSocket, WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -59,7 +59,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 26
+VERSION = 27
 
 
 @app.get("/api/version")
@@ -487,6 +487,39 @@ def skill_etikett(body: SkillEtikett) -> dict:
 
     bibliothek.setzen(body.id, body.name, body.beschreibung, body.kategorie)
     return {"ok": True}
+
+
+class NeuerSkill(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    beschreibung: str = ""
+    anleitung: str = ""
+
+
+@app.post("/api/skills/neu", dependencies=[Depends(require_auth)])
+def skill_neu(body: NeuerSkill) -> dict:
+    """Einen eigenen Skill aus getipptem oder diktiertem Text anlegen."""
+    try:
+        kennung = bibliothek.neu_aus_text(body.name, body.beschreibung, body.anleitung)
+    except ValueError as fehler:
+        raise HTTPException(400, str(fehler))
+    return {"ok": True, "id": kennung}
+
+
+@app.post("/api/skills/hochladen", dependencies=[Depends(require_auth)])
+async def skill_hochladen(
+    datei: UploadFile = File(...),
+    name: str = Form(""),
+) -> dict:
+    """Einen Skill aus einer Datei anlegen — eine SKILL.md oder ein .zip."""
+    inhalt = await datei.read()
+    if len(inhalt) > 5 * 1024 * 1024:      # 5 MB reicht für Text und Beiwerk
+        raise HTTPException(413, "Die Datei ist zu groß (mehr als 5 MB).")
+
+    try:
+        kennung = bibliothek.neu_aus_datei(datei.filename or "", inhalt, name)
+    except ValueError as fehler:
+        raise HTTPException(400, str(fehler))
+    return {"ok": True, "id": kennung}
 
 
 class Antwort(BaseModel):

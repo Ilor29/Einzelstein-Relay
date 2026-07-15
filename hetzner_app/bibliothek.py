@@ -12,7 +12,12 @@ technischen zu verlieren.
 
 from __future__ import annotations
 
+import io
 import json
+import re
+import shutil
+import unicodedata
+import zipfile
 from pathlib import Path
 
 try:
@@ -22,9 +27,13 @@ except ModuleNotFoundError:      # pragma: no cover — im Betrieb ist yaml da
 
 CLAUDE = Path.home() / ".claude"
 
+# Wohin deine eigenen Skills kommen. Genau der Ort, den Claude Code für selbst
+# angelegte Skills durchsucht.
+EIGENE = CLAUDE / "skills"
+
 # Wo Skills liegen. Nicht das ganze ~/.claude durchsuchen — dort liegen auch die
 # Gesprächsmitschriften, und die will man nicht bei jedem Aufruf durchwaten.
-WURZELN = [CLAUDE / "skills", CLAUDE / "plugins"]
+WURZELN = [EIGENE, CLAUDE / "plugins"]
 
 # Deine Etiketten. Neben den Fotos, im selben App-Ordner.
 ETIKETTEN = Path.home() / ".hetzner-app" / "bibliothek.json"
@@ -162,3 +171,81 @@ def setzen(kennung: str, name: str, beschreibung: str, kategorie: str) -> None:
         etiketten[kennung] = eintrag
 
     _etiketten_schreiben(etiketten)
+
+
+# --- Einen neuen Skill anlegen ----------------------------------------------
+
+def _kurzform(text: str) -> str:
+    """Aus einem Namen einen technischen Ordnernamen machen: klein, ohne
+    Umlaute, mit Bindestrichen. „Mein Skill!" wird zu „mein-skill"."""
+    ohne_umlaut = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    mit_strich = re.sub(r"[^a-z0-9]+", "-", ohne_umlaut.lower()).strip("-")
+    return mit_strich[:50] or "skill"
+
+
+def _frei_oder_fehler(kurzform: str) -> Path:
+    ordner = EIGENE / kurzform
+    if ordner.exists():
+        raise ValueError("Einen Skill mit diesem Namen gibt es schon.")
+    return ordner
+
+
+def neu_aus_text(name: str, beschreibung: str, anleitung: str) -> str:
+    """Einen eigenen Skill aus getipptem/diktiertem Text bauen.
+
+    Die Beschreibung entscheidet, wann Claude den Skill von selbst heranzieht;
+    die Anleitung ist, was er dann tun soll. Dein deutscher Name kommt gleich
+    als Etikett darüber, und die Kategorie ist „Eigene".
+    """
+    kurz = _kurzform(name)
+    ordner = _frei_oder_fehler(kurz)
+    ordner.mkdir(parents=True)
+
+    # description in Anführungszeichen, damit ein Doppelpunkt im Text den
+    # Frontmatter-Kopf nicht zerreißt.
+    beschr = (beschreibung.strip() or name.strip()).replace("\\", "\\\\").replace('"', '\\"')
+    kopf = f'---\nname: {kurz}\ndescription: "{beschr}"\n---\n'
+    rumpf = anleitung.strip() or f"# {name.strip()}\n"
+    (ordner / "SKILL.md").write_text(f"{kopf}\n{rumpf}\n", encoding="utf-8")
+
+    kennung = str(ordner.relative_to(CLAUDE))
+    setzen(kennung, name.strip(), beschreibung.strip(), "Eigene")
+    return kennung
+
+
+def neu_aus_datei(dateiname: str, inhalt: bytes, name: str = "") -> str:
+    """Einen Skill aus einer hochgeladenen Datei bauen — eine SKILL.md direkt
+    oder ein .zip mit dem ganzen Skill-Ordner darin."""
+    endung = Path(dateiname).suffix.lower()
+    kurz = _kurzform(name or Path(dateiname).stem)
+    ordner = _frei_oder_fehler(kurz)
+
+    if endung == ".md":
+        ordner.mkdir(parents=True)
+        (ordner / "SKILL.md").write_bytes(inhalt)
+
+    elif endung == ".zip":
+        ordner.mkdir(parents=True)
+        try:
+            with zipfile.ZipFile(io.BytesIO(inhalt)) as archiv:
+                grenze = ordner.resolve()
+                # Vor dem Auspacken jeden Pfad prüfen: Ein Eintrag wie
+                # „../../etc/böse" würde sonst aus dem Ordner ausbrechen.
+                for eintrag in archiv.namelist():
+                    ziel = (ordner / eintrag).resolve()
+                    if grenze != ziel and grenze not in ziel.parents:
+                        raise ValueError("Das Archiv enthält unsichere Pfade.")
+                archiv.extractall(ordner)
+        except zipfile.BadZipFile:
+            shutil.rmtree(ordner, ignore_errors=True)
+            raise ValueError("Das ist keine lesbare .zip-Datei.")
+
+        # Ohne SKILL.md ist es kein Skill — dann räumen wir wieder auf.
+        if not any(ordner.rglob("SKILL.md")):
+            shutil.rmtree(ordner, ignore_errors=True)
+            raise ValueError("Im Archiv fehlt eine SKILL.md.")
+
+    else:
+        raise ValueError("Nur eine .md- oder .zip-Datei.")
+
+    return str(ordner.relative_to(CLAUDE))
