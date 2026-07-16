@@ -384,11 +384,6 @@ let warBeschaeftigt = false;
 // du längst kennst. Dann warten wir kurz auf die neue.
 let zuletztVorgelesen = "";
 
-// Nachrichten, die du abgeschickt hast, während Claude noch arbeitete. Sie
-// warten hier und werden einzeln nachgeschoben, sobald er fertig ist — so
-// vermischt sich nichts und die Reihenfolge bleibt.
-let warteschlange = [];
-
 /** Setzt Claudes Text — mit Fettschrift, Kursiv und Befehlen.
  *
  *  Claude schreibt in Markdown. Ungerendert stehen dann Sternchen und
@@ -751,7 +746,7 @@ async function pruefeObClaudeArbeitet() {
     // Wirklich fertig = war beschäftigt, ist es jetzt (nach dem Puffer) nicht
     // mehr — nicht schon bei einer kurzen Pause zwischendurch.
     if (warBeschaeftigt && !beschaeftigt) {
-      if (!warteschlangeWeiter() && freisprech && !imTerminal) {
+      if (freisprech && !imTerminal) {
         freisprechVorlesen();
       }
     }
@@ -860,8 +855,6 @@ function oeffneSitzung(sitzung) {
   beschaeftigt = false;    // Freisprech soll nicht sofort beim Öffnen auslösen
   warBeschaeftigt = false;
   zuletztVorgelesen = "";  // neue Sitzung: die erste Antwort darf vorgelesen werden
-  warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
-  zeigeWarteschlange();
   denktBis = 0;
   $("denkt").hidden = true;
   sendeSperren(false);
@@ -943,48 +936,6 @@ async function sendeInSitzung(text) {
   setTimeout(ladeVerlauf, 600);
 }
 
-// --- Warteschlange -----------------------------------------------------------
-
-function zeigeWarteschlange() {
-  const el = $("warteschlange");
-  el.replaceChildren();
-  warteschlange.forEach((text, i) => {
-    const zeile = document.createElement("div");
-    zeile.className = "wartend";
-
-    const t = document.createElement("span");
-    t.className = "text";
-    t.textContent = text;
-
-    const weg = document.createElement("button");
-    weg.type = "button";
-    weg.setAttribute("aria-label", "Aus der Warteschlange nehmen");
-    weg.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><use href="#i-kreuz"/></svg>';
-    weg.addEventListener("click", () => {
-      warteschlange.splice(i, 1);
-      zeigeWarteschlange();
-    });
-
-    zeile.append(t, weg);
-    el.append(zeile);
-  });
-  el.hidden = warteschlange.length === 0;
-}
-
-// Die nächste wartende Nachricht nachschieben. Gibt true zurück, wenn eine
-// abging — dann hat das Vorrang vor allem anderen, was bei "fertig" passiert.
-function warteschlangeWeiter() {
-  if (!warteschlange.length) return false;
-  const text = warteschlange.shift();
-  zeigeWarteschlange();
-  sendeInSitzung(text).catch(() => {
-    // Ging nicht raus — vorne zurück in die Schlange, damit nichts verloren geht.
-    warteschlange.unshift(text);
-    zeigeWarteschlange();
-  });
-  return true;
-}
-
 // Eingabezeile: bequemer als direkt ins Terminal zu tippen, weil die
 // Handytastatur so ihre Autokorrektur und das Diktieren anbieten kann.
 $("eingabe-formular").addEventListener("submit", async (e) => {
@@ -1022,8 +973,8 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 // --- Schnellbefehle ----------------------------------------------------------
 //
 // Ein Tipp schickt einen fertigen Satz an Claude — genau denselben Weg wie die
-// Eingabezeile, also wandert er auch in die Warteschlange, wenn Claude noch
-// arbeitet.
+// Eingabezeile. Solange Claude arbeitet, wird auch hier abgewiesen statt
+// nachgeschoben (wie beim Stoppschild an der Eingabe).
 async function schnellbefehl(text) {
   if (!aktuelleSitzung || imTerminal || !text) return;
 

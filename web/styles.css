@@ -108,42 +108,6 @@ html, body {
 }
 .modus-pille.gesetzt { color: var(--schrift); }
 .modus-pille:active { filter: brightness(1.25); }
-.warteschlange {
-  display: flex;
-  flex-direction: column;
-  gap: .3rem;
-  padding: .4rem .8rem 0;
-  flex: none;
-}
-.warteschlange .wartend {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  font-size: .82rem;
-  color: var(--schrift-leise);
-  background: var(--erhoben);
-  border: 1px solid var(--linie);
-  border-radius: .7rem;
-  padding: .3rem .4rem .3rem .7rem;
-}
-.warteschlange .wartend .text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.warteschlange .wartend button {
-  flex: none;
-  width: 1.7rem;
-  height: 1.7rem;
-  display: grid;
-  place-items: center;
-  border: none;
-  background: none;
-  color: var(--schrift-schwach);
-  border-radius: .5rem;
-}
-.warteschlange .wartend button:active { background: var(--erhoben-2); }
 
 /* Während geglättet wird, funkelt der Knopf im Akzent und lässt sich nicht
    nochmal drücken. */
