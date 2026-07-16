@@ -203,6 +203,11 @@ function karte(sitzung) {
   return el;
 }
 
+// Welche klappbaren Gruppen gerade offen stehen — gemerkt über die Neuladungen
+// hinweg. Ohne das baute der 5-Sekunden-Takt die Liste neu und klappte alles
+// wieder zu; man tippte auf, und beim nächsten Takt war es zu.
+const offeneGruppen = new Set();
+
 async function ladeListe() {
   let sitzungen;
   try {
@@ -234,10 +239,13 @@ async function ladeListe() {
   const gruppe = (titel, eintraege, { zu = false } = {}) => {
     if (eintraege.length === 0) return;
 
+    // Steht die Gruppe schon offen? Dann beim Neuaufbau offen lassen.
+    const offen = offeneGruppen.has(titel);
+
     const kopf = document.createElement("div");
     kopf.className = "gruppe" + (zu ? " klappbar" : "");
     kopf.innerHTML = `
-      ${zu ? '<span class="pfeil">▸</span>' : ""}
+      ${zu ? `<span class="pfeil">${offen ? "▾" : "▸"}</span>` : ""}
       <span class="titel"></span>
       <span class="anzahl">${eintraege.length}</span>`;
     kopf.querySelector(".titel").textContent = titel;
@@ -250,16 +258,19 @@ async function ladeListe() {
     }
 
     // Eingeklappt: Die fremden Sitzungen sind viele, und meistens will man
-    // sie nicht sehen. Ein Tipp auf die Zeile klappt sie auf.
+    // sie nicht sehen. Ein Tipp auf die Zeile klappt sie auf — und der Zustand
+    // bleibt über die Neuladungen hinweg erhalten.
     const fach = document.createElement("div");
     fach.className = "fach";
-    fach.hidden = true;
+    fach.hidden = !offen;
     fach.append(...karten);
     liste.append(fach);
 
     kopf.addEventListener("click", () => {
       fach.hidden = !fach.hidden;
       kopf.querySelector(".pfeil").textContent = fach.hidden ? "▸" : "▾";
+      if (fach.hidden) offeneGruppen.delete(titel);
+      else offeneGruppen.add(titel);
     });
   };
 
