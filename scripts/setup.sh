@@ -46,6 +46,21 @@ else
   echo "   Es gibt schon eins in ${KONFIG}/umgebung — bleibt unverändert."
 fi
 
+# Kontaktadresse für die Push-Benachrichtigungen. Der Push-Dienst (Google,
+# Mozilla) will wissen, wen er bei Missbrauch anschreibt — das muss der
+# Betreiber DIESER Instanz sein, nicht der Entwickler.
+if ! grep -q '^HETZNER_APP_KONTAKT=' "${KONFIG}/umgebung"; then
+  echo
+  printf "→ Deine E-Mail für die Push-Benachrichtigungen (nur der Push-Dienst sieht sie): "
+  read -r KONTAKT
+  if [ -n "$KONTAKT" ]; then
+    printf 'HETZNER_APP_KONTAKT=%s\n' "$KONTAKT" >> "${KONFIG}/umgebung"
+    echo "   Gespeichert."
+  else
+    echo "   Übersprungen — kannst du später in ${KONFIG}/umgebung nachtragen."
+  fi
+fi
+
 echo "→ Caddy installieren (besorgt das HTTPS-Zertifikat) …"
 if ! command -v caddy >/dev/null; then
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \

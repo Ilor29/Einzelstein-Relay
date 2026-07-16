@@ -1688,7 +1688,12 @@ function tonKontextUeberwachen(c) {
  *  während der Rest im Hintergrund nachproduziert wird.
  */
 function haeppchen(text, mindestens = 90) {
-  const saetze = text.split(/(?<=[.!?:])\s+/);
+  // An Satzenden trennen — aber OHNE Lookbehind-Regex. `(?<=…)` kennt Safari
+  // erst ab 16.4, und weil es ein Regex-Literal ist, scheitert sonst schon das
+  // Einlesen der ganzen app.js: ältere iPhones sähen nur einen weißen
+  // Bildschirm. Darum das Satzzeichen zuerst markieren, dann an der Marke
+  // trennen — das Zeichen bleibt so beim Satz.
+  const saetze = text.match(/[\s\S]*?[.!?:]\s+|[\s\S]+$/g) || [text];
   const stuecke = [];
   let aktuell = "";
 

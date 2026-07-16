@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 import time
 from pathlib import Path
 
@@ -26,6 +27,17 @@ from . import state
 ORDNER = Path.home() / ".hetzner-app"
 VAPID = ORDNER / "vapid.json"
 EMPFAENGER = ORDNER / "empfaenger.json"
+
+# Wen der Push-Dienst bei Ärger anschreibt. MUSS der Betreiber dieser Instanz
+# sein — nicht der Entwickler. Sonst landen bei jedem verkauften Exemplar die
+# Missbrauchs-Beschwerden beim Falschen, und es wäre eine Betreiber-Falschangabe.
+# Darum aus der Umgebung, die `setup.sh` beim Einrichten setzt; der Standard ist
+# nur ein Notnagel, falls nichts gesetzt wurde.
+def _kontakt() -> str:
+    adresse = os.environ.get("HETZNER_APP_KONTAKT", "").strip()
+    if adresse and "@" in adresse:
+        return adresse if adresse.startswith("mailto:") else f"mailto:{adresse}"
+    return "mailto:betreiber@example.com"
 
 # Wie oft wir nachsehen. Zehn Sekunden sind genug — schneller merkt man den
 # Unterschied ohnehin nicht, und es kostet fast nichts.
@@ -117,7 +129,7 @@ def schicken(titel: str, text: str, sitzung: str = "") -> int:
                 data=nachricht,
                 vapid_private_key=werte["privat"],
                 # Der Push-Dienst will wissen, wen er bei Ärger anschreiben kann.
-                vapid_claims={"sub": "mailto:mixkultur@googlemail.com"},
+                vapid_claims={"sub": _kontakt()},
                 ttl=600,
             )
             zugestellt += 1

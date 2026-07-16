@@ -60,7 +60,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 48
+VERSION = 49
 
 
 @app.get("/api/version")
@@ -667,7 +667,10 @@ def session_sichern(name: str) -> dict:
     stempel = time.strftime("%d.%m.%Y um %H:%M")
     ergebnis = git("commit", "-m", f"Vom Handy gesichert, {stempel}")
     if ergebnis.returncode != 0:
-        raise HTTPException(500, f"Sichern fehlgeschlagen: {ergebnis.stderr[:200]}")
+        # Die git-Meldung enthält Serverpfade und Remote-Namen — die gehören
+        # ins Protokoll, nicht zum Client. Dort nur ein schlichter Hinweis.
+        print(f"Sichern fehlgeschlagen: {ergebnis.stderr[:500]}", flush=True)
+        raise HTTPException(500, "Sichern fehlgeschlagen — Details stehen im Server-Protokoll.")
 
     # Ins örtliche Lager auf dem Server schieben, falls es eins gibt.
     geschoben = git("push", "hetzner", "HEAD").returncode == 0
