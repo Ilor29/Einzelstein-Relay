@@ -19,56 +19,98 @@ from pathlib import Path
 STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
 EINSTELLUNG = Path.home() / ".hetzner-app" / "stimme.txt"
 
-# Die Stimmen, die wir kennen — mit Namen, die ein Mensch versteht statt der
-# technischen Piper-Kennungen. Die zwei "Jonas" sind dieselbe Stimme in zwei
+# Einzelstimmen: eine Datei = eine Stimme. Namen, die ein Mensch versteht statt
+# der technischen Piper-Kennungen. Die zwei "Jonas" sind dieselbe Stimme in zwei
 # Qualitäten: "Jonas" spricht schnell, "Jonas · fein" klingt etwas klarer, ist
 # aber deutlich langsamer.
+#
+# Nur Stimmen mit klarer Lizenz fürs Verkaufen: Thorsten (Jonas/Max) und Kerstin
+# (Marie) stehen unter CC0 (gemeinfrei). Die früheren Lena/Finn/Sophia (aus dem
+# M-AILABS-Datensatz, Lizenz nicht bestätigbar) sind bewusst raus.
 KATALOG = {
     "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell"),
     "de_DE-thorsten-high": ("Jonas · fein", "ruhig, besonders klar, etwas langsamer"),
-    "de_DE-karlsson-low": ("Finn", "hell, wach"),
-    "de_DE-eva_k-x_low": ("Lena", "weich, sanft"),
-    "de_DE-kerstin-low": ("Marie", "klar, sachlich"),
-    "de_DE-ramona-low": ("Sophia", "warm, freundlich"),
+    "de_DE-kerstin-low": ("Marie", "weiblich, klar"),
     "de_DE-thorsten_emotional-medium": ("Max", "lebhaft, betont"),
+}
+
+# Mehrstimmige Modelle: aus EINER Datei viele Sprecher. Wir picken einzelne
+# heraus und geben ihnen einen Namen. Schlüssel: "<datei>#<sprecher-nr>".
+#
+# mls (medium) steht unter CC-BY 4.0 — verkaufbar MIT Namensnennung (Credit im
+# Impressum: "Stimmen: MLS, CC-BY 4.0"). Hier stecken die besseren, auch
+# weiblichen Stimmen. Die Sprecher-Nummern kommen aus einer Tonhöhen-Analyse.
+_MLS = "de_DE-mls-medium"
+MEHRSTIMMIG: dict[str, tuple[str, str]] = {
+    # Aus einer Tonhöhen-Analyse ausgesuchte weibliche Stimmen (über 210 Hz).
+    # Probe-Stimmen: Roli hört sie im Menü an und behält die schönste, der Rest
+    # fliegt dann wieder raus.
+    f"{_MLS}#12":  ("Klara (Probe)", "weiblich, hoch & klar"),
+    f"{_MLS}#15":  ("Nora (Probe)", "weiblich, hell"),
+    f"{_MLS}#102": ("Greta (Probe)", "weiblich, ruhig"),
+    f"{_MLS}#30":  ("Lea (Probe)", "weiblich, weich"),
+    f"{_MLS}#69":  ("Mia (Probe)", "weiblich, warm"),
 }
 
 STANDARD = "de_DE-thorsten-medium"
 
 
+def _zerlegen_stimme(name: str) -> tuple[str, int | None]:
+    """Aus "datei#7" wird ("datei", 7); aus "datei" wird ("datei", None)."""
+    if "#" in name:
+        stem, sid = name.split("#", 1)
+        return stem, int(sid)
+    return name, None
+
+
+def _stimme_gueltig(name: str) -> bool:
+    stem, _ = _zerlegen_stimme(name)
+    return (STIMMEN / f"{stem}.onnx").is_file() and (
+        name in MEHRSTIMMIG or "#" not in name
+    )
+
+
 def stimmen() -> list[dict]:
-    """Welche Stimmen auf diesem Server bereitliegen."""
+    """Welche Stimmen auf diesem Server angeboten werden.
+
+    Nur, was im Katalog steht — nichts, was zufällig im Ordner liegt (etwa alte,
+    lizenz-unklare Modelle). Der Katalog IST das Angebot; so verkauft die App
+    nur, was rechtlich sauber ist.
+    """
     gewaehlt = gewaehlte_stimme()
     liste = []
-    for datei in sorted(STIMMEN.glob("*.onnx")):
-        name = datei.stem
-        anzeige, art = KATALOG.get(name, (name, ""))
-        liste.append({
-            "name": name,
-            "anzeige": anzeige,
-            "art": art,
-            "gewaehlt": name == gewaehlt,
-        })
+
+    for stem, (anzeige, art) in KATALOG.items():
+        if (STIMMEN / f"{stem}.onnx").is_file():
+            liste.append({"name": stem, "anzeige": anzeige, "art": art,
+                          "gewaehlt": stem == gewaehlt})
+
+    for key, (anzeige, art) in MEHRSTIMMIG.items():
+        stem = _zerlegen_stimme(key)[0]
+        if (STIMMEN / f"{stem}.onnx").is_file():
+            liste.append({"name": key, "anzeige": anzeige, "art": art,
+                          "gewaehlt": key == gewaehlt})
     return liste
 
 
 def gewaehlte_stimme() -> str:
     if EINSTELLUNG.exists():
         name = EINSTELLUNG.read_text().strip()
-        if (STIMMEN / f"{name}.onnx").is_file():
+        if _stimme_gueltig(name):
             return name
     return STANDARD
 
 
 def stimme_waehlen(name: str) -> None:
-    if not (STIMMEN / f"{name}.onnx").is_file():
+    if not _stimme_gueltig(name):
         raise ValueError("Diese Stimme gibt es nicht.")
     EINSTELLUNG.parent.mkdir(parents=True, exist_ok=True)
     EINSTELLUNG.write_text(name)
 
 
 def modell(name: str | None = None) -> Path:
-    return STIMMEN / f"{name or gewaehlte_stimme()}.onnx"
+    stem, _ = _zerlegen_stimme(name or gewaehlte_stimme())
+    return STIMMEN / f"{stem}.onnx"
 
 
 class TTSError(RuntimeError):
@@ -111,18 +153,24 @@ def _finde_piper() -> str | None:
 def _sprechen(text: str, name: str) -> bytes:
     """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
     weiter antwortet, während gesprochen wird."""
-    voice = _stimme_laden(name)
+    stem, sprecher = _zerlegen_stimme(name)
+    voice = _stimme_laden(stem)
+
+    # Bei mehrstimmigen Modellen den gewählten Sprecher setzen; bei
+    # Einzelstimmen bleibt es beim Standard.
+    from piper import SynthesisConfig
+    cfg = SynthesisConfig(speaker_id=sprecher) if sprecher is not None else None
 
     puffer = io.BytesIO()
     with wave.open(puffer, "wb") as wav:
-        voice.synthesize_wav(text, wav)
+        voice.synthesize_wav(text, wav, syn_config=cfg)
     return puffer.getvalue()
 
 
 def vorladen() -> None:
     """Die gewählte Stimme beim Start in den Speicher holen."""
     try:
-        _stimme_laden(gewaehlte_stimme())
+        _stimme_laden(_zerlegen_stimme(gewaehlte_stimme())[0])
     except Exception:
         # Fehlt die Stimme, merkt man es beim ersten Vorlesen — der Dienst darf
         # daran nicht scheitern.
@@ -132,7 +180,10 @@ def vorladen() -> None:
 async def synthesize(text: str, stimme: str | None = None) -> bytes:
     """Macht aus Text eine WAV-Datei — mit der gewählten Stimme."""
     name = stimme or gewaehlte_stimme()
-    return await asyncio.to_thread(_sprechen, text, name)
+    # Letzte Sicherung: Was hier ankommt, ist schon aufbereitet — aber ein
+    # übriggebliebenes Sternchen liest Piper gnadenlos mit vor. Also nochmal
+    # drüber, ganz kurz vor dem Mund.
+    return await asyncio.to_thread(_sprechen, symbole_weg(text), name)
 
 
 # --- Aufbereitung ------------------------------------------------------------
@@ -320,3 +371,116 @@ def for_speech(screen: str, nur_letzte: bool = True) -> str:
     werkzeuge_abschliessen()
 
     return "\n".join(absaetze).strip()
+
+
+# --- Markdown zum Hören ------------------------------------------------------
+#
+# Claudes Antworten sind Markdown: Sternchen für Betonung, Rückstriche für Code,
+# Rauten für Überschriften, Klammern für Verweise. Zum Lesen ist das schön, zum
+# Hören ist es Kauderwelsch — Piper liest jedes Zeichen brav mit ("Sternchen
+# Sternchen fertig Sternchen Sternchen"). Hier fliegt es raus, bevor gesprochen
+# wird.
+#
+# Anders als `for_speech`, das Terminal-Bildschirme aufräumt, arbeitet das hier
+# auf der sauberen Antwort aus der Mitschrift.
+
+_ZAUN = re.compile(r"^\s*(```|~~~)")
+_TABELLEN_LINIE = re.compile(r"^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$")
+_TRENNLINIE = re.compile(r"^\s*([-*_=])\1{2,}\s*$")
+
+_BILD = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+_VERWEIS = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+_CODE_SPANNE = re.compile(r"`+([^`]*)`+")
+_BETONUNG = re.compile(r"(\*\*|\*|__|_|~~)(?=\S)(.+?\S)\1")
+_ZEILEN_ANFANG = re.compile(r"^\s*(#{1,6}\s+|>\s+|[-*+•·⏺●]\s+|\d+[.)]\s+)")
+
+# Was danach noch stört: Kastengrafik, Sternchen, Rückstriche, Rauten, Pfeile.
+# Nichts davon will man hören, und Piper stolpert darüber.
+_REST_ZEICHEN = re.compile(
+    r"[*`#|~<>{}\[\]│┃─━╭╮╰╯┌┐└┘├┤┬┴┼═║▌▐█░▒▓⏺✻✽✢→←↔⇒➜•·●]+"
+)
+
+
+def symbole_weg(text: str) -> str:
+    """Zieht die letzten Sonderzeichen ab und glättet die Leerstellen."""
+    sauber = _REST_ZEICHEN.sub(" ", text)
+    zeilen = [re.sub(r"[ \t]+", " ", z).strip() for z in sauber.splitlines()]
+    return "\n".join(z for z in zeilen if z).strip()
+
+
+def _codeblock_ansage(zeilen: int) -> str:
+    wort = "Zeile" if zeilen == 1 else "Zeilen"
+    return f"Codeblock, {zeilen} {wort}."
+
+
+def fuer_stimme(text: str) -> str:
+    """Macht aus einer Markdown-Antwort etwas, das man sich anhören kann.
+
+    Code wird angesagt statt vorgelesen, Auszeichnung fällt weg, der Fließtext
+    bleibt.
+    """
+    absaetze: list[str] = []
+    im_code = False
+    code_zeilen = 0
+
+    for zeile in text.splitlines():
+        # Ein Code-Zaun schaltet um: Was dazwischen steht, wird gezählt.
+        if _ZAUN.match(zeile):
+            if im_code:
+                absaetze.append(_codeblock_ansage(code_zeilen))
+                code_zeilen = 0
+            im_code = not im_code
+            continue
+
+        if im_code:
+            if zeile.strip():
+                code_zeilen += 1
+            continue
+
+        satz = _zeile_fuer_stimme(zeile)
+        if satz:
+            absaetze.append(satz)
+
+    # Ein Zaun, der nie zuging — trotzdem ansagen, was drinstand.
+    if im_code and code_zeilen:
+        absaetze.append(_codeblock_ansage(code_zeilen))
+
+    return "\n".join(absaetze).strip()
+
+
+def _klingt_wie_code(text: str) -> bool:
+    """Viele Sonderzeichen, wenig Wörter — das will niemand hören.
+
+    Wie `_ist_code`, aber ohne die Einrückungs-Regel: In Markdown ist eine
+    eingerückte Zeile meistens ein Unterpunkt, kein Code.
+    """
+    sonderzeichen = len(_CODE_ZEICHEN.findall(text))
+    return sonderzeichen >= 3 and sonderzeichen > len(text.split()) / 2
+
+
+def _zeile_fuer_stimme(zeile: str) -> str:
+    text = entkleide(zeile)
+    if not text:
+        return ""
+
+    # Trennlinien und die Strich-Zeile unter einer Tabellenüberschrift sind
+    # reine Optik.
+    if _TRENNLINIE.match(text) or _TABELLEN_LINIE.match(text):
+        return ""
+
+    text = _BILD.sub("", text)
+    text = _VERWEIS.sub(r"\1", text)         # Verweis: der Text zählt, nicht die Adresse
+    text = _CODE_SPANNE.sub(r"\1", text)     # Rückstriche weg, der Inhalt bleibt
+    text = _ZEILEN_ANFANG.sub("", text)      # Raute, Zitatpfeil, Aufzählungspunkt
+
+    # Betonung zweimal abziehen — **fett mit *kursiv* drin** ist verschachtelt.
+    text = _BETONUNG.sub(r"\2", text)
+    text = _BETONUNG.sub(r"\2", text)
+
+    # Erst JETZT prüfen, ob es Code ist — am rohen Markdown gemessen hielte die
+    # Prüfung jeden Verweis und jedes Wort in Rückstrichen für Code und
+    # verschluckte den ganzen Satz drumherum.
+    if _klingt_wie_code(text):
+        return ""
+
+    return symbole_weg(text)

@@ -60,7 +60,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 47
+VERSION = 48
 
 
 @app.get("/api/version")
@@ -289,10 +289,13 @@ def session_text(name: str) -> dict:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
     # Aus der Mitschrift, nicht vom Bildschirm: Dort steht die Antwort ganz,
-    # nicht nur der Teil, der gerade zu sehen ist.
+    # nicht nur der Teil, der gerade zu sehen ist. Sie steht dort als Markdown —
+    # ungefiltert vorgelesen wird daraus Kauderwelsch aus Sternchen und Rauten.
     for block in reversed(mitschrift.lesen(treffer[0].cwd)):
         if block["typ"] == "claude" and block["text"].strip():
-            return {"text": block["text"]}
+            gesprochen = tts.fuer_stimme(block["text"])
+            if gesprochen:
+                return {"text": gesprochen}
 
     # Keine Mitschrift? Dann eben doch vom Bildschirm.
     return {"text": tts.for_speech(tmux.capture(name, lines=200))}
