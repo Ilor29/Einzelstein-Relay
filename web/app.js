@@ -1547,20 +1547,41 @@ $("knopf-melden").addEventListener("click", async () => {
 
 // --- Vorlesen ----------------------------------------------------------------
 
-const stimme = $("stimme");
 let spricht = false;
 let sprecherKnopf = null;     // welcher Knopf gerade "spricht" anzeigt
+
+// Vorlesen über Web Audio statt eines <audio>-Elements. Nur so lassen sich die
+// einzelnen Häppchen LÜCKENLOS aneinanderreihen: Wir planen jedes Stück exakt
+// auf das Ende des vorigen. Ein <audio> muss die Quelle bei jedem Stück neu
+// laden — und genau diese kurze Pause klang abgehakt.
+let hörCtx = null;
+let aktiveQuellen = [];       // laufende Tonquellen, zum Stoppen
+let sprechLauf = 0;           // Zähler, mit dem ein alter Vortrag abbricht
+
+function tonKontext() {
+  if (!hörCtx) hörCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return hörCtx;
+}
+
+// decodeAudioData gibt es als Promise (moderne Browser) und als Rückruf (ältere).
+function dekodiere(bytes) {
+  return new Promise((fertig, fehler) => {
+    const p = tonKontext().decodeAudioData(bytes, fertig, fehler);
+    if (p && p.then) p.then(fertig, fehler);
+  });
+}
 
 function zeichen(knopf, name) {
   knopf?.querySelector("use")?.setAttribute("href", name);
 }
 
 function stille() {
-  stimme.pause();
-  stimme.onended = null;
-  stimme.onerror = null;
-  stimme.currentTime = 0;
   spricht = false;
+  sprechLauf++;               // ein laufender Vortrag erkennt daran: Schluss
+  for (const q of aktiveQuellen) {
+    try { q.stop(); } catch { /* war schon vorbei */ }
+  }
+  aktiveQuellen = [];
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
   sprecherKnopf = null;
@@ -1612,7 +1633,10 @@ async function sprich(text, knopf, stimmeName = null) {
   zeichen(knopf, "#i-stopp");
 
   const meins = knopf;       // um zu merken, ob wir zwischendurch gestoppt wurden
+  const lauf = ++sprechLauf; // diese Ausgabe; ein Stopp erhöht den Zähler
   const stuecke = haeppchen(text);
+  const c = tonKontext();
+  try { await c.resume(); } catch { /* Autoplay-Sperre — dann eben nicht */ }
 
   async function hole(stueck) {
     const antwort = await api("/speak", {
@@ -1622,43 +1646,47 @@ async function sprich(text, knopf, stimmeName = null) {
         stimmeName ? { text: stueck, stimme: stimmeName } : { text: stueck }
       ),
     });
-    return URL.createObjectURL(await antwort.blob());
+    return dekodiere(await antwort.arrayBuffer());
   }
 
-  function spiele(quelle) {
-    return new Promise((fertig, fehler) => {
-      stimme.src = quelle;
-      stimme.onended = fertig;
-      stimme.onerror = fehler;
-      stimme.play().catch(fehler);
-    });
-  }
+  const abgebrochen = () => !spricht || lauf !== sprechLauf || sprecherKnopf !== meins;
 
   try {
-    // Das erste Häppchen holen und sofort abspielen — während das nächste
-    // schon unterwegs ist.
+    // Das erste Häppchen schon holen; das nächste läuft immer im Voraus mit.
     let naechstes = hole(stuecke[0]);
+    let startZeit = c.currentTime + 0.08;   // kleiner Vorlauf bis zum ersten Ton
 
     for (let i = 0; i < stuecke.length; i++) {
-      const quelle = await naechstes;
-      if (!spricht || sprecherKnopf !== meins) {
-        URL.revokeObjectURL(quelle);
-        return;
-      }
+      const puffer = await naechstes;
+      if (abgebrochen()) return;
 
-      // Das übernächste schon anfordern, solange dieses noch läuft.
+      // Das übernächste Stück schon dekodieren, solange dieses läuft.
       naechstes = i + 1 < stuecke.length ? hole(stuecke[i + 1]) : null;
 
-      await spiele(quelle);
-      URL.revokeObjectURL(quelle);
+      const quelle = c.createBufferSource();
+      quelle.buffer = puffer;
+      quelle.connect(c.destination);
+      const start = Math.max(startZeit, c.currentTime);
+      quelle.start(start);
+      startZeit = start + puffer.duration;   // das nächste schließt nahtlos an
+      aktiveQuellen.push(quelle);
 
-      if (!spricht || sprecherKnopf !== meins) return;
+      // Bis kurz vor das Ende warten — dann hängen wir das (bereits dekodierte)
+      // nächste Stück an, bevor überhaupt Stille entstehen kann.
+      const wartenMs = (startZeit - c.currentTime) * 1000 - 250;
+      await new Promise((r) => setTimeout(r, Math.max(0, wartenMs)));
+      if (abgebrochen()) return;
     }
 
-    stille();
+    // Auf das Ende des letzten Stücks warten, dann aufräumen.
+    const restMs = (startZeit - c.currentTime) * 1000;
+    await new Promise((r) => setTimeout(r, Math.max(0, restMs)));
+    if (!abgebrochen()) stille();
   } catch (err) {
-    stille();
-    melde("Das Vorlesen hat nicht geklappt.");
+    if (lauf === sprechLauf) {
+      stille();
+      melde("Das Vorlesen hat nicht geklappt.");
+    }
   }
 }
 
