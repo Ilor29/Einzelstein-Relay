@@ -15,6 +15,8 @@ import asyncio
 import base64
 import json
 import os
+import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -95,21 +97,42 @@ def _empfaenger() -> list[dict]:
         return []
 
 
+# So viele Empfänger-Geräte höchstens. Ein einzelner Nutzer hat eine Handvoll
+# Geräte; alles darüber wäre nur ein volllaufender Speicher.
+MAX_EMPFAENGER = 50
+
+# Schützt die Empfängerliste vor gleichzeitigem Lesen-ändern-Schreiben.
+_sperre = threading.Lock()
+
+
 def _empfaenger_speichern(liste: list[dict]) -> None:
     ORDNER.mkdir(parents=True, exist_ok=True)
-    EMPFAENGER.write_text(json.dumps(liste, indent=2))
-    EMPFAENGER.chmod(0o600)
+    fd, tmp = tempfile.mkstemp(dir=ORDNER, prefix=EMPFAENGER.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(liste, f, indent=2)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, EMPFAENGER)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def eintragen(anmeldung: dict) -> None:
     """Ein Gerät will benachrichtigt werden."""
-    liste = [e for e in _empfaenger() if e.get("endpoint") != anmeldung.get("endpoint")]
-    liste.append(anmeldung)
-    _empfaenger_speichern(liste)
+    with _sperre:
+        liste = [e for e in _empfaenger() if e.get("endpoint") != anmeldung.get("endpoint")]
+        liste.append(anmeldung)
+        # Läuft die Liste voll, die ältesten Einträge fallenlassen.
+        _empfaenger_speichern(liste[-MAX_EMPFAENGER:])
 
 
 def austragen(endpoint: str) -> None:
-    _empfaenger_speichern([e for e in _empfaenger() if e.get("endpoint") != endpoint])
+    with _sperre:
+        _empfaenger_speichern([e for e in _empfaenger() if e.get("endpoint") != endpoint])
 
 
 # --- Schicken ----------------------------------------------------------------

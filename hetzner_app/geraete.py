@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import secrets
+import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -32,7 +35,18 @@ SITZUNGEN = ORDNER / "anmeldungen.json"
 # Wie lange eine Zufallsaufgabe gültig ist. Kurz, damit sie niemand
 # aufheben und später wiederverwenden kann.
 AUFGABE_GILT = 120          # Sekunden
-ANMELDUNG_GILT = 60 * 60 * 24 * 365
+
+# Wie lange man ohne neue Unterschrift angemeldet bleibt. Kürzer als früher
+# (war ein Jahr) — ein abgegriffener Cookie ist damit nicht mehr ewig nutzbar.
+# Wer die App regelmäßig benutzt, bleibt trotzdem angemeldet: Die Frist wird bei
+# Nutzung stillschweigend wieder aufgefüllt (siehe anmeldung_benutzt).
+ANMELDUNG_GILT = 60 * 60 * 24 * 90     # 90 Tage
+
+# Schützt die Lese-ändern-Schreib-Zyklen der beiden JSON-Dateien. FastAPI führt
+# synchrone Endpunkte im Threadpool aus — ohne diese Sperre könnten zwei
+# gleichzeitige Anmeldungen einander überschreiben (eine frische Marke ginge
+# verloren, das Gerät flöge sofort wieder raus).
+_sperre = threading.Lock()
 
 
 @dataclass
@@ -58,12 +72,30 @@ def _laden() -> list[Geraet]:
         return []
 
 
-def _speichern(geraete: list[Geraet]) -> None:
+def _atomar_schreiben(ziel: Path, text: str) -> None:
+    """Schreibt eine Datei unteilbar — mit EIGENER Temp-Datei je Aufruf.
+
+    Ein fester ".tmp"-Name (wie früher) wäre bei zwei gleichzeitigen Schreibern
+    ein Datentopf für beide: Sie überschrieben dieselbe Temp-Datei und das
+    Ergebnis konnte trotz des atomaren replace() beschädigt sein.
+    """
     ORDNER.mkdir(parents=True, exist_ok=True)
-    tmp = GERAETE.with_suffix(".tmp")
-    tmp.write_text(json.dumps([asdict(g) for g in geraete], indent=2))
-    tmp.chmod(0o600)
-    tmp.replace(GERAETE)
+    fd, tmp = tempfile.mkstemp(dir=ORDNER, prefix=ziel.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, ziel)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _speichern(geraete: list[Geraet]) -> None:
+    _atomar_schreiben(GERAETE, json.dumps([asdict(g) for g in geraete], indent=2))
 
 
 def liste() -> list[Geraet]:
@@ -84,12 +116,31 @@ def erlauben(name: str, schluessel: str) -> Geraet:
 
 
 def entfernen(name: str) -> bool:
-    """Ein verlorenes Handy aussperren. Die anderen Geräte bleiben unberührt."""
-    geraete = _laden()
-    rest = [g for g in geraete if g.name != name]
-    if len(rest) == len(geraete):
-        return False
-    _speichern(rest)
+    """Ein verlorenes Handy aussperren — wirklich, samt laufender Anmeldung.
+
+    Früher wurde nur der Schlüssel gelöscht: Das Gerät konnte sich zwar nicht
+    mehr NEU anmelden, sein vorhandener Anmelde-Cookie galt aber weiter bis zu
+    ein Jahr. Genau der versprochene Fall funktionierte also nicht. Jetzt fliegt
+    mit dem Gerät auch jede Anmelde-Marke, die an es gebunden ist.
+    """
+    with _sperre:
+        geraete = _laden()
+        rest = [g for g in geraete if g.name != name]
+        if len(rest) == len(geraete):
+            return False
+        _speichern(rest)
+
+        # Marken dieses Geräts widerrufen — und dazu alle noch ungebundenen
+        # (aus der Zeit vor dieser Änderung): Wessen sie sind, lässt sich nicht
+        # mehr sagen, und beim Aussperren geht Sicherheit vor Bequemlichkeit.
+        # Betroffen ist höchstens das eigene Gerät, das sich einmal neu anmeldet.
+        werte = _anmeldungen()
+        behalten = {
+            m: e for m, e in werte.items()
+            if _marke_geraet(e) not in (name, None)
+        }
+        if len(behalten) != len(werte):
+            _anmeldungen_speichern(behalten)
     return True
 
 
@@ -150,35 +201,87 @@ def unterschrift_pruefen(aufgabe: str, unterschrift: str) -> Geraet | None:
 # Nach erfolgreicher Unterschrift bekommt das Gerät ein Sitzungsplätzchen, damit
 # es nicht bei jedem Klick neu unterschreiben muss.
 
-def _anmeldungen() -> dict[str, float]:
+# Eine Anmelde-Marke wird als {"geraet": name, "frist": zeit} gespeichert.
+# Alte Stände hielten nur die nackte Frist als Zahl — beide Formen werden hier
+# gelesen, damit niemand durch die Umstellung ausgesperrt wird. Eine solche
+# Alt-Marke gilt weiter bis zum Ablauf, ist aber keinem Gerät zugeordnet.
+
+def _marke_frist(eintrag: object) -> float:
+    if isinstance(eintrag, dict):
+        try:
+            return float(eintrag.get("frist", 0))
+        except (TypeError, ValueError):
+            return 0.0
+    try:
+        return float(eintrag)      # altes Format: nackte Zahl
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _marke_geraet(eintrag: object) -> str | None:
+    return eintrag.get("geraet") if isinstance(eintrag, dict) else None
+
+
+def _anmeldungen() -> dict[str, object]:
     if not SITZUNGEN.exists():
         return {}
     try:
-        return json.loads(SITZUNGEN.read_text())
+        werte = json.loads(SITZUNGEN.read_text())
+        return werte if isinstance(werte, dict) else {}
     except (json.JSONDecodeError, OSError):
         return {}
 
 
-def _anmeldungen_speichern(werte: dict[str, float]) -> None:
-    ORDNER.mkdir(parents=True, exist_ok=True)
-    tmp = SITZUNGEN.with_suffix(".tmp")
-    tmp.write_text(json.dumps(werte))
-    tmp.chmod(0o600)
-    tmp.replace(SITZUNGEN)
+def _anmeldungen_speichern(werte: dict[str, object]) -> None:
+    _atomar_schreiben(SITZUNGEN, json.dumps(werte))
 
 
-def anmeldung_ausstellen() -> str:
+def anmeldung_ausstellen(geraet: str) -> str:
+    """Eine neue Anmelde-Marke, fest an das unterschreibende Gerät gebunden."""
     marke = secrets.token_urlsafe(32)
-    werte = _anmeldungen()
     jetzt = time.time()
-    werte = {m: f for m, f in werte.items() if f > jetzt}   # Abgelaufene raus
-    werte[marke] = jetzt + ANMELDUNG_GILT
-    _anmeldungen_speichern(werte)
+    with _sperre:
+        werte = {m: e for m, e in _anmeldungen().items()
+                 if _marke_frist(e) > jetzt}        # Abgelaufene raus
+        werte[marke] = {"geraet": geraet, "frist": jetzt + ANMELDUNG_GILT}
+        _anmeldungen_speichern(werte)
     return marke
 
 
 def anmeldung_gueltig(marke: str) -> bool:
     if not marke:
         return False
-    frist = _anmeldungen().get(marke)
-    return frist is not None and frist > time.time()
+    eintrag = _anmeldungen().get(marke)
+    return eintrag is not None and _marke_frist(eintrag) > time.time()
+
+
+def anmeldung_benutzt(marke: str) -> None:
+    """Frist auffrischen, wenn die Marke schon über die Hälfte durch ist.
+
+    So bleibt ein aktiver Nutzer angemeldet, obwohl die Grundlaufzeit kurz ist —
+    ohne bei jedem einzelnen Klick in die Datei zu schreiben (nur einmal pro
+    halber Laufzeit).
+    """
+    jetzt = time.time()
+    with _sperre:
+        werte = _anmeldungen()
+        eintrag = werte.get(marke)
+        if eintrag is None:
+            return
+        frist = _marke_frist(eintrag)
+        if frist <= jetzt or frist - jetzt > ANMELDUNG_GILT / 2:
+            return                              # abgelaufen oder noch frisch genug
+        werte[marke] = {"geraet": _marke_geraet(eintrag),
+                        "frist": jetzt + ANMELDUNG_GILT}
+        _anmeldungen_speichern(werte)
+
+
+def abmelden(marke: str) -> None:
+    """Eine einzelne Anmeldung beenden (Logout auf diesem Gerät)."""
+    if not marke:
+        return
+    with _sperre:
+        werte = _anmeldungen()
+        if marke in werte:
+            del werte[marke]
+            _anmeldungen_speichern(werte)

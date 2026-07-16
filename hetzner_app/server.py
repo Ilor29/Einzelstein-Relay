@@ -14,7 +14,9 @@ import secrets
 import shutil
 import subprocess
 import time
+from collections import deque
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import (
     Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile,
@@ -22,7 +24,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from . import bibliothek, geraete, melden, mitschrift, state, tmux, tts, verlauf
 
@@ -31,6 +33,22 @@ WEB_DIR = Path(__file__).parent.parent / "web"
 COOKIE = "hetzner_app_anmeldung"
 
 app = FastAPI(title="Hetzner-App")
+
+
+@app.middleware("http")
+async def sicherheits_header(request: Request, call_next):
+    """Ein paar schützende Kopfzeilen auf jede Antwort.
+
+    Bewusst OHNE Content-Security-Policy: Eine falsch gesetzte CSP legt die App
+    lahm (Inline-Skript/-Stil, WebSocket, Audio-Blobs) und gehört erst nach
+    einem echten Test im Browser gesetzt — dann am besten in Caddy. Diese drei
+    Header dagegen brechen nichts und kosten nichts.
+    """
+    antwort = await call_next(request)
+    antwort.headers.setdefault("X-Content-Type-Options", "nosniff")
+    antwort.headers.setdefault("Referrer-Policy", "same-origin")
+    antwort.headers.setdefault("X-Frame-Options", "DENY")
+    return antwort
 
 
 @app.on_event("startup")
@@ -48,8 +66,12 @@ async def waechter_starten() -> None:
 # --- Zugangsschutz -----------------------------------------------------------
 
 def require_auth(request: Request) -> None:
-    if not geraete.anmeldung_gueltig(request.cookies.get(COOKIE, "")):
+    marke = request.cookies.get(COOKIE, "")
+    if not geraete.anmeldung_gueltig(marke):
         raise HTTPException(status_code=401, detail="Nicht angemeldet.")
+    # Wer die App aktiv benutzt, soll nicht mitten in der Arbeit rausfliegen —
+    # die kurze Grundlaufzeit wird bei Nutzung stillschweigend aufgefrischt.
+    geraete.anmeldung_benutzt(marke)
 
 
 class Unterschrift(BaseModel):
@@ -60,7 +82,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 49
+VERSION = 50
 
 
 @app.get("/api/version")
@@ -86,18 +108,38 @@ def anmelden(body: Unterschrift) -> Response:
 
     antwort = JSONResponse({"ok": True, "geraet": geraet.name})
     antwort.set_cookie(
-        COOKIE, geraete.anmeldung_ausstellen(),
+        COOKIE, geraete.anmeldung_ausstellen(geraet.name),
         httponly=True,
         samesite="strict",
         secure=True,        # nur über HTTPS — siehe Caddy-Konfiguration
-        max_age=geraete.ANMELDUNG_GILT,
+        # Der Browser darf die Marke lange behalten; wie lange sie WIRKLICH gilt,
+        # entscheidet allein der Server (90 Tage, bei Nutzung verlängert). So ist
+        # ein abgegriffener Cookie nicht ewig gültig und bleibt widerrufbar.
+        max_age=60 * 60 * 24 * 365,
     )
+    return antwort
+
+
+@app.post("/api/abmelden")
+def abmelden(request: Request) -> Response:
+    """Dieses Gerät abmelden — Marke widerrufen und Cookie löschen."""
+    geraete.abmelden(request.cookies.get(COOKIE, ""))
+    antwort = JSONResponse({"ok": True})
+    antwort.delete_cookie(COOKIE, httponly=True, samesite="strict", secure=True)
     return antwort
 
 
 @app.get("/api/geraete", dependencies=[Depends(require_auth)])
 def geraete_liste() -> list[dict]:
     return [{"name": g.name, "hinzugefuegt": g.hinzugefuegt} for g in geraete.liste()]
+
+
+@app.delete("/api/geraete/{name}", dependencies=[Depends(require_auth)])
+def geraet_aussperren(name: str) -> dict:
+    """Ein verlorenes Gerät aussperren — Schlüssel weg, laufende Anmeldung weg."""
+    if not geraete.entfernen(name):
+        raise HTTPException(404, "Dieses Gerät gibt es nicht.")
+    return {"ok": True}
 
 
 # --- Sitzungen ---------------------------------------------------------------
@@ -233,9 +275,51 @@ def melden_schluessel() -> dict:
     return {"schluessel": melden.oeffentlicher_schluessel()}
 
 
+# Die Hosts der bekannten Browser-Push-Dienste. Der Server schickt später POSTs
+# an die endpoint-URL der Anmeldung — nähme er dafür ein ungeprüftes dict (wie
+# früher), könnte ein angemeldetes Gerät die URL auf interne Adressen zeigen
+# lassen (127.0.0.1, Cloud-Metadaten 169.254.169.254) und den Server als
+# Sprungbrett missbrauchen. Darum nur echte Push-Gateways zulassen. Ein Eintrag
+# mit führendem Punkt gilt als Domain-Suffix, einer ohne als exakter Host.
+_PUSH_HOSTS = (
+    "fcm.googleapis.com",
+    "android.googleapis.com",
+    ".push.services.mozilla.com",
+    ".notify.windows.com",
+    ".push.apple.com",
+)
+
+
+def _push_host_erlaubt(host: str) -> bool:
+    host = host.lower()
+    return any(host.endswith(h) if h.startswith(".") else host == h
+               for h in _PUSH_HOSTS)
+
+
+class PushSchluessel(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=200)
+    auth: str = Field(min_length=1, max_length=100)
+
+
+class PushAnmeldung(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=1000)
+    keys: PushSchluessel
+    expirationTime: float | None = None
+
+    @field_validator("endpoint")
+    @classmethod
+    def _endpoint_pruefen(cls, wert: str) -> str:
+        ziel = urlparse(wert)
+        if ziel.scheme != "https" or not ziel.hostname:
+            raise ValueError("endpoint muss eine https-Adresse sein")
+        if not _push_host_erlaubt(ziel.hostname):
+            raise ValueError("endpoint zeigt nicht auf einen bekannten Push-Dienst")
+        return wert
+
+
 @app.post("/api/melden/eintragen", dependencies=[Depends(require_auth)])
-async def melden_eintragen(anmeldung: dict) -> dict:
-    melden.eintragen(anmeldung)
+async def melden_eintragen(anmeldung: PushAnmeldung) -> dict:
+    melden.eintragen(anmeldung.model_dump(exclude_none=True))
     return {"ok": True}
 
 
@@ -746,12 +830,34 @@ def _glaetten(text: str) -> str:
     return ergebnis.stdout.strip()
 
 
+# Kostenbremse fürs Glätten. Jeder Aufruf startet einen Claude-Prozess (kostet
+# Token) — eine hängende Schleife im Frontend oder Missbrauch dürfen nicht
+# ungebremst Aufrufe auslösen. Ein einzelner Nutzer glättet ein paar Mal pro
+# Minute; alles darüber wird gebremst.
+_glaetten_rufe: deque[float] = deque()
+_GLAETTEN_MAX = 12
+_GLAETTEN_FENSTER = 60      # Sekunden
+
+
+def _glaetten_erlaubt() -> bool:
+    jetzt = time.time()
+    while _glaetten_rufe and _glaetten_rufe[0] < jetzt - _GLAETTEN_FENSTER:
+        _glaetten_rufe.popleft()
+    if len(_glaetten_rufe) >= _GLAETTEN_MAX:
+        return False
+    _glaetten_rufe.append(jetzt)
+    return True
+
+
 @app.post("/api/glaetten", dependencies=[Depends(require_auth)])
 async def glaetten(body: Diktat) -> dict:
     """Einen diktierten Text aufräumen — auf Knopfdruck, vor dem Absenden."""
     text = body.text.strip()
     if not text:
         return {"text": ""}
+
+    if not _glaetten_erlaubt():
+        raise HTTPException(429, "Zu viele Glätt-Anfragen kurz hintereinander — kurz warten.")
 
     try:
         sauber = await asyncio.to_thread(_glaetten, text)
