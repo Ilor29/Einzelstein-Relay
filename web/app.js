@@ -852,6 +852,7 @@ function oeffneSitzung(sitzung) {
     ladeVerlauf();
     pruefeObClaudeArbeitet();
     pruefeFrage();
+    pruefeObTonZurueck();
   }, 3000);
 }
 
@@ -1193,6 +1194,10 @@ $("knopf-diktat").addEventListener("click", () => {
     };
 
     erkennung.onresult = (e) => {
+      // Redet die App gerade selbst, ist alles, was hereinkommt, ihre eigene
+      // Stimme aus dem Lautsprecher — nicht deine. Weghören.
+      if (spricht) return;
+
       // Nur das jüngste Ergebnis zählt — alles davor ist schon in `fertig`.
       const letztes = e.results[e.results.length - 1];
       const stueck = letztes[0].transcript;
@@ -1563,9 +1568,14 @@ let sprecherKnopf = null;     // welcher Knopf gerade "spricht" anzeigt
 let hörCtx = null;
 let aktiveQuellen = [];       // laufende Tonquellen, zum Stoppen
 let sprechLauf = 0;           // Zähler, mit dem ein alter Vortrag abbricht
+let restStuecke = [];         // was vom Vortrag noch aussteht
+let restText = "";            // beim Klingeln abgeschnitten — hierher gerettet
 
 function tonKontext() {
-  if (!hörCtx) hörCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (!hörCtx) {
+    hörCtx = new (window.AudioContext || window.webkitAudioContext)();
+    tonKontextUeberwachen(hörCtx);
+  }
   return hörCtx;
 }
 
@@ -1588,9 +1598,87 @@ function stille() {
     try { q.stop(); } catch { /* war schon vorbei */ }
   }
   aktiveQuellen = [];
+  restStuecke = [];           // von Hand gestoppt heißt: nichts steht mehr aus
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
   sprecherKnopf = null;
+}
+
+// --- Wenn das Telefon klingelt -----------------------------------------------
+//
+// Im Auto kommt ein Anruf über dieselbe Freisprecheinrichtung, aus der gerade
+// Jonas spricht. Beide gleichzeitig geht nicht, und nach Knöpfen suchen kann man
+// am Steuer nicht. Also hört Jonas von selbst auf — und liest danach weiter, wo
+// er war.
+//
+// Das Signal dafür ist der Ton-Zustand, NICHT `visibilitychange`. Der Bildschirm
+// geht im Auto nach ein paar Sekunden von selbst aus, während der Vortrag
+// weiterläuft; wer daran abbricht, schaltet sich bei jedem Timeout selber ab.
+// Nimmt das Telefon dagegen den Lautsprecher an sich, hält der Browser den
+// Ton-Kontext an: 'interrupted' (iPhone) oder 'suspended' (Android).
+
+function unterbrechen() {
+  if (!spricht) return;
+  const rest = restStuecke.join(" ");
+  stille();
+  hoertStoppen?.();     // das Gespräch braucht das Mikrofon dringender
+  restText = rest;
+}
+
+let liestWeiter = false;      // Riegel gegen das Weiterlesen im Weiterlesen
+
+async function weiterlesen() {
+  if (liestWeiter || !restText || spricht || hoert || !freisprech) return;
+
+  // Der Riegel ist kein Schmuck: Das Aufwecken des Tons meldet selbst wieder
+  // "Ton ist da" — und das ist genau das Signal, das hierher führt. Ohne Riegel
+  // ruft sich das Weiterlesen endlos selbst auf, bis der Browser aufgibt.
+  liestWeiter = true;
+  let text;
+  try {
+    // Den Rest erst aus der Hand geben, wenn der Ton wirklich da ist. Sonst
+    // wäre er verloren, falls das Aufwecken scheitert, statt beim nächsten
+    // Anklopfen nochmal versucht zu werden.
+    text = restText;
+    await tonKontext().resume();
+    if (tonKontext().state !== "running") return;
+    restText = "";
+  } catch {
+    return;                                  // dann eben beim nächsten Mal
+  } finally {
+    liestWeiter = false;
+  }
+
+  await sprich(text, $("knopf-vorlesen"));
+
+  // Zu Ende gelesen, was der Anruf abgeschnitten hatte — jetzt bist du dran,
+  // ohne dass du irgendwo hintippen musst.
+  await mikrofonAufmachen();
+}
+
+/** Netz unter dem Weiterlesen.
+ *
+ *  Ob der Browser den Ton nach einem Gespräch von selbst wieder anwirft, hält
+ *  jeder anders. Bleibt er hängen, käme das 'statechange'-Signal nie und der
+ *  Rest der Antwort bliebe für immer liegen. Also klopfen wir alle drei
+ *  Sekunden an — kostet nichts, wenn nichts aussteht.
+ */
+function pruefeObTonZurueck() {
+  if (!restText || spricht || hoert || !freisprech || !hörCtx) return;
+  weiterlesen();
+}
+
+function tonKontextUeberwachen(c) {
+  c.addEventListener("statechange", () => {
+    // Ton weg, obwohl wir mitten im Satz sind: Da klingelt etwas.
+    if (spricht && c.state !== "running") {
+      unterbrechen();
+      return;
+    }
+    // Der Ton ist zurück — das Gespräch ist vorbei. Weiterlesen, sofern der
+    // Freisprech-Modus an ist; sonst wartet der Rest am Lautsprecher-Knopf.
+    if (c.state === "running" && restText) weiterlesen();
+  });
 }
 
 /** Zerlegt einen Text in Häppchen, die sich gut sprechen lassen.
@@ -1633,6 +1721,15 @@ async function sprich(text, knopf, stimmeName = null) {
 
   if (!text?.trim()) return;
 
+  // Nie mit offenem Mikrofon sprechen.
+  //
+  // Sonst hört das Mikrofon die eigene Stimme aus dem Lautsprecher und schreibt
+  // sie in die Eingabe: Du diktierst, bekommst die Antwort vorgelesen — und
+  // findest sie hinterher in deinem eigenen Text wieder. Das Mikrofon geht im
+  // Freisprech-Modus nach dem Vortrag von selbst wieder auf.
+  hoertStoppen?.();
+
+  restText = "";       // ein neuer Vortrag hebt einen alten Rest auf
   spricht = true;
   sprecherKnopf = knopf;
   knopf.classList.add("spricht");
@@ -1663,6 +1760,10 @@ async function sprich(text, knopf, stimmeName = null) {
     let startZeit = c.currentTime + 0.08;   // kleiner Vorlauf bis zum ersten Ton
 
     for (let i = 0; i < stuecke.length; i++) {
+      // Ab hier steht dieses Stück noch aus. Klingelt jetzt das Telefon, wird
+      // genau ab hier weitergelesen — beim angefangenen Satz, nicht mittendrin.
+      restStuecke = stuecke.slice(i);
+
       const puffer = await naechstes;
       if (abgebrochen()) return;
 
@@ -1731,6 +1832,25 @@ function freisprechAnzeigen() {
   $("knopf-freisprech").classList.toggle("an", freisprech);
 }
 
+/** Nach dem Vortrag das Mikrofon öffnen, damit du gleich antworten kannst.
+ *
+ *  Manche Browser erlauben das nur nach einer Berührung — klappt es nicht,
+ *  tippst du das Mikrofon eben selbst an.
+ */
+async function mikrofonAufmachen() {
+  // Dem Lautsprecher einen Augenblick lassen — sonst fängt das Mikrofon den
+  // Nachhall des letzten Wortes noch ein.
+  await new Promise((r) => setTimeout(r, 400));
+
+  // Steht noch ein Rest aus, ist der Vortrag nicht durch, sondern von einem
+  // Anruf abgeschnitten. Dann läuft gerade ein Gespräch — da ist ein
+  // aufgehendes Mikrofon das Letzte, was jemand gebrauchen kann.
+  if (freisprech && !imTerminal && !hoert && !spricht && !restText &&
+      document.visibilityState === "visible") {
+    try { $("knopf-diktat").click(); } catch { /* dann von Hand */ }
+  }
+}
+
 $("knopf-freisprech").addEventListener("click", () => {
   freisprech = !freisprech;
   localStorage.setItem("freisprech", freisprech ? "1" : "0");
@@ -1764,14 +1884,7 @@ async function freisprechVorlesen() {
     zuletztVorgelesen = text;
 
     await sprich(text, $("knopf-vorlesen"));
-
-    // Vorlesen durch, Modus noch an, keiner hört zu: das Mikrofon öffnen, damit
-    // du gleich antworten kannst. Manche Browser erlauben das nur nach einer
-    // Berührung — klappt es nicht, tippst du das Mikrofon eben selbst an.
-    if (freisprech && !imTerminal && !hoert && !spricht &&
-        document.visibilityState === "visible") {
-      try { $("knopf-diktat").click(); } catch { /* dann von Hand */ }
-    }
+    await mikrofonAufmachen();
   } catch {
     // Kein Text, kein Netz — dann eben nicht.
   }
