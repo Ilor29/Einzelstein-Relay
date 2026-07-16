@@ -1049,6 +1049,16 @@ html, body {
 }
 .ordner .klein-knopf { margin-left: .5rem; }
 
+/* Die Geräteliste benutzt dieselben Zeilen; der Name links, der Aussperr-Knopf
+   rechts. Keine Zeilen-Auswahl wie bei Stimmen — nur der Knopf ist aktiv. */
+.ordner .geraet-name {
+  font-family: var(--sans);
+  font-size: .92rem;
+  margin-right: auto;
+}
+#geraete-liste .ordner { cursor: default; }
+#knopf-abmelden { margin-top: .7rem; width: 100%; }
+
 .ordner.gewaehlt .punkt-wahl {
   border-color: var(--akzent);
   border-width: 4px;

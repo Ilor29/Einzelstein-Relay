@@ -2016,6 +2016,64 @@ $("knopf-einstellungen").addEventListener("click", async () => {
 
     liste.append(el);
   }
+
+  ladeGeraete();
+});
+
+// Die angemeldeten Geräte, jedes mit einem Knopf zum Aussperren. Ein verlorenes
+// Handy verliert damit sofort seinen Zugang — nicht erst, wenn die Anmeldung
+// von selbst ausläuft.
+async function ladeGeraete() {
+  const liste = $("geraete-liste");
+  liste.replaceChildren();
+
+  let geraete;
+  try {
+    geraete = await (await api("/geraete")).json();
+  } catch {
+    const hinweis = document.createElement("p");
+    hinweis.className = "hinweis";
+    hinweis.textContent = "Geräte konnten nicht geladen werden.";
+    liste.append(hinweis);
+    return;
+  }
+
+  for (const g of geraete) {
+    const el = document.createElement("div");
+    el.className = "ordner";
+    el.innerHTML = `
+      <span class="geraet-name"></span>
+      <button class="klein-knopf" aria-label="Gerät aussperren">
+        <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+      </button>`;
+    el.querySelector(".geraet-name").textContent = g.name;
+
+    el.querySelector("button").addEventListener("click", async () => {
+      if (!confirm(
+        `Gerät „${g.name}" aussperren? Sein Zugang erlischt sofort. `
+        + `Ist das dein aktuelles Handy, wirst du abgemeldet.`
+      )) return;
+      try {
+        await api(`/geraete/${encodeURIComponent(g.name)}`, { method: "DELETE" });
+        melde(`„${g.name}" ausgesperrt.`);
+        ladeGeraete();
+      } catch (err) {
+        melde(err.message || "Aussperren hat nicht geklappt.");
+      }
+    });
+
+    liste.append(el);
+  }
+}
+
+$("knopf-abmelden").addEventListener("click", async () => {
+  if (!confirm("Dieses Gerät abmelden? Du musst dich danach neu anmelden.")) return;
+  try {
+    await api("/abmelden", { method: "POST" });
+  } catch {
+    // Cookie ist so oder so weg — der Neuaufbau unten fängt alles auf.
+  }
+  location.reload();
 });
 
 $("knopf-einst-zurueck").addEventListener("click", () => {
