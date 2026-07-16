@@ -666,14 +666,25 @@ def session_sichern(name: str) -> dict:
     if ergebnis.returncode != 0:
         raise HTTPException(500, f"Sichern fehlgeschlagen: {ergebnis.stderr[:200]}")
 
-    # Ins Lager schieben, falls es eins gibt.
+    # Ins örtliche Lager auf dem Server schieben, falls es eins gibt.
     geschoben = git("push", "hetzner", "HEAD").returncode == 0
 
-    return {
-        "ok": True,
-        "geaendert": True,
-        "text": "Gesichert." + ("" if geschoben else " (Noch kein Lager — nur örtlich gesichert.)"),
-    }
+    # Und, wenn angebunden, zusätzlich außer Haus zu GitHub — das ist die
+    # eigentliche Sicherheit: eine Kopie, die diesen Server überlebt. Scheitert
+    # sie (kein Netz o. Ä.), bleibt der Stand trotzdem örtlich gesichert; daran
+    # lassen wir das Sichern nicht scheitern.
+    remotes = git("remote").stdout.split()
+    ausser_haus = "github" in remotes and git("push", "github", "HEAD").returncode == 0
+
+    if ausser_haus:
+        text = "Gesichert — auch außer Haus bei GitHub."
+    elif geschoben:
+        text = ("Gesichert (örtlich). Dieses Projekt ist noch nicht bei GitHub — "
+                "sag Bescheid, dann binde ich es an.")
+    else:
+        text = "Gesichert (nur örtlich)."
+
+    return {"ok": True, "geaendert": True, "text": text}
 
 
 @app.post("/api/sessions/{name}/abbrechen", dependencies=[Depends(require_auth)])
