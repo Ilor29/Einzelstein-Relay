@@ -550,7 +550,12 @@ async function ladeVerlauf() {
   zuletztGesehen = abdruck;
 
   const behaelter = $("verlauf");
-  behaelter.replaceChildren(...bloecke.map(verlaufBlock));
+  // Die Werkzeug-Kästen ("Bash(…)", "Read(…)") gehören ins Terminal, nicht ins
+  // Gespräch. Die Lese-Ansicht zeigt, was Claude *sagt* — wer sehen will, was es
+  // *tut*, schaltet oben aufs Terminal.
+  behaelter.replaceChildren(
+    ...bloecke.filter((b) => b.typ !== "werkzeug").map(verlaufBlock)
+  );
 
   // Ans Ende ziehen, wenn wir mitlaufen sollen — aber erst in der nächsten
   // Bildwiederholung, wenn der neue Inhalt wirklich vermessen ist. Sofort wäre
