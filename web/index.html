@@ -116,6 +116,14 @@
       <rect x="6" y="6" width="12" height="12" rx="2"/>
     </g>
 
+    <!-- Ein Stoppschild (Achteck mit Querbalken): Senden gesperrt, solange
+         Claude arbeitet. -->
+    <g id="i-stopp-schild" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/>
+      <path d="M8.5 12h7"/>
+    </g>
+
     <g id="i-glocke" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -371,7 +379,7 @@
         <span id="modell-name">Modell</span>
       </button>
       <span class="fueller"></span>
-      <button type="submit" class="knopf-senden" aria-label="Senden">
+      <button type="submit" id="knopf-senden" class="knopf-senden" aria-label="Senden">
         <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
       </button>
     </div>

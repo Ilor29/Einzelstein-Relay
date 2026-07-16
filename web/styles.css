@@ -922,6 +922,12 @@ html, body {
   border-radius: 50%;
   cursor: pointer;
 }
+/* Gesperrt, solange Claude arbeitet: das Stoppschild statt des Pfeils, gedämpft.
+   Zum Unterbrechen gibt es den Anhalten-Knopf. */
+.knopf-senden.blockiert {
+  background: var(--erhoben-2);
+  color: var(--schrift-schwach);
+}
 .knopf-senden:active { filter: brightness(.9); }
 .knopf-senden svg { width: 17px; height: 17px; }
 

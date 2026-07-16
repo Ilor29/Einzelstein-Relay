@@ -680,6 +680,16 @@ async function antworte(nummer) {
   }
 }
 
+// Senden sperren, solange Claude arbeitet: aus dem Pfeil wird ein Stoppschild.
+// Nachschieben während des Denkens verwirrte nur ("ist das angekommen?"); wer
+// unterbrechen will, nimmt den Anhalten-Knopf.
+function sendeSperren(sperr) {
+  const knopf = $("knopf-senden");
+  knopf.classList.toggle("blockiert", sperr);
+  knopf.querySelector("use").setAttribute("href", sperr ? "#i-stopp-schild" : "#i-senden");
+  knopf.setAttribute("aria-label", sperr ? "Claude arbeitet — Senden gesperrt" : "Senden");
+}
+
 // Der Anhalten-Knopf zeigt sich nur, während Claude wirklich arbeitet.
 //
 // Nebenbei erkennt diese Runde den Übergang von "arbeitet" zu "ruht" — den
@@ -692,6 +702,7 @@ async function pruefeObClaudeArbeitet() {
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
     const zustand = jetzt?.state;
     $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
+    sendeSperren(zustand === "running");
     // Pulsiert, solange Claude arbeitet — und noch den Puffer nach dem Absenden,
     // bis die Arbeit sichtbar anläuft.
     $("denkt").hidden = !(zustand === "running" || Date.now() < denktBis);
@@ -817,6 +828,7 @@ function oeffneSitzung(sitzung) {
   zeigeWarteschlange();
   denktBis = 0;
   $("denkt").hidden = true;
+  sendeSperren(false);
   ladeVerlauf();
   pruefeFrage();
   clearInterval(verlaufTakt);
@@ -881,6 +893,7 @@ async function sendeInSitzung(text) {
   melde("Gesendet — Claude denkt nach …");
   denktBis = Date.now() + 6000;   // Anzeige hält, bis die Arbeit sichtbar anläuft
   $("denkt").hidden = false;
+  sendeSperren(true);             // ab jetzt arbeitet Claude — Senden gesperrt
   setTimeout(ladeVerlauf, 600);
 }
 
@@ -934,6 +947,14 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   const text = feld.value.trim();
   if (!text || !aktuelleSitzung) return;
 
+  // Solange Claude arbeitet, nehmen wir nichts Neues an — das Nachschieben
+  // führte nur zu "ist das angekommen?"-Verwirrung. Der Text bleibt im Feld,
+  // du kannst ihn abschicken, sobald das Stoppschild wieder zum Pfeil wird.
+  if (!imTerminal && letzterZustand === "running") {
+    melde("Claude arbeitet noch — gleich wieder frei. Zum Unterbrechen: „Claude anhalten".");
+    return;
+  }
+
   // Erst das Mikrofon zum Schweigen bringen.
   //
   // Sonst hört es weiter zu, hält seinen bisherigen Satz noch fest und
@@ -941,16 +962,6 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   hoertStoppen?.();
 
   feld.value = "";
-
-  // Arbeitet Claude noch, wird die Nachricht nicht sofort hineingetippt — sie
-  // wartet und geht ab, sobald er fertig ist. Sonst landete sie mitten in
-  // seiner Arbeit und die Reihenfolge geriete durcheinander.
-  if (!imTerminal && letzterZustand === "running") {
-    warteschlange.push(text);
-    zeigeWarteschlange();
-    melde("In die Warteschlange — kommt dran, sobald Claude fertig ist.");
-    return;
-  }
 
   try {
     await sendeInSitzung(text);
@@ -971,14 +982,12 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 // arbeitet.
 async function schnellbefehl(text) {
   if (!aktuelleSitzung || imTerminal || !text) return;
-  hoertStoppen?.();
 
   if (letzterZustand === "running") {
-    warteschlange.push(text);
-    zeigeWarteschlange();
-    melde("In die Warteschlange — kommt dran, sobald Claude fertig ist.");
+    melde("Claude arbeitet noch — gleich wieder frei.");
     return;
   }
+  hoertStoppen?.();
   try {
     await sendeInSitzung(text);
     letzterZustand = "running";
