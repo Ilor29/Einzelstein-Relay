@@ -136,6 +136,9 @@ const ETIKETT = {
 };
 
 function alter(sekunden) {
+  // Fehlt der Wert oder ist er keine Zahl, lieber gar nichts zeigen als
+  // "vor NaN Min." auf der Karte.
+  if (!Number.isFinite(sekunden)) return "";
   if (sekunden < 60) return "gerade eben";
   const minuten = Math.round(sekunden / 60);
   if (minuten < 60) return `vor ${minuten} Min.`;
@@ -162,7 +165,7 @@ function karte(sitzung) {
   const el = document.createElement("div");
   el.className = "karte" + (sitzung.pinned ? " angeheftet" : "");
   el.innerHTML = `
-    <div class="streifen ${sitzung.state}"></div>
+    <div class="streifen"></div>
     <div class="zeile-oben">
       <span class="name"></span>
       <button class="nadel" aria-label="Anheften">
@@ -171,11 +174,22 @@ function karte(sitzung) {
     </div>
     <div class="vorschau"></div>
     <div class="angaben">
-      <span class="etikett ${sitzung.state}">${ETIKETT[sitzung.state]}</span>
+      <span class="etikett"></span>
       <span class="wann"></span>
       <span class="terminals"></span>
     </div>
   `;
+  // Zustand als CSS-Klasse — aber nur, wenn wir ihn kennen. Käme vom Server je
+  // ein unbekannter Zustand, stünde sonst wörtlich "undefined" auf der Karte,
+  // und ein interpolierter Wert im class-Attribut bricht das sonst eiserne
+  // Muster "Daten nie in HTML-Vorlagen".
+  const bekannt = Object.prototype.hasOwnProperty.call(ETIKETT, sitzung.state);
+  if (bekannt) {
+    el.querySelector(".streifen").classList.add(sitzung.state);
+    el.querySelector(".etikett").classList.add(sitzung.state);
+  }
+  el.querySelector(".etikett").textContent = bekannt ? ETIKETT[sitzung.state] : "unbekannt";
+
   // Über textContent gesetzt, nicht über innerHTML — ein Sitzungsname oder
   // eine Terminalzeile darf kein HTML in die Seite schmuggeln.
   el.querySelector(".name").textContent = benannt(sitzung);
@@ -193,11 +207,15 @@ function karte(sitzung) {
 
   el.querySelector(".nadel").addEventListener("click", async (e) => {
     e.stopPropagation();   // sonst öffnet sich gleichzeitig die Sitzung
-    await api(`/sessions/${sitzung.name}`, {
-      method: "PATCH",
-      body: JSON.stringify({ pinned: !sitzung.pinned }),
-    });
-    ladeListe();
+    try {
+      await api(`/sessions/${encodeURIComponent(sitzung.name)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ pinned: !sitzung.pinned }),
+      });
+      ladeListe();
+    } catch (err) {
+      melde(err.message || "Anheften ging gerade nicht.");
+    }
   });
 
   return el;
@@ -349,7 +367,9 @@ let verlaufTakt = null;
 // Freisprech-Modus: Ist er an, liest die App eine fertige Antwort von selbst
 // vor und öffnet danach das Mikrofon — freihändig, ohne einen Knopf. Die
 // Einstellung überlebt das Neuladen.
-let freisprech = localStorage.getItem("freisprech") === "1";
+let freisprech = (() => {
+  try { return localStorage.getItem("freisprech") === "1"; } catch { return false; }
+})();
 
 // Ob Claude gerade beschäftigt ist — geglättet über einen Puffer (denktBis),
 // damit kurze Atempausen zwischen zwei Schritten nicht als "fertig" durchgehen.
@@ -874,8 +894,12 @@ function verbinde(name) {
     setzeVerbindung(false);
     // Verbindung weg — auf dem Handy passiert das ständig, sobald der
     // Bildschirm ausgeht. Die Sitzung läuft weiter, wir hängen uns nur
-    // wieder dran.
-    if (aktuelleSitzung?.name === name && !$("ansicht-sitzung").hidden) {
+    // wieder dran. ABER nur, solange wir wirklich im Terminal sind: In der
+    // Leseansicht (imTerminal = false) hat der Wechsel die Verbindung bewusst
+    // geschlossen — ohne diese Prüfung verbände sie sich sofort heimlich wieder
+    // und ein unsichtbarer Terminal-Strom liefe samt Akku- und Datenverbrauch
+    // weiter.
+    if (imTerminal && aktuelleSitzung?.name === name && !$("ansicht-sitzung").hidden) {
       setTimeout(() => verbinde(name), 1500);
     }
   });
@@ -1356,12 +1380,16 @@ $("knopf-zurueck").addEventListener("click", () => {
 $("knopf-anheften").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
   const neu = !aktuelleSitzung.pinned;
-  await api(`/sessions/${aktuelleSitzung.name}`, {
-    method: "PATCH",
-    body: JSON.stringify({ pinned: neu }),
-  });
-  aktuelleSitzung.pinned = neu;
-  $("knopf-anheften").classList.toggle("an", neu);
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ pinned: neu }),
+    });
+    aktuelleSitzung.pinned = neu;
+    $("knopf-anheften").classList.toggle("an", neu);
+  } catch (err) {
+    melde(err.message || "Anheften ging gerade nicht.");
+  }
 });
 
 // --- Das Modell wechseln -----------------------------------------------------
@@ -1548,12 +1576,18 @@ $("knopf-melden").addEventListener("click", async () => {
     }
   }
 
-  await api(`/sessions/${aktuelleSitzung.name}`, {
-    method: "PATCH",
-    body: JSON.stringify({ notify_when_done: neu }),
-  });
-  aktuelleSitzung.notifyWhenDone = neu;
-  $("knopf-melden").classList.toggle("an", neu);
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ notify_when_done: neu }),
+    });
+    aktuelleSitzung.notifyWhenDone = neu;
+    $("knopf-melden").classList.toggle("an", neu);
+  } catch (err) {
+    // Nicht durchgegangen: Der Knopf bleibt aus, damit du nicht auf eine
+    // Benachrichtigung wartest, die der Server gar nicht kennt.
+    melde(err.message || "Die Benachrichtigung ließ sich gerade nicht umstellen.");
+  }
 });
 
 // --- Vorlesen ----------------------------------------------------------------
@@ -1858,7 +1892,9 @@ async function mikrofonAufmachen() {
 
 $("knopf-freisprech").addEventListener("click", () => {
   freisprech = !freisprech;
-  localStorage.setItem("freisprech", freisprech ? "1" : "0");
+  // Im strengen Privatmodus mancher Browser wirft setItem — dann schaltet der
+  // Modus trotzdem für diese Sitzung, er wird nur nicht dauerhaft gemerkt.
+  try { localStorage.setItem("freisprech", freisprech ? "1" : "0"); } catch { /* nicht merkbar */ }
   freisprechAnzeigen();
   melde(freisprech
     ? "Freisprech an — ich lese fertige Antworten vor und öffne danach das Mikrofon."
@@ -2494,23 +2530,53 @@ if ("serviceWorker" in navigator) {
 // Beim Start: Sind wir noch angemeldet? Wenn nicht, einmal mit dem
 // Geräteschlüssel anmelden. Klappt auch das nicht, ist dieses Gerät noch nicht
 // freigeschaltet — dann zeigen wir seinen öffentlichen Schlüssel.
+// "Kein Netz" ist etwas anderes als "nicht angemeldet": fetch wirft bei
+// Netzwerkproblemen einen TypeError, unser api() dagegen bei 401 einen normalen
+// Error mit Text. Nur so lässt sich ein Gerät im Funkloch von einem wirklich
+// abgemeldeten unterscheiden.
+function istNetzfehler(err) {
+  return err instanceof TypeError;
+}
+
+function zeigeNetzHinweis() {
+  zeige("anmeldung");
+  const feld = $("anmelde-fehler");
+  feld.hidden = false;
+  feld.textContent = "Keine Verbindung zum Server — ich bin wieder da, sobald Netz da ist.";
+  // Sobald das Netz zurück ist, von selbst neu versuchen (nur einmal binden).
+  window.addEventListener("online", () => start(), { once: true });
+}
+
 async function start() {
   zeige("anmeldung");
   $("anmelde-fehler").hidden = true;
 
+  // Schon angemeldet?
   try {
     await (await api("/sessions")).json();
     starteListe();
     return;
-  } catch {
-    // noch nicht angemeldet — weiter unten
+  } catch (err) {
+    if (istNetzfehler(err)) { zeigeNetzHinweis(); return; }
+    // sonst 401 — unten mit dem Geräteschlüssel anmelden
   }
 
   try {
     await anmelden();
     starteListe();
-  } catch {
-    zeigeSchluessel();
+  } catch (err) {
+    if (istNetzfehler(err)) { zeigeNetzHinweis(); return; }
+    // Wirklich nicht freigeschaltet: den öffentlichen Schlüssel zeigen. Auch
+    // das kann scheitern (z.B. blockierte IndexedDB im strengen Privatmodus) —
+    // dann wenigstens eine verständliche Meldung statt einer toten Seite.
+    try {
+      await zeigeSchluessel();
+    } catch {
+      const feld = $("anmelde-fehler");
+      feld.hidden = false;
+      feld.textContent = "Dieses Gerät kann sich hier keinen Schlüssel anlegen "
+        + "(Browser-Einstellungen prüfen: privater Modus oder blockierte Website-Daten).";
+    }
   }
 }
 
