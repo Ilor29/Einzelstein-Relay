@@ -914,6 +914,11 @@ async function schnellbefehl(text) {
 }
 
 $("schnellbefehle").addEventListener("click", (e) => {
+  // Der Zauberstab holt die weiteren Befehle hervor oder klappt sie wieder weg.
+  if (e.target.closest("#knopf-mehr-befehle")) {
+    $("schnellbefehle").classList.toggle("offen");
+    return;
+  }
   const chip = e.target.closest(".chip");
   if (chip) schnellbefehl(chip.dataset.text);
 });

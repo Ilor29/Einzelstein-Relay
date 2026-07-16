@@ -173,6 +173,25 @@ html, body {
   white-space: nowrap;
 }
 .schnellbefehle .chip:active { background: var(--erhoben-2); }
+
+/* Zusätzliche Befehle bleiben verborgen, bis der Zauberstab sie hervorholt. */
+.schnellbefehle .chip.extra { display: none; }
+.schnellbefehle.offen .chip.extra { display: block; }
+
+.chip-wand {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  color: var(--schrift-leise);
+}
+.chip-wand svg { width: 1.15rem; height: 1.15rem; }
+.chip-wand:active { background: var(--erhoben-2); }
+.schnellbefehle.offen .chip-wand { color: var(--akzent); background: var(--erhoben-2); }
 .kopf h1 {
   font-size: 1.1rem;
   font-weight: 600;
