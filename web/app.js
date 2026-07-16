@@ -635,6 +635,7 @@ async function pruefeObClaudeArbeitet() {
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
     const zustand = jetzt?.state;
     $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
+    $("denkt").hidden = zustand !== "running";
     zeigeSitzungInfo(jetzt);
     zeigeModus(jetzt?.modus);
 
@@ -673,6 +674,7 @@ function ansichtWechseln() {
   $("sondertasten").hidden = !imTerminal;
   // Die Schnellbefehle gehören zur Lese-Ansicht — im Terminal tippt man direkt.
   $("schnellbefehle").hidden = imTerminal;
+  if (imTerminal) $("denkt").hidden = true;
   // Der Knopf zeigt, wohin er führt — nicht, wo man ist.
   $("knopf-ansicht").querySelector("use")
     .setAttribute("href", imTerminal ? "#i-lesen" : "#i-terminal");
@@ -750,6 +752,7 @@ function oeffneSitzung(sitzung) {
   letzterZustand = null;   // Freisprech soll nicht sofort beim Öffnen auslösen
   warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
   zeigeWarteschlange();
+  $("denkt").hidden = true;
   ladeVerlauf();
   pruefeFrage();
   clearInterval(verlaufTakt);
@@ -809,6 +812,10 @@ async function sendeInSitzung(text) {
   // Du hast gerade abgeschickt — jetzt willst du die Antwort sehen. Also wieder
   // ans Ende mitlaufen, egal wo du vorher standest.
   folgeUnten = true;
+  // Sofort Rückmeldung: angekommen, und es arbeitet — kein stummer Stillstand
+  // mehr, bis die Antwort kommt.
+  melde("Gesendet — Claude denkt nach …");
+  $("denkt").hidden = false;
   setTimeout(ladeVerlauf, 600);
 }
 
@@ -876,6 +883,7 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   if (!imTerminal && letzterZustand === "running") {
     warteschlange.push(text);
     zeigeWarteschlange();
+    melde("In die Warteschlange — kommt dran, sobald Claude fertig ist.");
     return;
   }
 
@@ -903,6 +911,7 @@ async function schnellbefehl(text) {
   if (letzterZustand === "running") {
     warteschlange.push(text);
     zeigeWarteschlange();
+    melde("In die Warteschlange — kommt dran, sobald Claude fertig ist.");
     return;
   }
   try {
@@ -994,14 +1003,18 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
 
 $("knopf-bild").addEventListener("click", () => $("bild-waehler").click());
 $("bild-waehler").addEventListener("change", (e) => {
-  const dateien = e.target.files;
+  // ERST die Auswahl in ein eigenes Array kopieren, DANN das Feld leeren.
+  // e.target.files ist eine lebende Liste — leert man das Feld vorher, ist die
+  // gerade gewählte Datei weg, bevor sie hochlädt. Genau daran scheiterte das
+  // Foto-Senden: auswählen ging, absenden nicht.
+  const dateien = [...e.target.files];
   e.target.value = "";                 // damit dieselbe Auswahl nochmal ginge
   anhaengeHochladen(dateien, "bild", "bild", $("knopf-bild"));
 });
 
 $("knopf-datei").addEventListener("click", () => $("datei-waehler").click());
 $("datei-waehler").addEventListener("change", (e) => {
-  const dateien = e.target.files;
+  const dateien = [...e.target.files];
   e.target.value = "";
   anhaengeHochladen(dateien, "datei", "datei", $("knopf-datei"));
 });

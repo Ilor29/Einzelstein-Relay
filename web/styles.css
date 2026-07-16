@@ -229,6 +229,15 @@ html, body {
   font-size: .9rem;
 }
 .chip-menu:active { background: var(--erhoben-2); }
+
+/* "Claude denkt nach …" — sanft pochend, solange gearbeitet wird. */
+.denkt {
+  flex: none;
+  padding: .35rem .9rem;
+  font-size: .8rem;
+  color: var(--schrift-leise);
+  animation: pochen 1.5s ease-in-out infinite;
+}
 .kopf h1 {
   font-size: 1.1rem;
   font-weight: 600;
