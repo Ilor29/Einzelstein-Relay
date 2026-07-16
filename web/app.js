@@ -951,7 +951,7 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   // führte nur zu "ist das angekommen?"-Verwirrung. Der Text bleibt im Feld,
   // du kannst ihn abschicken, sobald das Stoppschild wieder zum Pfeil wird.
   if (!imTerminal && letzterZustand === "running") {
-    melde("Claude arbeitet noch — gleich wieder frei. Zum Unterbrechen: „Claude anhalten".");
+    melde("Claude arbeitet noch — gleich wieder frei. Zum Unterbrechen den Anhalten-Knopf.");
     return;
   }
 
