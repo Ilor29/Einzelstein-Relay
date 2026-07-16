@@ -518,6 +518,18 @@ function verlaufBlock(block) {
 
 let zuletztGesehen = "";
 
+// Soll der Verlauf am Ende mitlaufen? Solange du unten stehst — und immer gleich
+// nach dem Absenden —, zieht jede neue Antwort nach unten ins Sichtfeld. Scrollst
+// du hoch, um Älteres zu lesen, halten wir an und lassen dich in Ruhe. Vorher
+// wurde bei jeder Runde neu geraten, und deine erste Antwort blieb unter der
+// Kante liegen, halb hinter der Eingabe.
+let folgeUnten = true;
+
+$("verlauf").addEventListener("scroll", () => {
+  const el = $("verlauf");
+  folgeUnten = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+});
+
 async function ladeVerlauf() {
   if (!aktuelleSitzung || imTerminal) return;
 
@@ -538,12 +550,14 @@ async function ladeVerlauf() {
   zuletztGesehen = abdruck;
 
   const behaelter = $("verlauf");
-  // Wer unten steht, wird mitgenommen. Wer oben liest, bleibt, wo er ist.
-  const unten = behaelter.scrollHeight - behaelter.scrollTop - behaelter.clientHeight < 80;
-
   behaelter.replaceChildren(...bloecke.map(verlaufBlock));
 
-  if (unten) behaelter.scrollTop = behaelter.scrollHeight;
+  // Ans Ende ziehen, wenn wir mitlaufen sollen — aber erst in der nächsten
+  // Bildwiederholung, wenn der neue Inhalt wirklich vermessen ist. Sofort wäre
+  // scrollHeight noch der alte Wert, und wir landeten zu kurz.
+  if (folgeUnten) {
+    requestAnimationFrame(() => { behaelter.scrollTop = behaelter.scrollHeight; });
+  }
 }
 
 // --- Claudes Rückfragen ------------------------------------------------------
@@ -732,6 +746,7 @@ function oeffneSitzung(sitzung) {
   $("frage").hidden = true;
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
+  folgeUnten = true;       // beim Öffnen ans Ende, zum Neuesten
   letzterZustand = null;   // Freisprech soll nicht sofort beim Öffnen auslösen
   warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
   zeigeWarteschlange();
@@ -791,6 +806,9 @@ async function sendeInSitzung(text) {
     method: "POST",
     body: JSON.stringify({ text }),
   });
+  // Du hast gerade abgeschickt — jetzt willst du die Antwort sehen. Also wieder
+  // ans Ende mitlaufen, egal wo du vorher standest.
+  folgeUnten = true;
   setTimeout(ladeVerlauf, 600);
 }
 
