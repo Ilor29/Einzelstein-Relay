@@ -7,7 +7,10 @@ Zutat — sie liegen in einer schlichten JSON-Datei neben den Sitzungen.
 from __future__ import annotations
 
 import json
+import os
 import re
+import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
@@ -15,6 +18,11 @@ from pathlib import Path
 from . import tmux, tts
 
 STATE_FILE = Path.home() / ".hetzner-app" / "sitzungen.json"
+
+# Schützt die Lese-ändern-Schreib-Zyklen. Ohne die Sperre könnten zwei
+# gleichzeitige update()-Aufrufe einander überschreiben — eine Änderung
+# (z. B. „angeheftet") ginge verloren.
+_sperre = threading.Lock()
 
 # Zustände, die wir in der Übersicht anzeigen.
 RUNNING = "running"   # Claude arbeitet gerade
@@ -61,13 +69,25 @@ def _load() -> dict[str, Meta]:
 
 def _save(metas: dict[str, Meta]) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = STATE_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(
+    inhalt = json.dumps(
         {name: asdict(m) for name, m in metas.items()},
         indent=2,
         ensure_ascii=False,
-    ))
-    tmp.replace(STATE_FILE)  # atomar, damit bei einem Absturz nichts halb dasteht
+    )
+    # Eigene Temp-Datei je Aufruf (nicht ein fester ".tmp"-Name): Sonst schrieben
+    # zwei gleichzeitige _save in dieselbe Datei und das replace() könnte einen
+    # halb geschriebenen Stand übernehmen.
+    fd, tmp = tempfile.mkstemp(dir=STATE_FILE.parent, prefix=STATE_FILE.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(inhalt)
+        os.replace(tmp, STATE_FILE)   # atomar, damit bei einem Absturz nichts halb dasteht
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def get(name: str) -> Meta:
@@ -75,19 +95,21 @@ def get(name: str) -> Meta:
 
 
 def update(name: str, **changes) -> Meta:
-    metas = _load()
-    meta = metas.get(name, Meta())
-    for key, value in changes.items():
-        setattr(meta, key, value)
-    metas[name] = meta
-    _save(metas)
+    with _sperre:
+        metas = _load()
+        meta = metas.get(name, Meta())
+        for key, value in changes.items():
+            setattr(meta, key, value)
+        metas[name] = meta
+        _save(metas)
     return meta
 
 
 def forget(name: str) -> None:
-    metas = _load()
-    metas.pop(name, None)
-    _save(metas)
+    with _sperre:
+        metas = _load()
+        metas.pop(name, None)
+        _save(metas)
 
 
 # --- Zustandserkennung -------------------------------------------------------
