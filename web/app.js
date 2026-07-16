@@ -359,6 +359,11 @@ let freisprech = localStorage.getItem("freisprech") === "1";
 let beschaeftigt = false;
 let warBeschaeftigt = false;
 
+// Was zuletzt vorgelesen wurde. So erkennt der Freisprech-Modus, ob die frische
+// Antwort schon da ist — oder ob die Mitschrift noch am vorigen Block hängt, den
+// du längst kennst. Dann warten wir kurz auf die neue.
+let zuletztVorgelesen = "";
+
 // Nachrichten, die du abgeschickt hast, während Claude noch arbeitete. Sie
 // warten hier und werden einzeln nachgeschoben, sobald er fertig ist — so
 // vermischt sich nichts und die Reihenfolge bleibt.
@@ -834,6 +839,7 @@ function oeffneSitzung(sitzung) {
   folgeUnten = true;       // beim Öffnen ans Ende, zum Neuesten
   beschaeftigt = false;    // Freisprech soll nicht sofort beim Öffnen auslösen
   warBeschaeftigt = false;
+  zuletztVorgelesen = "";  // neue Sitzung: die erste Antwort darf vorgelesen werden
   warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
   zeigeWarteschlange();
   denktBis = 0;
@@ -1705,6 +1711,7 @@ $("knopf-vorlesen").addEventListener("click", async () => {
       `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
     )).json();
     if (!text) throw new Error("Da ist nichts zum Vorlesen.");
+    zuletztVorgelesen = text;   // damit Freisprech es nicht gleich nochmal liest
     await sprich(text, knopf);
   } catch (err) {
     stille();
@@ -1739,10 +1746,22 @@ async function freisprechVorlesen() {
   if (!aktuelleSitzung) return;
 
   try {
-    const { text } = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
-    )).json();
-    if (!text) return;
+    // Auf die FRISCHE Antwort warten. Direkt nach "fertig" liefert die
+    // Mitschrift manchmal noch den vorigen Block — den hast du schon gehört.
+    // Also kurz nachfassen, bis ein neuer Text da ist (höchstens ein paar
+    // Sekunden), sonst gar nicht vorlesen.
+    let text = "";
+    for (let versuch = 0; versuch < 6; versuch++) {
+      const antwort = await (await api(
+        `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+      )).json();
+      text = antwort.text || "";
+      if (text && text !== zuletztVorgelesen) break;
+      await new Promise((r) => setTimeout(r, 700));
+      if (spricht || hoert) return;   // zwischendurch hörst/diktierst du doch
+    }
+    if (!text || text === zuletztVorgelesen) return;   // nichts Neues
+    zuletztVorgelesen = text;
 
     await sprich(text, $("knopf-vorlesen"));
 
