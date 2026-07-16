@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # Sichert auf dem Hetzner automatisch, was Claude Code dort geändert hat.
 #
-# Läuft alle paar Minuten und schiebt jede Änderung ins Lager. Damit ist das,
-# was du unterwegs auf dem Handy machst, sofort auch für deinen Rechner da —
-# ohne dass du daran denken musst.
+# Läuft alle paar Minuten und schiebt jede Änderung ins Lager auf dem Server UND
+# außer Haus zu GitHub. Damit ist das, was du unterwegs auf dem Handy machst,
+# sofort auch für deinen Rechner da — er holt es sich von GitHub — ohne dass du
+# an etwas denken musst.
+#
+# GitHub ist das Bindeglied: Server → GitHub → dein Laptop. Der Lager-Schritt
+# ist nur die schnelle Kopie auf demselben Server; die ECHTE Sicherung ist die
+# bei GitHub, weil sie den Server überlebt.
 #
 # Einrichten als Zeitgeber (siehe deploy/auto-sichern.timer).
 set -uo pipefail
@@ -19,18 +24,20 @@ ALS=(-c "user.name=Hetzner-App" -c "user.email=hetzner-app@localhost")
 
 for arbeit in "$ARBEIT"/*/; do
   projekt="$(basename "$arbeit")"
+
+  # Verweise (Symlinks) überspringen. Sie zeigen auf Projekte, die anderswo
+  # "echt" liegen und dort eigenständig verwaltet werden (z.B. Jarvis, das eine
+  # eigene Sitzung betreut). Fassten wir sie hier auch an, käme es zu Doppelarbeit.
+  [ -L "${arbeit%/}" ] && continue
+
   [ -d "${arbeit}.git" ] || continue
 
-  # Nichts zu tun?
-  if [ -z "$(git -C "$arbeit" status --porcelain)" ]; then
-    continue
+  # Offene Änderungen festschreiben. Wer hat's geändert, steht in der Nachricht.
+  if [ -n "$(git -C "$arbeit" status --porcelain)" ]; then
+    git -C "$arbeit" add -A
+    git -C "$arbeit" "${ALS[@]}" commit --quiet \
+      -m "Automatisch gesichert vom Server ($(date '+%d.%m.%Y %H:%M'))" || continue
   fi
-
-  # Wer hat's geändert? Steht in der Nachricht, damit man später erkennt,
-  # ob das eine Sitzung vom Handy war oder Handarbeit.
-  git -C "$arbeit" add -A
-  git -C "$arbeit" "${ALS[@]}" commit --quiet \
-    -m "Automatisch gesichert vom Server ($(date '+%d.%m.%Y %H:%M'))" || continue
 
   # Lager fehlt noch? Dann anlegen und verbinden.
   if ! git -C "$arbeit" remote get-url hetzner >/dev/null 2>&1; then
@@ -39,9 +46,28 @@ for arbeit in "$ARBEIT"/*/; do
     git -C "$arbeit" remote add hetzner "${LAGER}/${projekt}.git"
   fi
 
+  # Erst ins Lager auf dem Server (schnell, immer erreichbar).
   if git -C "$arbeit" push --quiet hetzner HEAD 2>/dev/null; then
-    echo "✓ ${projekt} gesichert."
+    echo "✓ ${projekt} ins Lager."
   else
-    echo "✗ ${projekt}: Sichern fehlgeschlagen." >&2
+    echo "✗ ${projekt}: Lager fehlgeschlagen." >&2
+  fi
+
+  # Dann außer Haus zu GitHub — aber nur, wenn angebunden UND dort nicht schon
+  # der gleiche Stand liegt (spart unnötige Netz-Zugriffe bei jedem Lauf).
+  if git -C "$arbeit" remote get-url github >/dev/null 2>&1; then
+    zweig="$(git -C "$arbeit" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+    hier="$(git -C "$arbeit" rev-parse HEAD 2>/dev/null)"
+    drueben="$(git -C "$arbeit" rev-parse "github/${zweig}" 2>/dev/null || echo none)"
+    if [ "$hier" != "$drueben" ]; then
+      # Scheitert der Push (kein Netz, oder der GitHub-Stand ist auseinander-
+      # gelaufen), bleibt der Lager-Stand trotzdem — daran lassen wir das
+      # Sichern nicht scheitern. Nie mit Gewalt (--force): das zerstörte Arbeit.
+      if git -C "$arbeit" push --quiet github HEAD 2>/dev/null; then
+        echo "  → auch zu GitHub gesichert."
+      else
+        echo "  → GitHub übersprungen (kein Netz oder Stand divergiert)." >&2
+      fi
+    fi
   fi
 done
