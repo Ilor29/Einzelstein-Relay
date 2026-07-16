@@ -738,14 +738,18 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px; height: 30px;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  color: var(--schrift-schwach);
+  width: 36px; height: 36px;
+  /* Sichtbar auch im Auto bei Sonne: heller Umriss statt durchsichtig, kräftige
+     Icon-Farbe statt der blassesten. Und etwas größer, damit man ihn trifft. */
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 9px;
+  color: var(--schrift);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+.klein-knopf svg { width: 19px; height: 19px; }
+.klein-knopf:active { background: var(--erhoben); }
 .klein-knopf svg { width: 16px; height: 16px; }
 .klein-knopf:active { background: var(--erhoben-2); }
 .klein-knopf.spricht { color: var(--laeuft); }

@@ -348,10 +348,16 @@ let verlaufTakt = null;
 
 // Freisprech-Modus: Ist er an, liest die App eine fertige Antwort von selbst
 // vor und öffnet danach das Mikrofon — freihändig, ohne einen Knopf. Die
-// Einstellung überlebt das Neuladen; `letzterZustand` merkt sich den vorigen
-// Zustand, damit wir den Sprung von "arbeitet" zu "fertig" genau einmal treffen.
+// Einstellung überlebt das Neuladen.
 let freisprech = localStorage.getItem("freisprech") === "1";
-let letzterZustand = null;
+
+// Ob Claude gerade beschäftigt ist — geglättet über einen Puffer (denktBis),
+// damit kurze Atempausen zwischen zwei Schritten nicht als "fertig" durchgehen.
+// Daran hängt alles: Senden gesperrt, "denkt nach"-Anzeige, und der Sprung von
+// beschäftigt zu fertig (Freisprech). `warBeschaeftigt` merkt sich den vorigen
+// Stand, damit wir "fertig" genau einmal treffen.
+let beschaeftigt = false;
+let warBeschaeftigt = false;
 
 // Nachrichten, die du abgeschickt hast, während Claude noch arbeitete. Sie
 // warten hier und werden einzeln nachgeschoben, sobald er fertig ist — so
@@ -700,28 +706,31 @@ async function pruefeObClaudeArbeitet() {
   try {
     const sitzungen = await (await api("/sessions")).json();
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
-    const zustand = jetzt?.state;
-    $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
-    sendeSperren(zustand === "running");
-    // Pulsiert, solange Claude arbeitet — und noch den Puffer nach dem Absenden,
-    // bis die Arbeit sichtbar anläuft.
-    $("denkt").hidden = !(zustand === "running" || Date.now() < denktBis);
+    const arbeitet = jetzt?.state === "running";
+
+    // Solange Claude arbeitet, den Puffer immer wieder nachladen. So bleibt
+    // "beschäftigt" DURCHGEHEND wahr — auch über die kurzen Atempausen zwischen
+    // zwei Schritten hinweg, in denen der Zustand kurz auf "ruht" fällt. Ohne
+    // das flackerte die Anzeige und der Freisprech-Vortrag löste zu früh aus.
+    if (arbeitet) denktBis = Date.now() + 3500;
+    beschaeftigt = Date.now() < denktBis;
+
+    // Der Anhalten-Knopf folgt dem echten Zustand — anhalten kann man nur, was
+    // wirklich läuft. Sperre und Anzeige folgen dem geglätteten "beschäftigt".
+    $("knopf-abbrechen-arbeit").hidden = !arbeitet;
+    sendeSperren(beschaeftigt);
+    $("denkt").hidden = !beschaeftigt;
     zeigeSitzungInfo(jetzt);
     zeigeModus(jetzt?.modus);
 
-    // Claude ist gerade fertig geworden.
-    if (letzterZustand === "running" && zustand === "idle") {
-      denktBis = 0;   // Antwort ist da — der Puffer darf die Anzeige nicht länger halten
-      // Wartet noch etwas in der Schlange, geht das zuerst raus — du willst ja,
-      // dass es weitergeht (sendeInSitzung setzt den Denkt-Puffer dann neu).
-      if (warteschlangeWeiter()) {
-        // läuft weiter
-      } else {
-        $("denkt").hidden = true;   // wirklich fertig
-        if (freisprech && !imTerminal) freisprechVorlesen();
+    // Wirklich fertig = war beschäftigt, ist es jetzt (nach dem Puffer) nicht
+    // mehr — nicht schon bei einer kurzen Pause zwischendurch.
+    if (warBeschaeftigt && !beschaeftigt) {
+      if (!warteschlangeWeiter() && freisprech && !imTerminal) {
+        freisprechVorlesen();
       }
     }
-    letzterZustand = zustand;
+    warBeschaeftigt = beschaeftigt;
   } catch {
     // dann eben nicht
   }
@@ -823,7 +832,8 @@ function oeffneSitzung(sitzung) {
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
   folgeUnten = true;       // beim Öffnen ans Ende, zum Neuesten
-  letzterZustand = null;   // Freisprech soll nicht sofort beim Öffnen auslösen
+  beschaeftigt = false;    // Freisprech soll nicht sofort beim Öffnen auslösen
+  warBeschaeftigt = false;
   warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
   zeigeWarteschlange();
   denktBis = 0;
@@ -891,9 +901,14 @@ async function sendeInSitzung(text) {
   // Sofort Rückmeldung: angekommen, und es arbeitet — kein stummer Stillstand
   // mehr, bis die Antwort kommt.
   melde("Gesendet — Claude denkt nach …");
-  denktBis = Date.now() + 6000;   // Anzeige hält, bis die Arbeit sichtbar anläuft
+  // Sofort auf "beschäftigt" schalten — mit großzügigem Puffer, bis die Arbeit
+  // sichtbar anläuft. So sperrt der Senden-Knopf ohne Verzögerung und die
+  // Anzeige steht von der ersten Sekunde an.
+  denktBis = Date.now() + 6000;
+  beschaeftigt = true;
+  warBeschaeftigt = true;
   $("denkt").hidden = false;
-  sendeSperren(true);             // ab jetzt arbeitet Claude — Senden gesperrt
+  sendeSperren(true);
   setTimeout(ladeVerlauf, 600);
 }
 
@@ -950,7 +965,7 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   // Solange Claude arbeitet, nehmen wir nichts Neues an — das Nachschieben
   // führte nur zu "ist das angekommen?"-Verwirrung. Der Text bleibt im Feld,
   // du kannst ihn abschicken, sobald das Stoppschild wieder zum Pfeil wird.
-  if (!imTerminal && letzterZustand === "running") {
+  if (!imTerminal && beschaeftigt) {
     melde("Claude arbeitet noch — gleich wieder frei. Zum Unterbrechen den Anhalten-Knopf.");
     return;
   }
@@ -965,12 +980,10 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 
   try {
     await sendeInSitzung(text);
-    // Ab jetzt arbeitet Claude — tippst du gleich noch etwas, wandert es in die
-    // Schlange, statt seine Arbeit zu zerschneiden. Die nächste Runde bestätigt
-    // den Zustand ohnehin.
-    if (!imTerminal) letzterZustand = "running";
   } catch (err) {
     feld.value = text;      // nichts verloren
+    beschaeftigt = false;   // ging nicht raus — nicht fälschlich sperren
+    sendeSperren(false);
     alert(err.message);
   }
 });
@@ -983,15 +996,16 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 async function schnellbefehl(text) {
   if (!aktuelleSitzung || imTerminal || !text) return;
 
-  if (letzterZustand === "running") {
+  if (beschaeftigt) {
     melde("Claude arbeitet noch — gleich wieder frei.");
     return;
   }
   hoertStoppen?.();
   try {
     await sendeInSitzung(text);
-    letzterZustand = "running";
   } catch (err) {
+    beschaeftigt = false;
+    sendeSperren(false);
     melde(err.message);
   }
 }
