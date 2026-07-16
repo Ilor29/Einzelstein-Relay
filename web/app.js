@@ -366,14 +366,43 @@ let warteschlange = [];
  *  jeden Text über textContent — so kann aus einer Antwort niemals HTML werden,
  *  das die Seite verändert.
  */
-function schreibe(ziel, text) {
-  // Zerlegen an **fett**, *kursiv* und `befehl` — die Klammern bleiben in den
-  // Stücken erhalten, damit wir sie unterscheiden können.
-  const teile = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g);
+// Ein mehrzeiliger Code-Kasten mit eigenem Kopierknopf. Auf dem Handy ist
+// Markieren und Kopieren die Hölle — und gerade Befehle will man mit einem Tipp
+// haben, nicht mühsam mit dem Finger einkreisen.
+function codeKasten(code) {
+  const box = document.createElement("div");
+  box.className = "codekasten";
 
+  const pre = document.createElement("pre");
+  pre.textContent = code;
+
+  const knopf = document.createElement("button");
+  knopf.className = "code-kopieren";
+  knopf.setAttribute("aria-label", "Code kopieren");
+  knopf.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-kopieren"/></svg>`;
+  knopf.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      knopf.classList.add("getan");
+      knopf.querySelector("use").setAttribute("href", "#i-haken");
+      setTimeout(() => {
+        knopf.classList.remove("getan");
+        knopf.querySelector("use").setAttribute("href", "#i-kopieren");
+      }, 1600);
+    } catch {
+      alert("Kopieren hat nicht geklappt.");
+    }
+  });
+
+  box.append(pre, knopf);
+  return box;
+}
+
+// Inline-Auszeichnung eines Textstücks: **fett**, *kursiv*, `befehl`.
+function inlineSchreiben(ziel, text) {
+  const teile = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g);
   for (const teil of teile) {
     if (!teil) continue;
-
     let el;
     if (teil.startsWith("**") && teil.endsWith("**") && teil.length > 4) {
       el = document.createElement("strong");
@@ -388,6 +417,23 @@ function schreibe(ziel, text) {
       el = document.createTextNode(teil);
     }
     ziel.append(el);
+  }
+}
+
+function schreibe(ziel, text) {
+  // Erst an mehrzeiligen Code-Blöcken (```…```) trennen; der Rest bekommt die
+  // Inline-Auszeichnung.
+  const segmente = text.split(/(```[\s\S]*?```)/g);
+  for (const seg of segmente) {
+    if (!seg) continue;
+    if (seg.startsWith("```") && seg.endsWith("```") && seg.length > 6) {
+      // Eine etwaige Sprach-Angabe in der ersten Zeile ("bash") fällt weg, der
+      // abschließende Umbruch auch.
+      const code = seg.slice(3, -3).replace(/^[a-zA-Z0-9_-]*\n/, "").replace(/\n$/, "");
+      ziel.append(codeKasten(code));
+    } else {
+      inlineSchreiben(ziel, seg);
+    }
   }
 }
 
@@ -525,6 +571,12 @@ let zuletztGesehen = "";
 // Kante liegen, halb hinter der Eingabe.
 let folgeUnten = true;
 
+// Bis wann die "denkt nach"-Anzeige mindestens stehen bleibt. Direkt nach dem
+// Absenden dauert es einen Moment, bis Claude sichtbar zu arbeiten beginnt —
+// ohne diesen Puffer flackerte die Anzeige kurz weg und wieder an. So pulsiert
+// sie durchgehend, bis die Antwort kommt.
+let denktBis = 0;
+
 $("verlauf").addEventListener("scroll", () => {
   const el = $("verlauf");
   folgeUnten = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
@@ -640,16 +692,22 @@ async function pruefeObClaudeArbeitet() {
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
     const zustand = jetzt?.state;
     $("knopf-abbrechen-arbeit").hidden = zustand !== "running";
-    $("denkt").hidden = zustand !== "running";
+    // Pulsiert, solange Claude arbeitet — und noch den Puffer nach dem Absenden,
+    // bis die Arbeit sichtbar anläuft.
+    $("denkt").hidden = !(zustand === "running" || Date.now() < denktBis);
     zeigeSitzungInfo(jetzt);
     zeigeModus(jetzt?.modus);
 
     // Claude ist gerade fertig geworden.
     if (letzterZustand === "running" && zustand === "idle") {
+      denktBis = 0;   // Antwort ist da — der Puffer darf die Anzeige nicht länger halten
       // Wartet noch etwas in der Schlange, geht das zuerst raus — du willst ja,
-      // dass es weitergeht. Erst wenn nichts mehr wartet, liest Freisprech vor.
-      if (!warteschlangeWeiter() && freisprech && !imTerminal) {
-        freisprechVorlesen();
+      // dass es weitergeht (sendeInSitzung setzt den Denkt-Puffer dann neu).
+      if (warteschlangeWeiter()) {
+        // läuft weiter
+      } else {
+        $("denkt").hidden = true;   // wirklich fertig
+        if (freisprech && !imTerminal) freisprechVorlesen();
       }
     }
     letzterZustand = zustand;
@@ -757,6 +815,7 @@ function oeffneSitzung(sitzung) {
   letzterZustand = null;   // Freisprech soll nicht sofort beim Öffnen auslösen
   warteschlange = [];      // die Schlange gehört zur alten Sitzung, nicht zur neuen
   zeigeWarteschlange();
+  denktBis = 0;
   $("denkt").hidden = true;
   ladeVerlauf();
   pruefeFrage();
@@ -820,6 +879,7 @@ async function sendeInSitzung(text) {
   // Sofort Rückmeldung: angekommen, und es arbeitet — kein stummer Stillstand
   // mehr, bis die Antwort kommt.
   melde("Gesendet — Claude denkt nach …");
+  denktBis = Date.now() + 6000;   // Anzeige hält, bis die Arbeit sichtbar anläuft
   $("denkt").hidden = false;
   setTimeout(ladeVerlauf, 600);
 }

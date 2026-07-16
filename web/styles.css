@@ -230,6 +230,41 @@ html, body {
 }
 .chip-menu:active { background: var(--erhoben-2); }
 
+/* Ein mehrzeiliger Code-Kasten in Claudes Antwort — mit Kopierknopf oben rechts. */
+.codekasten {
+  position: relative;
+  margin: .5rem 0;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: .6rem;
+}
+.codekasten pre {
+  margin: 0;
+  padding: .7rem 2.8rem .7rem .8rem;
+  overflow-x: auto;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: .82rem;
+  line-height: 1.45;
+  color: var(--schrift);
+  white-space: pre;
+}
+.code-kopieren {
+  position: absolute;
+  top: .4rem;
+  right: .4rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  border-radius: .45rem;
+  color: var(--schrift-leise);
+}
+.code-kopieren svg { width: 1rem; height: 1rem; }
+.code-kopieren.getan { color: var(--akzent); }
+.code-kopieren:active { background: var(--erhoben-2); }
+
 /* "Claude denkt nach …" — sanft pochend, solange gearbeitet wird. */
 .denkt {
   flex: none;
