@@ -69,12 +69,14 @@
       <path d="M17.5 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>
     </g>
 
-    <!-- Ein Zauberstab mit Stern an der Spitze: mehr Schnellbefehle hervorzaubern. -->
+    <!-- Ein Zauberstab: ein Stäbchen mit einem Stern an der Spitze und ein paar
+         kleinen Funken drumherum. -->
     <g id="i-zauberstab" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 19L14.5 9.5"/>
-      <path d="M14 4l.8 1.7 1.7.8-1.7.8L14 9l-.8-1.7L11.5 6.5l1.7-.8z"/>
-      <path d="M19.5 12.5l.5 1.1 1.1.5-1.1.5-.5 1.1-.5-1.1-1.1-.5 1.1-.5z"/>
+      <path d="M4 20l9.5-9.5"/>
+      <path d="M15.5 4.2l.95 2.05 2.05.95-2.05.95-.95 2.05-.95-2.05-2.05-.95 2.05-.95z"/>
+      <path d="M20 11.5l.5 1.1 1.1.5-1.1.5-.5 1.1-.5-1.1-1.1-.5 1.1-.5z"/>
+      <path d="M9.5 4.5l.4.9.9.4-.9.4-.4.9-.4-.9-.9-.4.9-.4z"/>
     </g>
 
     <g id="i-senden" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -309,14 +311,23 @@
        hineinpassen, ohne die Eingabe zu verdrängen. Der data-text ist, was
        wirklich an Claude geht — die Aufschrift bleibt kurz. -->
   <div id="schnellbefehle" class="schnellbefehle">
-    <button type="button" class="chip" data-text="Ja, super — leg los.">Los geht's</button>
-    <button type="button" class="chip" data-text="Mach bitte weiter.">Weiter</button>
-    <button type="button" class="chip" data-text="Fass mir das bitte kurz zusammen.">Zusammenfassen</button>
-    <button type="button" class="chip extra" data-text="Fass dich bitte kürzer.">Kürzer</button>
-    <button type="button" class="chip extra" data-text="Erklär's mir bitte einfacher.">Einfacher</button>
-    <button type="button" id="knopf-mehr-befehle" class="chip-wand" aria-label="Mehr Schnellbefehle">
-      <svg viewBox="0 0 24 24"><use href="#i-zauberstab"/></svg>
-    </button>
+    <div class="chip-reihe">
+      <button type="button" class="chip" data-text="Ja, super — leg los.">Los geht's</button>
+      <button type="button" class="chip" data-text="Mach bitte weiter.">Weiter</button>
+      <button type="button" class="chip" data-text="Fass mir das bitte kurz zusammen.">Zusammenfassen</button>
+    </div>
+    <!-- Der Zauberstab klappt die weiteren Befehle nach OBEN auf — als kleines
+         Menü über dem Knopf, damit man mit dem Finger direkt trifft, statt zur
+         Seite scrollen zu müssen. -->
+    <div class="befehle-wand-wrap">
+      <div id="befehle-mehr" class="befehle-mehr" hidden>
+        <button type="button" class="chip-menu" data-text="Fass dich bitte kürzer.">Kürzer</button>
+        <button type="button" class="chip-menu" data-text="Erklär's mir bitte einfacher.">Einfacher</button>
+      </div>
+      <button type="button" id="knopf-mehr-befehle" class="chip-wand" aria-label="Mehr Schnellbefehle">
+        <svg viewBox="0 0 24 24"><use href="#i-zauberstab"/></svg>
+      </button>
+    </div>
   </div>
   <!-- Was du abgeschickt hast, während Claude noch arbeitete. Es wird der Reihe
        nach nachgeschoben, sobald er fertig ist — und lässt sich vorher mit dem

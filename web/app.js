@@ -913,14 +913,32 @@ async function schnellbefehl(text) {
   }
 }
 
+function befehlsmenue(auf) {
+  const wrap = $("schnellbefehle").querySelector(".befehle-wand-wrap");
+  $("befehle-mehr").hidden = !auf;
+  wrap.classList.toggle("offen", auf);
+}
+
 $("schnellbefehle").addEventListener("click", (e) => {
-  // Der Zauberstab holt die weiteren Befehle hervor oder klappt sie wieder weg.
+  // Der Zauberstab klappt das Menü nach oben auf oder wieder zu.
   if (e.target.closest("#knopf-mehr-befehle")) {
-    $("schnellbefehle").classList.toggle("offen");
+    befehlsmenue($("befehle-mehr").hidden);
+    return;
+  }
+  // Ein Menüpunkt sendet und schließt gleich wieder.
+  const menuBefehl = e.target.closest(".chip-menu");
+  if (menuBefehl) {
+    schnellbefehl(menuBefehl.dataset.text);
+    befehlsmenue(false);
     return;
   }
   const chip = e.target.closest(".chip");
   if (chip) schnellbefehl(chip.dataset.text);
+});
+
+// Tippt man neben das Menü, klappt es zu.
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".befehle-wand-wrap")) befehlsmenue(false);
 });
 
 // --- Ein Foto an Claude ------------------------------------------------------
