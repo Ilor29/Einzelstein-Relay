@@ -1491,10 +1491,14 @@ $("knopf-modell").addEventListener("click", async () => {
       // Das laufende Modell trägt den Haken — so wie in der offiziellen App.
       const gewaehlt = m.name === aktuelleSitzung.modell;
       zeile.classList.toggle("gewaehlt", gewaehlt);
+      // Gerüst ohne Daten; Titel und Art über textContent, damit auch aus der
+      // Modell-Liste nie HTML in die Seite gelangt.
       zeile.innerHTML = `
-        <span class="modell-titel">${m.anzeige}</span>
-        <span class="modell-art">${m.art}</span>
+        <span class="modell-titel"></span>
+        <span class="modell-art"></span>
         ${gewaehlt ? '<span class="modell-haken">✓</span>' : ""}`;
+      zeile.querySelector(".modell-titel").textContent = m.anzeige;
+      zeile.querySelector(".modell-art").textContent = m.art;
       zeile.addEventListener("click", () => waehleModell(m));
       return zeile;
     })
@@ -2014,7 +2018,17 @@ $("knopf-einstellungen").addEventListener("click", async () => {
   const liste = $("stimmen-liste");
   liste.replaceChildren();
 
-  const stimmen = await (await api("/stimmen")).json();
+  let stimmen;
+  try {
+    stimmen = await (await api("/stimmen")).json();
+  } catch {
+    const hinweis = document.createElement("p");
+    hinweis.className = "hinweis";
+    hinweis.textContent = "Stimmen konnten nicht geladen werden — keine Verbindung?";
+    liste.append(hinweis);
+    ladeGeraete();
+    return;
+  }
 
   for (const s of stimmen) {
     const el = document.createElement("div");
@@ -2042,12 +2056,16 @@ $("knopf-einstellungen").addEventListener("click", async () => {
 
     // Wählen.
     el.addEventListener("click", async () => {
-      await api("/stimmen", {
-        method: "POST",
-        body: JSON.stringify({ name: s.name }),
-      });
-      liste.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
-      el.classList.add("gewaehlt");
+      try {
+        await api("/stimmen", {
+          method: "POST",
+          body: JSON.stringify({ name: s.name }),
+        });
+        liste.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
+        el.classList.add("gewaehlt");
+      } catch (err) {
+        melde(err.message || "Die Stimme ließ sich gerade nicht wählen.");
+      }
     });
 
     liste.append(el);
@@ -2126,7 +2144,15 @@ $("knopf-neu").addEventListener("click", async () => {
   zeige("neu");
   $("neu-fehler").hidden = true;
 
-  const ordner = await (await api("/dirs")).json();
+  let ordner;
+  try {
+    ordner = await (await api("/dirs")).json();
+  } catch {
+    const feld = $("neu-fehler");
+    feld.hidden = false;
+    feld.textContent = "Die Ordner konnten nicht geladen werden — keine Verbindung?";
+    return;
+  }
   const behaelter = $("neu-ordner");
   behaelter.replaceChildren();
   gewaehlterOrdner = ordner[0] ?? null;
