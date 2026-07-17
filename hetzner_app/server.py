@@ -410,8 +410,6 @@ def session_verlauf(name: str) -> list[dict]:
     return bloecke
 
 
-BILDER = Path.home() / ".hetzner-app" / "bilder"
-
 # Was wir annehmen. Alles andere fliegt raus — hier landet nichts Ausführbares.
 BILDARTEN = {
     "image/jpeg": ".jpg",
