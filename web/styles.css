@@ -245,6 +245,28 @@ html, body {
 }
 .befehl-weg:active { background: var(--linie); }
 
+/* Die Symbol-Legende in den Einstellungen: Icon links, Erklärung rechts. */
+.symbol-gruppe {
+  margin: .7rem 0 .1rem;
+  font-size: .78rem;
+  letter-spacing: .02em;
+  color: var(--schrift-schwach);
+}
+.symbol-liste { display: flex; flex-direction: column; }
+.symbol-zeile {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .4rem .1rem;
+}
+.symbol-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  color: var(--schrift);
+}
+.symbol-zeile span { font-size: .88rem; line-height: 1.35; }
+
 /* Ein mehrzeiliger Code-Kasten in Claudes Antwort — mit Kopierknopf oben rechts. */
 .codekasten {
   position: relative;
