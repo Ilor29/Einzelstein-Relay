@@ -825,6 +825,9 @@ function baueTerminal() {
 function oeffneSitzung(sitzung) {
   stoppeListe();
   aktuelleSitzung = sitzung;
+  // Anhänge gehören zu der Sitzung, aus der sie hochgeladen wurden — beim
+  // Wechsel weg damit, sonst schickte man das Foto ins falsche Projekt.
+  anhaengeLeeren();
 
   $("sitzung-name").textContent = benannt(sitzung);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
@@ -942,11 +945,14 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   e.preventDefault();
   const feld = $("eingabe");
   const text = feld.value.trim();
-  if (!text || !aktuelleSitzung) return;
+  const pfade = anhaenge.map((a) => a.pfad);
+  // Ein bloßer Anhang ohne ein Wort dazu darf raus — dann schaut Claude ihn
+  // sich eben ohne weitere Anweisung an.
+  if ((!text && !pfade.length) || !aktuelleSitzung) return;
 
   // Solange Claude arbeitet, nehmen wir nichts Neues an — das Nachschieben
-  // führte nur zu "ist das angekommen?"-Verwirrung. Der Text bleibt im Feld,
-  // du kannst ihn abschicken, sobald das Stoppschild wieder zum Pfeil wird.
+  // führte nur zu "ist das angekommen?"-Verwirrung. Text und Anhänge bleiben
+  // stehen, du kannst abschicken, sobald das Stoppschild wieder zum Pfeil wird.
   if (!imTerminal && beschaeftigt) {
     melde("Claude arbeitet noch — gleich wieder frei. Zum Unterbrechen den Anhalten-Knopf.");
     return;
@@ -958,12 +964,20 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   // schreibt ihn gleich wieder ins Feld — man löscht ihn und er kommt zurück.
   hoertStoppen?.();
 
+  // Die Anhang-Pfade zuerst, der Text dahinter — genau so, wie man es am
+  // Rechner eintippte. Feld und Streifen sofort leeren; klemmt das Senden,
+  // stellen wir beides wieder her.
+  const gesamt = [...pfade, text].filter(Boolean).join(" ");
+  const gemerkt = anhaenge;
   feld.value = "";
+  anhaengeLeeren();
 
   try {
-    await sendeInSitzung(text);
+    await sendeInSitzung(gesamt);
   } catch (err) {
     feld.value = text;      // nichts verloren
+    anhaenge = gemerkt;     // auch die Anhänge zurück
+    anhangStreifenZeichnen();
     beschaeftigt = false;   // ging nicht raus — nicht fälschlich sperren
     sendeSperren(false);
     alert(err.message);
@@ -1027,16 +1041,67 @@ document.addEventListener("click", (e) => {
 // am Rechner selbst eintippen würde. Ein Screenshot erklärt oft mehr als drei
 // Absätze, und unterwegs ist ein Foto schneller als jede Beschreibung.
 
+// Die Anhänge, die beim nächsten Senden mitgehen. Früher stand ihr Pfad roh
+// im Eingabefeld — eine kryptische Zeile, die man aus Versehen zerpflückte.
+// Jetzt liegen sie hier und stehen als kleine Vorschau über dem Feld; der Pfad
+// wird erst beim Absenden vorangestellt.
+let anhaenge = [];
+
+function anhangStreifenZeichnen() {
+  const streifen = $("anhang-streifen");
+  streifen.textContent = "";
+  streifen.hidden = anhaenge.length === 0;
+
+  anhaenge.forEach((a) => {
+    const chip = document.createElement("div");
+    chip.className = a.istBild ? "anhang-chip" : "anhang-chip datei";
+
+    if (a.istBild) {
+      const bild = document.createElement("img");
+      bild.src = a.url;
+      bild.alt = "Angehängtes Foto";
+      chip.appendChild(bild);
+    } else {
+      // Dokumente haben kein Vorschaubild — Symbol und Name müssen reichen.
+      chip.insertAdjacentHTML("beforeend",
+        '<svg viewBox="0 0 24 24"><use href="#i-datei"/></svg>');
+      const name = document.createElement("span");
+      name.textContent = a.name;               // textContent, nie innerHTML: der Name kommt vom Gerät
+      chip.appendChild(name);
+    }
+
+    const weg = document.createElement("button");
+    weg.type = "button";
+    weg.className = "anhang-weg";
+    weg.setAttribute("aria-label", "Anhang wegnehmen");
+    weg.insertAdjacentHTML("beforeend",
+      '<svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>');
+    weg.addEventListener("click", () => {
+      anhaenge = anhaenge.filter((x) => x !== a);
+      anhangStreifenZeichnen();
+    });
+    chip.appendChild(weg);
+
+    streifen.appendChild(chip);
+  });
+}
+
+function anhaengeLeeren() {
+  anhaenge = [];
+  anhangStreifenZeichnen();
+}
+
 // Mehrere Anhänge auf einmal hochladen — Fotos wie Dokumente. Jeder Anhang geht
 // einzeln an den Server, der die Datei im Projektordner ablegt und den kurzen
-// Pfad zurückgibt. Alle Pfade landen vorne im Eingabefeld; abgeschickt wird
-// erst, wenn du auf Senden tippst — so kannst du noch etwas dazuschreiben.
+// Pfad zurückgibt. Statt in den Text wandert jeder in den Vorschau-Streifen;
+// abgeschickt wird erst, wenn du auf Senden tippst — so kannst du noch etwas
+// dazuschreiben.
 async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
   dateien = [...dateien];
   if (!dateien.length || !aktuelleSitzung) return;
 
+  const istBild = endpunkt === "bild";
   knopf.classList.add("laedt");
-  const pfade = [];
   try {
     for (const datei of dateien) {
       const paket = new FormData();
@@ -1052,18 +1117,24 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
         throw new Error(koerper.detail || "Der Anhang kam nicht an.");
       }
       const { pfad } = await antwort.json();
-      pfade.push(pfad);
+      const dateiname = pfad.split("/").pop();
+      anhaenge.push({
+        pfad,
+        istBild,
+        // Für die Kachel der schöne Name vom Gerät, sonst der vom Server.
+        name: datei.name || dateiname,
+        // Nur Fotos haben eine Vorschau — über denselben Weg, über den auch der
+        // Verlauf ein geschicktes Foto wieder anzeigt.
+        url: istBild
+          ? `/api/bilder/${encodeURIComponent(aktuelleSitzung.name)}/${encodeURIComponent(dateiname)}`
+          : "",
+      });
     }
-
-    const feld = $("eingabe");
-    const bisher = feld.value.trim();
-    const vorne = pfade.join(" ");
-    feld.value = bisher ? `${vorne} ${bisher}` : `${vorne} `;
-    feldAnpassen();
-    feld.focus();
-    melde(pfade.length === 1
-      ? "Anhang angehängt — schreib etwas dazu und sende ab."
-      : `${pfade.length} Anhänge angehängt — schreib etwas dazu und sende ab.`);
+    anhangStreifenZeichnen();
+    $("eingabe").focus();
+    melde(anhaenge.length === 1
+      ? "Angehängt — schreib etwas dazu und sende ab."
+      : `${anhaenge.length} Anhänge — schreib etwas dazu und sende ab.`);
   } catch (err) {
     alert(err.message);
   } finally {
