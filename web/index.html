@@ -337,6 +337,9 @@
       <div id="befehle-mehr" class="befehle-mehr" hidden>
         <button type="button" class="chip-menu" data-text="Fass dich bitte kürzer.">Kürzer</button>
         <button type="button" class="chip-menu" data-text="Erklär's mir bitte einfacher.">Einfacher</button>
+        <!-- Deine eigenen Befehle — kommen aus dem Gerätespeicher. -->
+        <div id="eigene-befehle"></div>
+        <button type="button" id="knopf-befehle-verwalten" class="chip-menu chip-menu-aktion">＋ Eigene Befehle</button>
       </div>
       <button type="button" id="knopf-mehr-befehle" class="chip-wand" aria-label="Mehr Schnellbefehle">
         <svg viewBox="0 0 24 24"><use href="#i-zauberstab"/></svg>
@@ -519,6 +522,32 @@
         <datalist id="bib-kategorien"></datalist>
       </label>
       <button type="button" id="skill-speichern" class="knopf-voll">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Eigene Schnellbefehle anlegen und löschen — dasselbe Blatt von unten. -->
+<div id="befehle-blatt" class="blatt" hidden>
+  <div class="blatt-schatten" id="befehle-schatten"></div>
+  <div class="blatt-inhalt">
+    <div class="blatt-kopf">
+      <button type="button" id="befehle-schliessen" class="knopf-blank"
+              aria-label="Schließen">✕</button>
+      <h2>Eigene Schnellbefehle</h2>
+    </div>
+    <div class="skill-formular">
+      <p class="hinweis">Ein Knopf, ein fertiger Satz an Claude. Der Name steht auf dem Knopf, der Satz wird geschickt. Sie liegen auf diesem Gerät.</p>
+      <label class="feld">
+        <span class="marke">Name auf dem Knopf</span>
+        <input type="text" id="befehl-label" class="eingabe" placeholder="z. B. Tests starten">
+      </label>
+      <label class="feld">
+        <span class="marke">Was an Claude geschickt wird</span>
+        <textarea id="befehl-text" class="eingabe" rows="3"
+                  placeholder="Führ bitte die Tests aus und fass das Ergebnis kurz zusammen."></textarea>
+      </label>
+      <button type="button" id="befehl-hinzufuegen" class="knopf-voll">Hinzufügen</button>
+      <div id="befehle-liste" class="befehle-liste"></div>
     </div>
   </div>
 </div>

@@ -1018,6 +1018,13 @@ $("schnellbefehle").addEventListener("click", (e) => {
     befehlsmenue($("befehle-mehr").hidden);
     return;
   }
+  // Der "Eigene Befehle"-Knopf öffnet das Verwalten-Blatt — vor der Sende-
+  // Prüfung, denn er trägt selbst die chip-menu-Klasse und würde sonst senden.
+  if (e.target.closest("#knopf-befehle-verwalten")) {
+    befehleBlattAuf();
+    befehlsmenue(false);
+    return;
+  }
   // Ein Menüpunkt sendet und schließt gleich wieder.
   const menuBefehl = e.target.closest(".chip-menu");
   if (menuBefehl) {
@@ -1033,6 +1040,109 @@ $("schnellbefehle").addEventListener("click", (e) => {
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".befehle-wand-wrap")) befehlsmenue(false);
 });
+
+// --- Eigene Schnellbefehle ---------------------------------------------------
+//
+// Zu den fest eingebauten Sätzen darfst du dir eigene anlegen: ein Name auf dem
+// Knopf, ein fertiger Satz dahinter. Sie liegen im Gerätespeicher — also auf
+// diesem Gerät, nicht in der Wolke; ein zweites Handy sähe sie (noch) nicht.
+const BEFEHLE_SPEICHER = "eigene-schnellbefehle";
+
+function eigeneBefehleLesen() {
+  try { return JSON.parse(localStorage.getItem(BEFEHLE_SPEICHER)) || []; }
+  catch { return []; }
+}
+function eigeneBefehleSchreiben(liste) {
+  try { localStorage.setItem(BEFEHLE_SPEICHER, JSON.stringify(liste)); }
+  catch { /* nicht merkbar — dann gelten sie eben nur für diese Sitzung */ }
+}
+
+// Die eigenen Befehle als Chips ins Zauberstab-Menü, über den "Eigene"-Knopf.
+function eigeneBefehleZeichnen() {
+  const behaelter = $("eigene-befehle");
+  behaelter.textContent = "";
+  for (const b of eigeneBefehleLesen()) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip-menu";
+    chip.dataset.text = b.text;      // dataset ist sicher — landet nie als HTML
+    chip.textContent = b.label;      // textContent, denn der Name kommt von dir
+    behaelter.appendChild(chip);
+  }
+}
+
+// Die Liste im Verwalten-Blatt — jede Zeile mit einem Kreuz zum Löschen.
+function befehleListeZeichnen() {
+  const liste = $("befehle-liste");
+  liste.textContent = "";
+  const befehle = eigeneBefehleLesen();
+  if (!befehle.length) {
+    const leer = document.createElement("p");
+    leer.className = "hinweis";
+    leer.textContent = "Noch keine eigenen Befehle.";
+    liste.appendChild(leer);
+    return;
+  }
+  befehle.forEach((b, i) => {
+    const zeile = document.createElement("div");
+    zeile.className = "befehl-zeile";
+
+    const text = document.createElement("div");
+    text.className = "befehl-text";
+    const name = document.createElement("strong");
+    name.textContent = b.label;
+    const satz = document.createElement("span");
+    satz.textContent = b.text;
+    text.append(name, satz);
+
+    const weg = document.createElement("button");
+    weg.type = "button";
+    weg.className = "befehl-weg";
+    weg.setAttribute("aria-label", "Befehl löschen");
+    weg.textContent = "✕";
+    weg.addEventListener("click", () => {
+      const rest = eigeneBefehleLesen();
+      rest.splice(i, 1);
+      eigeneBefehleSchreiben(rest);
+      befehleListeZeichnen();
+      eigeneBefehleZeichnen();
+    });
+
+    zeile.append(text, weg);
+    liste.appendChild(zeile);
+  });
+}
+
+function befehleBlattAuf() {
+  $("befehl-label").value = "";
+  $("befehl-text").value = "";
+  befehleListeZeichnen();
+  $("befehle-blatt").hidden = false;
+}
+function befehleBlattZu() { $("befehle-blatt").hidden = true; }
+
+$("befehle-schatten").addEventListener("click", befehleBlattZu);
+$("befehle-schliessen").addEventListener("click", befehleBlattZu);
+
+$("befehl-hinzufuegen").addEventListener("click", () => {
+  const label = $("befehl-label").value.trim();
+  const text = $("befehl-text").value.trim();
+  if (!label || !text) {
+    melde("Bitte einen Namen und den Satz eintragen.");
+    return;
+  }
+  const befehle = eigeneBefehleLesen();
+  befehle.push({ label, text });
+  eigeneBefehleSchreiben(befehle);
+  $("befehl-label").value = "";
+  $("befehl-text").value = "";
+  befehleListeZeichnen();
+  eigeneBefehleZeichnen();
+  melde("Befehl angelegt.");
+});
+
+// Beim Start die gespeicherten Befehle ins Menü holen.
+eigeneBefehleZeichnen();
 
 // --- Ein Foto an Claude ------------------------------------------------------
 //
