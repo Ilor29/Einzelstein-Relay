@@ -75,7 +75,9 @@ unterwegs am Handy — und keiner weiß vom anderen. Die Lösung nutzt aus, dass
 mit dieser App **die Arbeit auf dem Server passiert**. Der Hetzner ist damit die
 Wahrheit, alle anderen holen sich von dort ab.
 
-Nichts davon verlässt deinen Server. Kein GitHub, kein fremder Dienst.
+Der Anbieter dieser App sieht davon nichts: kein Phone-Home, keine Telemetrie,
+kein Lizenzserver. Der Abgleich läuft über dein eigenes GitHub-Konto — die
+Sicherung schiebt dorthin, damit sie den Server überlebt.
 
 **Einmalig auf dem Hetzner:**
 
