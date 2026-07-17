@@ -51,6 +51,68 @@ async def sicherheits_header(request: Request, call_next):
     return antwort
 
 
+# Anhänge — Fotos und Dokumente — sind Durchgangsware: einmal an Claude gereicht,
+# liegen sie nur noch als Altlast im Projekt. Diese Ordner räumen wir darum von
+# selbst; sie stehen bewusst außerhalb von Git (siehe die .gitignore beim Upload).
+ANHANG_ORDNER = (".hetzner-bilder", ".hetzner-dateien")
+
+# Wie lange ein Anhang liegen bleiben darf. Ein paar Tage, damit man einen
+# Screenshot von gestern noch nachreichen oder ansehen kann — aber nicht ewig.
+ANHANG_HALTBAR_TAGE = 3
+
+
+def _anhang_ordner() -> set[Path]:
+    """Alle Durchgangs-Ordner, die es aufzuräumen gilt.
+
+    Aus zwei Quellen, damit keiner durchrutscht: die Projekte unter ~/projekte
+    (auch die ohne laufende Sitzung) und die Arbeitsordner der lebenden
+    Sitzungen (falls eine mal woanders als unter ~/projekte läuft).
+    """
+    ordner: set[Path] = set()
+    wurzel = Path.home() / "projekte"
+    if wurzel.is_dir():
+        for projekt in wurzel.iterdir():
+            for name in ANHANG_ORDNER:
+                ordner.add(projekt / name)
+    for s in tmux.list_sessions():
+        for name in ANHANG_ORDNER:
+            ordner.add(Path(s.cwd) / name)
+    return {o for o in ordner if o.is_dir()}
+
+
+def _alte_anhaenge_loeschen() -> int:
+    """Löscht Anhänge, die älter sind als ANHANG_HALTBAR_TAGE. Gibt die Zahl
+    der gelöschten Dateien zurück."""
+    grenze = time.time() - ANHANG_HALTBAR_TAGE * 86400
+    geloescht = 0
+    for ordner in _anhang_ordner():
+        for datei in ordner.iterdir():
+            # Die .gitignore hält den Ordner aus Git heraus — die bleibt.
+            if datei.name == ".gitignore" or not datei.is_file():
+                continue
+            try:
+                if datei.stat().st_mtime < grenze:
+                    datei.unlink()
+                    geloescht += 1
+            except OSError:
+                pass          # eine störrische Datei hält das Aufräumen nicht auf
+    return geloescht
+
+
+async def anhaenge_aufraeumen() -> None:
+    """Räumt in aller Ruhe alle paar Stunden die Durchgangs-Ordner leer.
+
+    Aufräumen ist Nebensache — es darf die App unter keinen Umständen stören,
+    darum steckt jeder Durchlauf in einem breiten Fangnetz.
+    """
+    while True:
+        try:
+            await asyncio.to_thread(_alte_anhaenge_loeschen)
+        except Exception:
+            pass
+        await asyncio.sleep(6 * 3600)
+
+
 @app.on_event("startup")
 async def waechter_starten() -> None:
     """Der Wächter behält die Sitzungen im Auge und meldet sich, wenn eine
@@ -61,6 +123,9 @@ async def waechter_starten() -> None:
     # Vorlesen drei Sekunden auf ein Modell, das man auch vorher hätte laden
     # können.
     asyncio.create_task(asyncio.to_thread(tts.vorladen))
+
+    # Alte Anhänge (Fotos, Dokumente) von selbst wegräumen.
+    asyncio.create_task(anhaenge_aufraeumen())
 
 
 # --- Zugangsschutz -----------------------------------------------------------

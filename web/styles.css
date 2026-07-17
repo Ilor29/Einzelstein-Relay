@@ -856,6 +856,72 @@ html, body {
 }
 .eingabezeile:focus-within { border-color: var(--schrift-schwach); }
 
+/* Der Vorschau-Streifen über dem Feld: die angehängten Fotos als kleine
+   Fenster, Dokumente als Kachel mit Namen. Rollt zur Seite, wenn es viele
+   werden, statt in die Höhe zu wachsen. */
+.anhang-streifen {
+  display: flex;
+  gap: .4rem;
+  overflow-x: auto;
+  padding: .15rem .1rem .35rem;
+}
+.anhang-chip {
+  position: relative;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--linie);
+  background: var(--grund);
+}
+.anhang-chip img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+}
+/* Dokumente haben kein Bild — eine Kachel mit Symbol und dem Dateinamen. */
+.anhang-chip.datei {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  height: 56px;
+  max-width: 160px;
+  padding: 0 .55rem 0 .45rem;
+  color: var(--schrift-schwach);
+}
+.anhang-chip.datei svg { width: 20px; height: 20px; flex: none; }
+.anhang-chip.datei span {
+  font-size: .8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Das Kreuz zum Wegnehmen — oben rechts in der Ecke des Fensters. */
+.anhang-weg {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  cursor: pointer;
+}
+.anhang-weg svg { width: 12px; height: 12px; }
+/* Bei der Dokument-Kachel sitzt das Kreuz nicht überm Bild, sondern rechts
+   in der Reihe — sonst verdeckt es den Namen. */
+.anhang-chip.datei .anhang-weg {
+  position: static;
+  background: none;
+  color: var(--schrift-schwach);
+}
+
 .eingabe-knoepfe {
   display: flex;
   align-items: center;
