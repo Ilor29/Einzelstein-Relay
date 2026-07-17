@@ -907,6 +907,18 @@ function setzeVerbindung(verbunden) {
   anzeige.lastChild.textContent = verbunden ? "verbunden" : "getrennt";
 }
 
+// Datum und Uhrzeit dieses Geräts, kurz und lesbar — z. B. "Fr., 17.07.2026,
+// 19:45". Claude Code hat keine eigene Uhr: Eine Sitzung läuft tagelang, und
+// ohne diesen Hinweis weiß Claude bei "heute Abend" oder "in zwei Stunden"
+// nicht, wann jetzt ist. Wir nehmen die Zeit des Handys, nicht die des Servers
+// — der steht womöglich in einer anderen Zeitzone.
+function jetztStempel() {
+  return new Date().toLocaleString("de-DE", {
+    weekday: "short", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 // Text an die Sitzung schicken — von der Eingabezeile oder aus dem Verlauf.
 // In der Lese-Ansicht gibt es keine offene Verbindung; der Text geht über den
 // Server hinein und erscheint gleich als deine Blase im Verlauf.
@@ -914,13 +926,16 @@ async function sendeInSitzung(text) {
   if (!text || !aktuelleSitzung) return;
 
   if (imTerminal) {
+    // Im rohen Terminal NICHT die Zeit voranstellen — dort tippst du Befehle,
+    // und ein Zeitstempel davor wäre Unsinn.
     steckdose?.send(text + "\r");
     return;
   }
 
   await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
     method: "POST",
-    body: JSON.stringify({ text }),
+    // Die Uhrzeit still vorangestellt, damit Claude immer weiß, wann jetzt ist.
+    body: JSON.stringify({ text: `[${jetztStempel()}] ${text}` }),
   });
   // Du hast gerade abgeschickt — jetzt willst du die Antwort sehen. Also wieder
   // ans Ende mitlaufen, egal wo du vorher standest.
