@@ -907,16 +907,17 @@ function setzeVerbindung(verbunden) {
   anzeige.lastChild.textContent = verbunden ? "verbunden" : "getrennt";
 }
 
-// Datum und Uhrzeit dieses Geräts, kurz und lesbar — z. B. "Fr., 17.07.2026,
-// 19:45". Claude Code hat keine eigene Uhr: Eine Sitzung läuft tagelang, und
-// ohne diesen Hinweis weiß Claude bei "heute Abend" oder "in zwei Stunden"
-// nicht, wann jetzt ist. Wir nehmen die Zeit des Handys, nicht die des Servers
-// — der steht womöglich in einer anderen Zeitzone.
+// Datum und Uhrzeit dieses Geräts, kurz gehalten — z. B. "18.07. 01:26".
+// Claude Code hat keine eigene Uhr: Eine Sitzung läuft tagelang, und ohne
+// diesen Hinweis weiß Claude bei "heute Abend" oder "in zwei Stunden" nicht,
+// wann jetzt ist. Bewusst ohne Wochentag und Jahr — kurz im Verlauf, für Claude
+// trotzdem eindeutig. Wir nehmen die Zeit des Handys, nicht die des Servers —
+// der steht womöglich in einer anderen Zeitzone.
 function jetztStempel() {
-  return new Date().toLocaleString("de-DE", {
-    weekday: "short", day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const jetzt = new Date();
+  const datum = jetzt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  const zeit = jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  return `${datum} ${zeit}`;
 }
 
 // Text an die Sitzung schicken — von der Eingabezeile oder aus dem Verlauf.
