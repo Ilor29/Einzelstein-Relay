@@ -243,6 +243,20 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Umschalter „in der Leiste zeigen" — hervorgehoben, wenn an. */
+.befehl-leiste {
+  flex: none;
+  border: 1px solid var(--linie);
+  background: none;
+  color: var(--schrift-schwach);
+  font-family: var(--sans);
+  font-size: .72rem;
+  padding: .3rem .5rem;
+  border-radius: .5rem;
+  cursor: pointer;
+}
+.befehl-leiste.an { color: var(--akzent); border-color: var(--akzent); }
+
 .befehl-weg {
   flex: none;
   width: 1.9rem;

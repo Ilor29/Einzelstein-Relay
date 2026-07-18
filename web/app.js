@@ -1076,17 +1076,25 @@ function eigeneBefehleSchreiben(liste) {
   catch { /* nicht merkbar — dann gelten sie eben nur für diese Sitzung */ }
 }
 
-// Die eigenen Befehle als Chips ins Zauberstab-Menü, über den "Eigene"-Knopf.
+// Die eigenen Befehle als Chips: die mit "leiste" in die sichtbare Reihe neben
+// den festen dreien, alle anderen ins Zauberstab-Menü.
 function eigeneBefehleZeichnen() {
-  const behaelter = $("eigene-befehle");
-  behaelter.textContent = "";
+  const menu = $("eigene-befehle");
+  const reihe = $("chip-reihe-eigene");
+  menu.textContent = "";
+  reihe.textContent = "";
   for (const b of eigeneBefehleLesen()) {
     const chip = document.createElement("button");
     chip.type = "button";
-    chip.className = "chip-menu";
     chip.dataset.text = b.text;      // dataset ist sicher — landet nie als HTML
     chip.textContent = b.label;      // textContent, denn der Name kommt von dir
-    behaelter.appendChild(chip);
+    if (b.leiste) {
+      chip.className = "chip";        // sichtbare Leiste — sendet über denselben Klick-Weg
+      reihe.appendChild(chip);
+    } else {
+      chip.className = "chip-menu";   // hinterm Zauberstab
+      menu.appendChild(chip);
+    }
   }
 }
 
@@ -1132,9 +1140,27 @@ function befehleListeZeichnen() {
       eigeneBefehleZeichnen();
     });
 
-    zeile.append(text, weg);
+    // Umschalter: steht der Befehl in der sichtbaren Leiste oder nur im Menü?
+    const leiste = document.createElement("button");
+    leiste.type = "button";
+    leiste.className = "befehl-leiste" + (b.leiste ? " an" : "");
+    leiste.setAttribute("aria-label", b.leiste ? "Aus der Leiste nehmen" : "In die Leiste stellen");
+    leiste.textContent = "Leiste";
+    leiste.addEventListener("click", () => befehlLeisteUmschalten(i));
+
+    zeile.append(text, leiste, weg);
     liste.appendChild(zeile);
   });
+}
+
+// Einen Befehl in die sichtbare Leiste stellen oder wieder ins Menü nehmen.
+function befehlLeisteUmschalten(i) {
+  const befehle = eigeneBefehleLesen();
+  if (!befehle[i]) return;
+  befehle[i].leiste = !befehle[i].leiste;
+  eigeneBefehleSchreiben(befehle);
+  befehleListeZeichnen();
+  eigeneBefehleZeichnen();
 }
 
 // Formular leeren und zurück in den Neuanlegen-Zustand (Knopf: „Hinzufügen").
@@ -1176,14 +1202,15 @@ $("befehl-hinzufuegen").addEventListener("click", () => {
   }
   const befehle = eigeneBefehleLesen();
   if (befehlBearbeitung !== null && befehle[befehlBearbeitung]) {
-    befehle[befehlBearbeitung] = { label, text };   // bestehenden ändern
+    // Ändern — die Leiste-Wahl des Befehls erhalten, nicht überschreiben.
+    befehle[befehlBearbeitung] = { label, text, leiste: befehle[befehlBearbeitung].leiste };
     eigeneBefehleSchreiben(befehle);
     befehlFormZuruecksetzen();
     befehleListeZeichnen();
     eigeneBefehleZeichnen();
     melde("Befehl geändert.");
   } else {
-    befehle.push({ label, text });                  // neuen anlegen
+    befehle.push({ label, text, leiste: false });   // neuer Befehl startet im Menü
     eigeneBefehleSchreiben(befehle);
     befehlFormZuruecksetzen();
     befehleListeZeichnen();
