@@ -2389,8 +2389,13 @@ $("neu-formular").addEventListener("submit", async (e) => {
   const fehler = $("neu-fehler");
   fehler.hidden = true;
 
-  if (!gewaehlterOrdner) {
-    fehler.textContent = "Bitte einen Ordner wählen.";
+  // Ein eingetipptes neues Projekt gewinnt über die Auswahl: Dann legt der
+  // Server unter ~/projekte einen frischen Ordner samt Vorlage an.
+  const neuesProjekt = $("neu-projekt").value.trim();
+  const ordner = neuesProjekt ? `~/projekte/${neuesProjekt}` : gewaehlterOrdner;
+
+  if (!ordner) {
+    fehler.textContent = "Bitte einen Ordner wählen oder ein neues Projekt eintippen.";
     fehler.hidden = false;
     return;
   }
@@ -2413,7 +2418,7 @@ $("neu-formular").addEventListener("submit", async (e) => {
       method: "POST",
       body: JSON.stringify({
         name: $("neu-name").value,
-        cwd: gewaehlterOrdner,
+        cwd: ordner,
         first_prompt: $("neu-auftrag").value,
         pinned: $("neu-anheften").checked,
         notify_when_done: melden,

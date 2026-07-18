@@ -1,0 +1,9 @@
+# Übliche Wegwerf-Ordner — von Anfang an draußen.
+.venv/
+__pycache__/
+node_modules/
+.DS_Store
+
+# Durchgangs-Anhänge der Einzelstein-App (räumen sich selbst auf).
+.hetzner-bilder/
+.hetzner-dateien/

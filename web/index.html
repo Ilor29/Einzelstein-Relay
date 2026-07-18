@@ -423,6 +423,12 @@
     <div class="feld">
       <span class="marke">Arbeitsordner</span>
       <div id="neu-ordner" class="ordnerwahl"></div>
+      <!-- Steht hier etwas, gewinnt es über die Auswahl oben: Die App legt
+           dann unter ~/projekte einen frischen Ordner an — mit Start-CLAUDE.md
+           und Git-Repo aus der Vorlage. -->
+      <input type="text" id="neu-projekt" class="eingabe mono"
+             pattern="[A-Za-z0-9][A-Za-z0-9._\-]*"
+             placeholder="… oder NEUES Projekt anlegen: Ordnername">
     </div>
 
     <label class="feld">

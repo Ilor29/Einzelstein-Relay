@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 67
+VERSION = 68
 
 
 @app.get("/api/version")
@@ -243,11 +243,44 @@ def list_sessions() -> list[dict]:
     return state.overview()
 
 
+# Die Startausstattung für frische Projekte. Liegt im App-Repo (mitgesichert,
+# und beim Verkauf Teil des Produkts): eine CLAUDE.md-Vorlage und ein
+# .gitignore, damit kein Projekt mehr „blank" beginnt.
+VORLAGE = Path(__file__).resolve().parent.parent / "vorlage"
+
+
+def _vorlage_einrichten(ordner: Path) -> None:
+    """Legt die Vorlage in ein frisches Projekt und macht es zu einem Git-Repo.
+
+    Ohne das Git-Repo überspränge die automatische Sicherung das Projekt
+    stillschweigend — genau so ist früher schon Arbeit unversioniert geblieben.
+    """
+    if VORLAGE.is_dir():
+        for quelle in VORLAGE.iterdir():
+            ziel = ordner / quelle.name
+            if ziel.exists():
+                continue
+            if quelle.is_dir():
+                shutil.copytree(quelle, ziel)
+            else:
+                shutil.copy(quelle, ziel)
+    subprocess.run(["git", "init", "--quiet", str(ordner)], capture_output=True)
+
+
 @app.post("/api/sessions", dependencies=[Depends(require_auth)])
 async def create_session(body: NewSession) -> dict:
     cwd = Path(body.cwd).expanduser()
     if not cwd.is_dir():
-        raise HTTPException(400, f"Den Ordner {body.cwd} gibt es nicht.")
+        # Ein Ordner, den es nicht gibt, darf ein NEUES Projekt werden — aber
+        # nur direkt unter ~/projekte und ohne Punkt-Namen. Alles andere bleibt
+        # ein Fehler: Die App soll keine Ordner irgendwo im System anlegen.
+        wurzel = (Path.home() / "projekte").resolve()
+        ziel = cwd.resolve()
+        if ziel.parent != wurzel or ziel.name.startswith("."):
+            raise HTTPException(400, f"Den Ordner {body.cwd} gibt es nicht.")
+        ziel.mkdir()
+        _vorlage_einrichten(ziel)
+        cwd = ziel
 
     try:
         tmux.create(body.name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
