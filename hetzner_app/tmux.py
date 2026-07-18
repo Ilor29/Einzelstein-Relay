@@ -224,10 +224,28 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
     return False
 
 
+# Ein einzelnes send-keys-Argument kappt der Kernel bei rund 128 KB
+# (MAX_ARG_STRLEN). Ein langer Text — etwa ein eingefügter Artikel — scheiterte
+# dann mit "Argument list too long", und der Aufrufer bekam einen 500er. Darum
+# zerlegen wir in Stücke. 8000 Zeichen sind selbst bei 4 Byte je Zeichen noch
+# weit unter der Grenze.
+_SENDE_STUECK = 8000
+
+
 def send_text(name: str, text: str) -> None:
-    """Schickt Text an die Sitzung, so als hätte man ihn getippt."""
+    """Schickt Text an die Sitzung, so als hätte man ihn getippt.
+
+    Auch sehr lange Texte: Sie werden in Stücke zerlegt und nacheinander
+    geschickt — tmux reiht sie im Eingabepuffer nahtlos aneinander, das Ergebnis
+    ist dasselbe, als käme alles auf einmal. Zerteilt wird nach Zeichen, nie
+    mitten in einem Mehr-Byte-Zeichen.
+    """
+    if not text:
+        return
     socket, sitzung = _zerlegen(name)
-    _run("send-keys", "-t", sitzung, "-l", text, socket=socket)
+    for anfang in range(0, len(text), _SENDE_STUECK):
+        stueck = text[anfang:anfang + _SENDE_STUECK]
+        _run("send-keys", "-t", sitzung, "-l", stueck, socket=socket)
 
 
 def send_key(name: str, key: str) -> None:
