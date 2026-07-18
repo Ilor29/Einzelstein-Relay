@@ -17,6 +17,20 @@ function zeige(name) {
   for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
 }
 
+// Aus einer Server-Antwort einen lesbaren Fehlersatz machen. FastAPI schickt
+// bei einer Formularprüfung `detail` als LISTE von Objekten — landet die roh in
+// einer Fehlermeldung, steht dort nur "[object Object]". Also die Klartext-Teile
+// (`msg`) herausziehen.
+function fehlerText(körper) {
+  const d = körper?.detail;
+  if (typeof d === "string") return d;
+  if (Array.isArray(d)) {
+    const saetze = d.map((f) => f?.msg).filter(Boolean);
+    if (saetze.length) return saetze.join("; ");
+  }
+  return null;
+}
+
 async function api(pfad, optionen = {}) {
   const antwort = await fetch(`/api${pfad}`, {
     headers: { "Content-Type": "application/json" },
@@ -28,7 +42,7 @@ async function api(pfad, optionen = {}) {
   }
   if (!antwort.ok) {
     const körper = await antwort.json().catch(() => ({}));
-    throw new Error(körper.detail || `Fehler ${antwort.status}`);
+    throw new Error(fehlerText(körper) || `Fehler ${antwort.status}`);
   }
   return antwort;
 }

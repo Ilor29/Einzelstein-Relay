@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 75
+VERSION = 76
 
 
 @app.get("/api/version")
@@ -219,7 +219,7 @@ def geraet_aussperren(name: str) -> dict:
 # --- Sitzungen ---------------------------------------------------------------
 
 class NewSession(BaseModel):
-    name: str = Field(min_length=1, max_length=60, pattern=r"^[A-Za-z0-9._-]+$")
+    name: str = Field(min_length=1, max_length=60, pattern=r"^[A-Za-z0-9._ -]+$")
     cwd: str
     first_prompt: str = ""
     pinned: bool = False
@@ -267,6 +267,20 @@ def _vorlage_einrichten(ordner: Path) -> None:
     subprocess.run(["git", "init", "--quiet", str(ordner)], capture_output=True)
 
 
+def _sicherer_sitzungsname(roh: str) -> str:
+    """Ein Name, der als tmux-Sitzungsname unverändert überlebt.
+
+    tmux schreibt '.' und ':' im Sitzungsnamen still zu '_' um — danach sucht
+    die App ihre Sitzung unter dem eingegebenen Namen und findet sie nie wieder
+    (genau der „geht nicht"-Fehler bei „Hetzner-App 1.1"). Also ersetzen wir die
+    Zeichen selbst, damit gespeicherter Name und tmux-Name deckungsgleich sind.
+    """
+    name = roh.strip()
+    for zeichen in ".:":
+        name = name.replace(zeichen, "_")
+    return name
+
+
 @app.post("/api/sessions", dependencies=[Depends(require_auth)])
 async def create_session(body: NewSession) -> dict:
     cwd = Path(body.cwd).expanduser()
@@ -282,13 +296,19 @@ async def create_session(body: NewSession) -> dict:
         _vorlage_einrichten(ziel)
         cwd = ziel
 
+    # Ab hier durchgehend den tmux-sicheren Namen benutzen — sonst laufen
+    # gespeicherter Name und tmux-Sitzung auseinander.
+    name = _sicherer_sitzungsname(body.name)
+    if not name:
+        raise HTTPException(400, "Bitte einen Namen für die Sitzung angeben.")
+
     try:
-        tmux.create(body.name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
+        tmux.create(name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
     state.update(
-        body.name,
+        name,
         pinned=body.pinned,
         notify_when_done=body.notify_when_done,
         created_prompt=body.first_prompt,
@@ -299,9 +319,9 @@ async def create_session(body: NewSession) -> dict:
         # Code braucht ein paar Sekunden, bis es Eingaben annimmt — solange
         # dürfen wir das Handy nicht hängen lassen. Also: Sitzung sofort
         # melden, Auftrag im Hintergrund nachschieben.
-        asyncio.create_task(_ersten_auftrag_schicken(body.name, body.first_prompt))
+        asyncio.create_task(_ersten_auftrag_schicken(name, body.first_prompt))
 
-    return {"ok": True, "name": body.name}
+    return {"ok": True, "name": name}
 
 
 async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
