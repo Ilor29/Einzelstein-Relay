@@ -2282,7 +2282,17 @@ navigator.serviceWorker?.addEventListener("message", async (e) => {
 
 // --- Einstellungen: die Stimme ------------------------------------------------
 
-const PROBE = "Hallo Roli. So klinge ich, wenn ich dir vorlese, was Claude geschrieben hat.";
+// Der Text der Stimmprobe. Bewusst neutral: spricht niemanden mit Namen an und
+// nennt keine fremde Marke — er läuft ja auch in der verkauften Fassung, wo ihn
+// Fremde hören. Zeigt die Stimme in ihrer Bandbreite: ruhige Sätze, eine Frage,
+// ein Innehalten am Komma.
+const PROBE =
+  "Willkommen. Nehmen Sie sich einen Augenblick und hören Sie einfach zu. " +
+  "Eine gute Stimme hat es nicht eilig — sie nimmt sich Zeit für den Satz, " +
+  "hält kurz inne beim Komma und lässt das letzte Wort in Ruhe ausklingen. " +
+  "Sie liest Ihnen vor, was Sie sonst selbst lesen müssten: eine Notiz am " +
+  "Morgen, einen längeren Text am Abend, unterwegs und ganz nebenbei. Passt " +
+  "dieser Klang zu Ihnen? Dann haben Sie Ihre Stimme gefunden.";
 
 $("knopf-einstellungen").addEventListener("click", async () => {
   stoppeListe();
