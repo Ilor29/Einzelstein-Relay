@@ -101,8 +101,11 @@ Das Skript ist absichtlich vorsichtig: Liegen auf dem Rechner ungesicherte
 
 ## Was noch fehlt
 
-- **Benachrichtigungen**, wenn Claude fertig ist oder nachfragt. Der Schalter
-  ist im Formular schon da, dahinter passiert aber noch nichts.
 - **Wischgesten** in der Liste (nach links wischen zum Anheften).
 - Die Audio-Antwort kommt als WAV, was auf Mobilfunk unnötig groß ist. Mit
   ffmpeg nach Opus wandeln wäre etwa zehnmal kleiner.
+
+Die **Benachrichtigungen** (Glocke: „Melden, wenn fertig") sind fertig gebaut —
+Web-Push mit eigenem VAPID-Schlüssel, Anmeldung übers Handy, der Wächter schickt,
+wenn eine Sitzung von „arbeitet" auf „wartet/fertig" springt, und ein Tipp auf die
+Nachricht öffnet die Sitzung. Siehe `hetzner_app/melden.py` und `web/sw.js`.
