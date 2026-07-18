@@ -563,7 +563,28 @@ function verlaufBlock(block) {
       }
     });
 
-    leiste.append(hoeren, kopieren);
+    // Teilen — über das Teilen-Menü des Handys (WhatsApp, SMS, E-Mail …). Das
+    // bringt das Betriebssystem mit; wir reichen nur den Text hinein. Kann das
+    // Gerät es nicht (z. B. Desktop-Browser), kopieren wir stattdessen.
+    const teilen = document.createElement("button");
+    teilen.className = "klein-knopf";
+    teilen.setAttribute("aria-label", "Antwort teilen");
+    teilen.innerHTML = `<svg viewBox="0 0 24 24"><use href="#i-teilen"/></svg>`;
+    teilen.addEventListener("click", async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share({ text: block.text });
+        } else {
+          await navigator.clipboard.writeText(block.text);
+          melde("Teilen geht auf diesem Gerät nicht — Text kopiert.");
+        }
+      } catch (err) {
+        // Bricht man das Teilen-Menü ab, ist das kein Fehler.
+        if (err?.name !== "AbortError") melde("Teilen hat nicht geklappt.");
+      }
+    });
+
+    leiste.append(hoeren, kopieren, teilen);
     el.append(text, leiste);
     return el;
   }
