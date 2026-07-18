@@ -535,6 +535,20 @@ html, body {
 .knopf-blank.spricht { color: var(--laeuft); }
 .knopf-blank.laeuft { color: var(--akzent); animation: pochen 1.2s ease-in-out infinite; }
 
+/* Die Vorlese-Dauer neben dem Lautsprecher. Schmal, mit Ziffern gleicher
+   Breite (font-variant-numeric), damit die Zahl beim Mitlaufen nicht zappelt.
+   Der Titel daneben weicht durch sein ellipsis zurück, wenn der Platz knapp
+   wird — die Zeit steht immer ganz da. */
+.vorlese-dauer {
+  flex: none;
+  margin-left: -.3rem;
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--laeuft);
+  white-space: nowrap;
+  letter-spacing: -.01em;
+}
+
 /* Eine kurze Rückmeldung, die von selbst wieder geht. Besser als ein
    Hinweisfenster, das man erst wegtippen muss. */
 .zettel {

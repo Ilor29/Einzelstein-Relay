@@ -1872,6 +1872,22 @@ let sprechLauf = 0;           // Zähler, mit dem ein alter Vortrag abbricht
 let restStuecke = [];         // was vom Vortrag noch aussteht
 let restText = "";            // beim Klingeln abgeschnitten — hierher gerettet
 
+// Die kleine Dauer-Anzeige neben dem Lautsprecher (wie Grok „0:15 / 4:20").
+// „gerade / gesamt": links wie weit du bist, rechts wie lang das bisher
+// Bekannte ist. Im Folge-Modus wächst „gesamt" mit, während Claude nachschreibt.
+const dauerEl = $("vorlese-dauer");
+let dauerTakt = null;         // der Sekundentakt, der die Zahl mitlaufen lässt
+
+function zeitFormat(sek) {
+  sek = Math.max(0, Math.round(sek));
+  return Math.floor(sek / 60) + ":" + String(sek % 60).padStart(2, "0");
+}
+
+function dauerAus() {
+  if (dauerTakt) { clearInterval(dauerTakt); dauerTakt = null; }
+  if (dauerEl) { dauerEl.hidden = true; dauerEl.textContent = ""; }
+}
+
 function tonKontext() {
   if (!hörCtx) {
     hörCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1900,6 +1916,7 @@ function stille() {
   }
   aktiveQuellen = [];
   restStuecke = [];           // von Hand gestoppt heißt: nichts steht mehr aus
+  dauerAus();
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
   sprecherKnopf = null;
@@ -2078,6 +2095,19 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     let startZeit = c.currentTime + 0.08;   // kleiner Vorlauf bis zum ersten Ton
     let i = 0;
 
+    // Ab wann der Ton wirklich läuft — erst beim ersten geplanten Stück bekannt
+    // (das Holen dauert). `startZeit` ist dann das Ende des zuletzt Eingereihten,
+    // also ist „startZeit − sprechBeginn" die bislang bekannte Gesamtdauer.
+    let sprechBeginn = null;
+    dauerEl.hidden = false;
+    dauerEl.textContent = "0:00";
+    dauerTakt = setInterval(() => {
+      if (sprechBeginn === null) return;
+      const gesamt = Math.max(0, startZeit - sprechBeginn);
+      const jetzt = Math.min(Math.max(0, c.currentTime - sprechBeginn), gesamt);
+      dauerEl.textContent = zeitFormat(jetzt) + " / " + zeitFormat(gesamt);
+    }, 500);
+
     while (true) {
       // Bekannte Stücke aufgebraucht? Im Folge-Modus fragen wir nach, ob Claude
       // inzwischen weitergeschrieben hat — sonst ist hier Schluss.
@@ -2108,6 +2138,7 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
       quelle.connect(c.destination);
       const start = Math.max(startZeit, c.currentTime);
       quelle.start(start);
+      if (sprechBeginn === null) sprechBeginn = start;   // ab hier läuft die Uhr
       startZeit = start + puffer.duration;   // das nächste schließt nahtlos an
       aktiveQuellen.push(quelle);
 
