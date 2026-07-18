@@ -547,7 +547,7 @@
       <!-- __VERSION__ ersetzt der Server beim Ausliefern durch die echte
            Nummer (siehe server.py:index). So steht hier immer, was wirklich
            läuft — ohne einen zweiten Zähler, der auseinanderlaufen könnte. -->
-      <p class="hinweis">Einzelstein Fernbedienung · Version __VERSION__</p>
+      <p class="hinweis">Einzelstein Relay · Version __VERSION__</p>
     </div>
   </div>
 </section>
@@ -565,6 +565,14 @@
       <svg viewBox="0 0 24 24"><use href="#i-plus"/></svg>
     </button>
   </header>
+  <div class="bib-suche">
+    <svg class="bib-suche-lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+    </svg>
+    <input type="search" id="bib-suchfeld" class="bib-suchfeld"
+           placeholder="Skill suchen …" autocomplete="off" enterkeyhint="search">
+  </div>
   <div id="bib-reiter" class="bib-reiter"></div>
   <div id="bib-liste" class="bib-liste"></div>
 </section>

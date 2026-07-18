@@ -1268,6 +1268,34 @@ html, body {
 /* --- Bibliothek ---
    Die Reiter oben zum Filtern, darunter die Skill-Karten. Ruhiger als die
    Sitzungsliste — hier stöbert man, statt auf einen Blick etwas zu erfassen. */
+/* Die Lupe: Suchfeld über den Kategorie-Reitern. */
+.bib-suche {
+  flex: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: .6rem .7rem .2rem;
+}
+.bib-suche-lupe {
+  position: absolute;
+  left: 1.15rem;
+  width: 18px;
+  height: 18px;
+  color: var(--schrift-schwach);
+  pointer-events: none;
+}
+.bib-suchfeld {
+  width: 100%;
+  padding: .55rem .7rem .55rem 2.3rem;   /* Platz links für die Lupe */
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  border-radius: .7rem;
+  color: var(--schrift);
+  font-family: var(--sans);
+  font-size: .92rem;
+}
+.bib-suchfeld:focus { outline: none; border-color: var(--schrift-schwach); }
+
 .bib-reiter {
   flex: none;
   display: flex;

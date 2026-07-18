@@ -2375,6 +2375,7 @@ $("neu-formular").addEventListener("submit", async (e) => {
 
 let skills = [];
 let bibFach = "Alle";
+let bibSuche = "";              // das Suchwort aus dem Lupenfeld
 let bibZiel = null;             // die Sitzung, in die "Einfügen" schreibt
 let bearbeiteterSkill = null;
 
@@ -2407,6 +2408,10 @@ async function oeffneBibliothek(ziel) {
   // Sitzung heraus halten wir nichts an — wir kehren gleich dorthin zurück.
   if (!ziel) stoppeListe();
   zeige("bibliothek");
+  // Mit leerer Lupe starten — ein altes Suchwort von letztem Mal würde sonst
+  // die halbe Bibliothek verstecken.
+  bibSuche = "";
+  $("bib-suchfeld").value = "";
   try {
     skills = await (await api("/skills")).json();
   } catch {
@@ -2419,6 +2424,12 @@ async function oeffneBibliothek(ziel) {
 
 $("knopf-bibliothek").addEventListener("click", () => oeffneBibliothek(null));
 $("knopf-skill").addEventListener("click", () => oeffneBibliothek(aktuelleSitzung));
+
+// Die Lupe: tippt man, wird sofort gefiltert.
+$("bib-suchfeld").addEventListener("input", (e) => {
+  bibSuche = e.target.value;
+  zeigeSkills();
+});
 
 $("knopf-bib-zurueck").addEventListener("click", () => {
   const zurueckZurSitzung = Boolean(bibZiel);
@@ -2451,16 +2462,28 @@ function baueReiter() {
 
 function zeigeSkills() {
   const liste = $("bib-liste");
-  const sichtbar = bibFach === "Alle"
+  let sichtbar = bibFach === "Alle"
     ? skills
     : skills.filter((s) => s.kategorie === bibFach);
+
+  // Das Suchwort filtert über Name UND Beschreibung — so findet man einen Skill
+  // auch, wenn man nur weiß, wofür er gut war, nicht mehr, wie er heißt.
+  const suche = bibSuche.trim().toLowerCase();
+  if (suche) {
+    sichtbar = sichtbar.filter((s) =>
+      (skillName(s) || "").toLowerCase().includes(suche) ||
+      (skillText(s) || "").toLowerCase().includes(suche)
+    );
+  }
 
   if (sichtbar.length === 0) {
     const leer = document.createElement("p");
     leer.className = "leer";
-    leer.textContent = skills.length === 0
-      ? "Keine Skills gefunden."
-      : "In diesem Fach ist noch nichts.";
+    leer.textContent = suche
+      ? `Nichts gefunden zu „${bibSuche.trim()}".`
+      : skills.length === 0
+        ? "Keine Skills gefunden."
+        : "In diesem Fach ist noch nichts.";
     liste.replaceChildren(leer);
     return;
   }
