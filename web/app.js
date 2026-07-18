@@ -1935,6 +1935,18 @@ function tonKontextUeberwachen(c) {
  *  drückt und es passiert nichts. Satzweise beginnt das Sprechen sofort,
  *  während der Rest im Hintergrund nachproduziert wird.
  */
+// Der Teil von `voll`, der über das schon Gelesene hinausgeht — oder null, wenn
+// nichts sauber anschließt. Grundlage des Folge-Modus: Beim Vorlesen fragt die
+// App den mitwachsenden Antwort-Schnappschuss immer wieder ab; was neu ist, wird
+// weitergelesen. Schließt der neue Stand nicht sauber an (Anfang aus dem Fenster
+// gescrollt o. Ä.), lieber null — dann hört die App auf, statt Falsches zu lesen.
+function neuerTeil(gelesen, voll) {
+  if (voll.length > gelesen.length && voll.startsWith(gelesen)) {
+    return voll.slice(gelesen.length);
+  }
+  return null;
+}
+
 function haeppchen(text, mindestens = 90) {
   // An Satzenden trennen — aber OHNE Lookbehind-Regex. `(?<=…)` kennt Safari
   // erst ab 16.4, und weil es ein Regex-Literal ist, scheitert sonst schon das
@@ -1964,7 +1976,7 @@ function haeppchen(text, mindestens = 90) {
 
 /** Liest einen Text vor. Ein zweiter Druck — auf denselben oder einen anderen
  *  Knopf — hört sofort auf. Es spricht immer nur eine Stimme. */
-async function sprich(text, knopf, stimmeName = null) {
+async function sprich(text, knopf, stimmeName = null, nachschub = null) {
   // Läuft schon etwas? Dann erst mal Ruhe.
   const derselbe = sprecherKnopf === knopf;
   if (spricht) {
@@ -1990,7 +2002,7 @@ async function sprich(text, knopf, stimmeName = null) {
 
   const meins = knopf;       // um zu merken, ob wir zwischendurch gestoppt wurden
   const lauf = ++sprechLauf; // diese Ausgabe; ein Stopp erhöht den Zähler
-  const stuecke = haeppchen(text);
+  let stuecke = haeppchen(text);   // wächst im Folge-Modus per Nachschub
   const c = tonKontext();
   try { await c.resume(); } catch { /* Autoplay-Sperre — dann eben nicht */ }
 
@@ -2009,10 +2021,24 @@ async function sprich(text, knopf, stimmeName = null) {
 
   try {
     // Das erste Häppchen schon holen; das nächste läuft immer im Voraus mit.
-    let naechstes = hole(stuecke[0]);
+    let naechstes = stuecke.length ? hole(stuecke[0]) : null;
     let startZeit = c.currentTime + 0.08;   // kleiner Vorlauf bis zum ersten Ton
+    let i = 0;
 
-    for (let i = 0; i < stuecke.length; i++) {
+    while (true) {
+      // Bekannte Stücke aufgebraucht? Im Folge-Modus fragen wir nach, ob Claude
+      // inzwischen weitergeschrieben hat — sonst ist hier Schluss.
+      if (i >= stuecke.length) {
+        if (!nachschub) break;
+        const mehr = await nachschub(abgebrochen);
+        if (abgebrochen()) return;
+        if (!mehr) break;                    // Claude ist durch — es kommt nichts mehr
+        const neue = haeppchen(mehr);
+        if (!neue.length) continue;
+        stuecke = stuecke.concat(neue);
+        naechstes = hole(stuecke[i]);
+      }
+
       // Ab hier steht dieses Stück noch aus. Klingelt jetzt das Telefon, wird
       // genau ab hier weitergelesen — beim angefangenen Satz, nicht mittendrin.
       restStuecke = stuecke.slice(i);
@@ -2020,7 +2046,8 @@ async function sprich(text, knopf, stimmeName = null) {
       const puffer = await naechstes;
       if (abgebrochen()) return;
 
-      // Das übernächste Stück schon dekodieren, solange dieses läuft.
+      // Das übernächste Stück schon dekodieren, solange dieses läuft — sofern in
+      // der bekannten Liste noch eins steht.
       naechstes = i + 1 < stuecke.length ? hole(stuecke[i + 1]) : null;
 
       const quelle = c.createBufferSource();
@@ -2036,6 +2063,7 @@ async function sprich(text, knopf, stimmeName = null) {
       const wartenMs = (startZeit - c.currentTime) * 1000 - 250;
       await new Promise((r) => setTimeout(r, Math.max(0, wartenMs)));
       if (abgebrochen()) return;
+      i++;
     }
 
     // Auf das Ende des letzten Stücks warten, dann aufräumen.
@@ -2066,7 +2094,42 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     )).json();
     if (!text) throw new Error("Da ist nichts zum Vorlesen.");
     zuletztVorgelesen = text;   // damit Freisprech es nicht gleich nochmal liest
-    await sprich(text, knopf);
+
+    // Folge-Modus: Ist Claude noch am Schreiben, sammelt die App die neu
+    // eintrudelnden Sätze ein und liest weiter — du drückst nur EINMAL.
+    // Aufgehört wird, wenn Claude fertig ist und nichts Neues mehr nachkommt.
+    let gelesen = text;
+    const nachschub = async (abgebrochen) => {
+      const beginn = Date.now();
+      let fertigInFolge = 0;    // wie oft „nichts Neues UND Claude ruht" in Folge
+      while (!abgebrochen()) {
+        let voll = "";
+        try {
+          voll = ((await (await api(
+            `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+          )).json()).text) || "";
+        } catch {
+          return null;          // kein Text zu holen — dann eben Schluss
+        }
+        const neu = neuerTeil(gelesen, voll);
+        if (neu) {
+          gelesen = voll;
+          zuletztVorgelesen = voll;
+          return neu;
+        }
+        // Nichts Neues. Ist Claude fertig? Zweimal in Folge bestätigen, damit
+        // eine kurze Atempause (der geglättete Zustand) nicht zu früh abbricht.
+        fertigInFolge = beschaeftigt ? 0 : fertigInFolge + 1;
+        if (fertigInFolge >= 2) return null;
+        // Sicherheitsnetz gegen ein hängendes „beschäftigt": nach 30 s ohne
+        // neuen Text ist Schluss, egal was der Zustand sagt.
+        if (Date.now() - beginn > 30000) return null;
+        await new Promise((r) => setTimeout(r, 700));
+      }
+      return null;
+    };
+
+    await sprich(text, knopf, null, nachschub);
   } catch (err) {
     stille();
     alert(err.message);
