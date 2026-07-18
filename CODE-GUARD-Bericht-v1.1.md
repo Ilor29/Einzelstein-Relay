@@ -180,6 +180,25 @@ Serialisierung ist beim Vorlesen sogar erwünscht). Nur wissen, nicht ändern.
 | Recht 4.1–4.4 | offen aus v1.0 (BFSG/CRA/327er) |
 | Recht 4.5 Lizenzen | geprüft (GPL-Trennung ✓, Liste 🟡) |
 
+## Nachtrag — Fixes umgesetzt (18.07.2026, Version 67)
+
+Noch am Prüftag behoben und einzeln verifiziert:
+- 🟠 **Piper-Neustart:** `HTTPError` wird jetzt ohne Neustart durchgereicht;
+  Leertext wird dreifach abgefangen (Endpunkt 400, `synthesize`-Wächter,
+  Client). **Nachgewiesen:** Leertext-Ablehnung bei identischer Prozess-Nummer,
+  warme Sätze danach 0,6–0,9 s.
+- 🟡 **Längengrenzen:** Senden max. 2 Mio. Zeichen (413), Vorlesen max.
+  100 000; globaler 35-MiB-Deckel in der Middleware, **live getestet**
+  (40-MB-Paket → 413, bevor der Körper gelesen wird).
+- 🟡 **Stück-Verzahnung:** `threading.Lock` um die Sende-Schleife —
+  Atomarität wiederhergestellt.
+- 🟡 **Lizenzliste:** Flask-Familie (6 Pakete, BSD/MIT) nachgetragen.
+- 🔵 **piper.log** beginnt je Prozess-Start frisch; 🔵 der Kindprozess erbt
+  keine `HETZNER_*`-Geheimnisse mehr.
+
+Offen bleiben nur die 🔵-Doku-Hinweise (Piper-Port auf Mehr-Nutzer-Servern)
+und die v1.0-Verkaufspunkte.
+
 ## Nächste Schritte
 
 1. 🟠 `_sprechen`: HTTPError ohne Neustart behandeln + Leertext-Abweisung im

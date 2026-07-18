@@ -16,6 +16,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -179,7 +180,12 @@ def _starten(warte: float = 20.0) -> None:
             raise TTSError(f"Die Stimme fehlt: {datei.name}")
 
         _LOG.parent.mkdir(parents=True, exist_ok=True)
-        with open(_LOG, "ab") as log:
+        # Der Kindprozess braucht unsere Geheimnisse nicht (Zugangswort in
+        # HETZNER_*-Variablen) — also bekommt er sie gar nicht erst.
+        umgebung = {k: v for k, v in os.environ.items() if not k.startswith("HETZNER_")}
+        # "wb": Bei jedem Prozess-Start beginnt das Log frisch. So enthält es
+        # immer den letzten Lauf — und wächst nicht über Monate ins Uferlose.
+        with open(_LOG, "wb") as log:
             _prozess = subprocess.Popen(
                 [
                     sys.executable, "-m", "piper.http_server",
@@ -190,6 +196,7 @@ def _starten(warte: float = 20.0) -> None:
                 ],
                 stdout=log,
                 stderr=log,
+                env=umgebung,
             )
 
     frist = time.monotonic() + warte
@@ -238,13 +245,18 @@ def _sprechen(text: str, name: str) -> bytes:
             # Lange Absätze brauchen ihre Zeit — großzügig bemessen.
             with urllib.request.urlopen(aufruf, timeout=120) as antwort:
                 return antwort.read()
+        except urllib.error.HTTPError as fehler:
+            # Piper LEBT und meldet einen Fehler (etwa: leerer Text). Das ist
+            # kein Absturz — ein Neustart würde nur das warme Modell wegwerfen
+            # und den nächsten echten Satz den Kaltstart zahlen lassen.
+            raise TTSError(f"Piper lehnt ab (HTTP {fehler.code}) — siehe ~/.hetzner-app/piper.log")
         except OSError:
             if versuch == 2:
                 raise TTSError(
                     "Piper antwortet nicht — siehe ~/.hetzner-app/piper.log"
                 )
-            # Vermutlich ist der Prozess gestorben. Einmal neu starten,
-            # nochmal versuchen — erst dann aufgeben.
+            # Verbindungsfehler: Der Prozess ist wohl wirklich gestorben.
+            # Einmal neu starten, nochmal versuchen — erst dann aufgeben.
             _beenden()
     raise TTSError("Unerreichbar")   # nur für den Typ-Prüfer; oben kehrt immer zurück
 
@@ -265,7 +277,12 @@ async def synthesize(text: str, stimme: str | None = None) -> bytes:
     # Letzte Sicherung: Was hier ankommt, ist schon aufbereitet — aber ein
     # übriggebliebenes Sternchen liest Piper gnadenlos mit vor. Also nochmal
     # drüber, ganz kurz vor dem Mund.
-    return await asyncio.to_thread(_sprechen, symbole_weg(text), name)
+    sauber = symbole_weg(text)
+    # Bleibt danach nichts übrig (etwa bei "***"), gar nicht erst zu Piper —
+    # der antwortete darauf nur mit einem Fehler.
+    if not sauber.strip():
+        raise TTSError("Da ist nichts Vorlesbares übrig geblieben.")
+    return await asyncio.to_thread(_sprechen, sauber, name)
 
 
 # --- Aufbereitung ------------------------------------------------------------

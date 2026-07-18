@@ -44,6 +44,15 @@ async def sicherheits_header(request: Request, call_next):
     einem echten Test im Browser gesetzt — dann am besten in Caddy. Diese drei
     Header dagegen brechen nichts und kosten nichts.
     """
+    # Deckel auf die Anfragengröße, BEVOR der Körper in den Speicher gelesen
+    # wird. Die größte legitime Anfrage ist ein Dokument-Upload (30 MB) —
+    # 35 MB lassen dafür Luft. Ohne den Deckel könnte ein angemeldetes Gerät
+    # mit einem einzigen Riesen-Paket die kleine Maschine in den Speichertod
+    # schicken.
+    laenge = request.headers.get("content-length")
+    if laenge and laenge.isdigit() and int(laenge) > 35 * 1024 * 1024:
+        return JSONResponse({"detail": "Die Anfrage ist zu groß."}, status_code=413)
+
     antwort = await call_next(request)
     antwort.headers.setdefault("X-Content-Type-Options", "nosniff")
     antwort.headers.setdefault("Referrer-Policy", "same-origin")
@@ -147,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 66
+VERSION = 67
 
 
 @app.get("/api/version")
@@ -411,7 +420,19 @@ class Stimme(BaseModel):
 
 @app.post("/api/speak", dependencies=[Depends(require_auth)])
 async def speak(body: Speak) -> Response:
-    audio = await tts.synthesize(body.text, body.stimme)
+    # Leeren Text gar nicht erst zu Piper tragen — der lehnte ihn nur ab, und
+    # die alte Neustart-Logik warf dafür sogar das warme Modell weg.
+    if not body.text.strip():
+        raise HTTPException(400, "Kein Text zum Vorlesen.")
+    # Obergrenze: Vorlesen ist fürs Ohr — niemand hört sich 100.000 Zeichen
+    # an, aber Piper würde Minuten daran rechnen.
+    if len(body.text) > 100_000:
+        raise HTTPException(413, "Der Text zum Vorlesen ist zu lang.")
+    try:
+        audio = await tts.synthesize(body.text, body.stimme)
+    except tts.TTSError as fehler:
+        # Eine verständliche Meldung statt eines nackten 500ers.
+        raise HTTPException(503, str(fehler))
     return Response(content=audio, media_type="audio/wav")
 
 
@@ -943,6 +964,12 @@ async def session_senden(name: str, body: Nachricht) -> dict:
     """
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    # Seit dem Stückel-Fix gibt es keine technische Grenze mehr — also eine
+    # vernünftige: 2 Millionen Zeichen sind ein sehr dickes Buch. Alles darüber
+    # ist ein Versehen (oder Missbrauch) und würde die kleine Maschine würgen.
+    if len(body.text) > 2_000_000:
+        raise HTTPException(413, "Die Nachricht ist zu groß (mehr als 2 Millionen Zeichen).")
 
     tmux.send_text(name, body.text)
     # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt Claude

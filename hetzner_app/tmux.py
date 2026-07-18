@@ -11,6 +11,7 @@ import asyncio
 import os
 import shlex
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -231,6 +232,13 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
 # weit unter der Grenze.
 _SENDE_STUECK = 8000
 
+# Ein Text, ein Stück Arbeit: Ohne die Sperre könnten zwei gleichzeitige
+# Sende-Aufrufe (Eingabe + Schnellbefehl, zwei Geräte) ihre Stücke im
+# Eingabepuffer verzahnen — und bei Claude käme ein zusammengewürfelter Text
+# an. Vor der Stückelung war ein Senden ein einziger tmux-Aufruf und damit
+# von selbst atomar; die Sperre stellt genau das wieder her.
+_sende_sperre = threading.Lock()
+
 
 def send_text(name: str, text: str) -> None:
     """Schickt Text an die Sitzung, so als hätte man ihn getippt.
@@ -243,9 +251,10 @@ def send_text(name: str, text: str) -> None:
     if not text:
         return
     socket, sitzung = _zerlegen(name)
-    for anfang in range(0, len(text), _SENDE_STUECK):
-        stueck = text[anfang:anfang + _SENDE_STUECK]
-        _run("send-keys", "-t", sitzung, "-l", stueck, socket=socket)
+    with _sende_sperre:
+        for anfang in range(0, len(text), _SENDE_STUECK):
+            stueck = text[anfang:anfang + _SENDE_STUECK]
+            _run("send-keys", "-t", sitzung, "-l", stueck, socket=socket)
 
 
 def send_key(name: str, key: str) -> None:

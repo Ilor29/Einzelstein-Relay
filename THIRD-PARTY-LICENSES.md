@@ -67,6 +67,11 @@ multidict, propcache, python-multipart, requests, yarl.
 
 **MPL-2.0:** certifi, py-vapid, pywebpush.
 
+**Flask-Familie (seit 18.07.2026, für den Piper-HTTP-Server):** flask 3.1.3
+(BSD-3-Clause), werkzeug 3.1.8 (BSD-3-Clause), jinja2 3.1.6 (BSD-3-Clause),
+markupsafe 3.0.3 (BSD-3-Clause), itsdangerous 2.2.0 (BSD-3-Clause),
+blinker 1.9.0 (MIT).
+
 **PSF (Python Software Foundation):** aiohappyeyeballs.
 
 **Lizenz nicht in den Metadaten hinterlegt — zu bestätigen** (durchweg bekannte,
