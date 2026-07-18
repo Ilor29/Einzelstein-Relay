@@ -42,8 +42,10 @@ EINSTELLUNG = Path.home() / ".hetzner-app" / "stimme.txt"
 KATALOG = {
     "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell — flüssig auch auf kleinem Server"),
     "de_DE-thorsten-high": ("Jonas · fein", "besonders klar — braucht einen stärkeren Server"),
-    "de_DE-kerstin-low": ("Marie", "weiblich, klar"),
     "de_DE-thorsten_emotional-medium": ("Max", "lebhaft, betont"),
+    # "Marie" (de_DE-kerstin-low) am 18.07. raus: das einzige verfügbare Modell
+    # war "low"-Qualität und klang rau. Suchen eine bessere, ebenfalls
+    # gemeinfreie weibliche Stimme als Ersatz.
 }
 
 # Mehrstimmige Modelle (ein Modell, viele Sprecher) bieten wir derzeit NICHT an —
