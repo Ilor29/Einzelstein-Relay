@@ -12,22 +12,20 @@ sobald die App verkauft oder weitergegeben wird.
 
 ## ⚠ Der eine Punkt, der eine Entscheidung braucht: Piper (Sprachausgabe)
 
-**piper-tts 1.4.2 — GPL-3.0-or-later.**
+**piper-tts 1.4.2 — GPL-3.0-or-later.** (Die GPL kommt über espeak-ng, das die
+Aussprache liefert — nicht über das Stimm-Modell.)
 
-Das ist die einzige nicht-freizügige Lizenz im ganzen Paket, und sie sitzt an
-einer heiklen Stelle: `hetzner_app/tts.py` importiert Piper **direkt in den
-eigenen Prozess** (`from piper import PiperVoice`). Die GPL verlangt bei so einer
-engen Verbindung, dass das Gesamtwerk unter GPL steht und der Quellcode
-offengelegt wird. Für eine App, die verkauft werden soll, ist das ein echter
-Stolperstein — kein Randthema.
+**Stand 18.07.2026: abgekoppelt.** Piper läuft als **eigener Prozess** mit
+lokaler Schnittstelle (siehe `hetzner_app/tts.py`) — der frühere direkte Import
+in unseren Prozess ist ausgebaut. Die App ist damit ein eigenes Werk, das mit
+einem getrennten GPL-Programm nur noch spricht.
 
-Drei Wege (Entscheidung steht aus, gehört zum Fachanwalt):
-1. **Abkoppeln:** Piper nur noch als eigenen Prozess/Kommandozeile aufrufen statt
-   im selben Prozess zu importieren — dann ist die Verbindung lockerer und die
-   GPL greift nur auf Piper selbst, nicht auf die App.
-2. **Ersetzen:** eine Sprachausgabe mit freizügiger Lizenz suchen.
-3. **Akzeptieren:** die App selbst unter GPL stellen und den Quellcode offenlegen
-   (passt in der Regel nicht zum Verkaufsmodell).
+Fürs Verkaufen gilt zusätzlich: **Piper wird nicht mitgeliefert.** Der
+Einrichtungs-Weg lässt den Kunden Piper auf seinem eigenen Server installieren
+(z. B. `pip install piper-tts` + `pip install flask`); damit verteilt der Kunde
+die GPL-Software an sich selbst, nicht wir. Diese Auslegung ist breit anerkannt,
+aber nicht höchstrichterlich bestätigt — vor dem Verkauf einmal vom
+IT-Fachanwalt bestätigen lassen.
 
 Der frühere CODE//GUARD-Bericht hatte Piper fälschlich als MIT geführt — das ist
 hiermit richtiggestellt.

@@ -8,12 +8,15 @@ Also: Fließtext wird vorgelesen, Code und Werkzeugaufrufe werden nur angesagt.
 from __future__ import annotations
 
 import asyncio
-import io
+import atexit
+import json
 import os
 import re
-import shutil
+import subprocess
 import sys
-import wave
+import threading
+import time
+import urllib.request
 from pathlib import Path
 
 STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
@@ -117,60 +120,139 @@ class TTSError(RuntimeError):
     pass
 
 
-# Die geladenen Stimmen. Das Modell einmal von der Platte zu holen dauert
-# Sekunden — und Piper tat das bei JEDEM Vorlesen neu. Deshalb kam der Ton erst
-# nach vier Sekunden, egal wie kurz der Satz war. Einmal geladen, spricht es in
-# Sekundenbruchteilen.
-_geladen: dict[str, object] = {}
+# --- Der Piper-Prozess --------------------------------------------------------
+#
+# Piper läuft als EIGENES Programm, nicht mehr als Import in unserem Prozess.
+# Zwei Gründe:
+#
+#  1. Lizenz. Piper ist GPL (über espeak-ng, das die Aussprache liefert). Als
+#     getrennter Prozess hinter einer Schnittstelle bleibt unsere App ein
+#     eigenes Werk — entscheidend, sobald sie verkauft wird. Beim Kunden
+#     installiert der Einrichtungs-Weg Piper auf dessen Server; wir liefern
+#     Piper nicht mit, wir reden nur mit ihm.
+#  2. Robustheit. Stürzt Piper, stürzt nicht der Dienst — wir starten es neu.
+#
+# Der Prozess hält das Modell im Speicher, genau wie vorher der eigene. Deshalb
+# kommt der erste Satz weiterhin sofort — die Vier-Sekunden-Wartezeit von
+# früher (Modell bei jedem Vorlesen neu laden) bleibt Geschichte.
+
+# Nur der eigene Rechner. Piper selbst würde an 0.0.0.0 binden — dann stünde
+# das Vorlesen offen im Netz und jeder könnte den Server Aufsätze sprechen
+# lassen.
+_PORT = int(os.environ.get("HETZNER_TTS_PORT", "5005"))
+_URL = f"http://127.0.0.1:{_PORT}"
+
+# Was Piper zu erzählen hat (Startmeldungen, Fehler), landet hier — sonst wäre
+# es beim Fehlersuchen einfach weg.
+_LOG = Path.home() / ".hetzner-app" / "piper.log"
+
+_prozess: subprocess.Popen | None = None
+_sperre = threading.Lock()
 
 
-def _stimme_laden(name: str):
-    if name in _geladen:
-        return _geladen[name]
-
-    from piper import PiperVoice   # erst hier: der Import selbst dauert
-
-    datei = STIMMEN / f"{name}.onnx"
-    if not datei.exists():
-        raise TTSError(f"Die Stimme fehlt: {name}")
-
-    _geladen[name] = PiperVoice.load(str(datei))
-    return _geladen[name]
+def _laeuft() -> bool:
+    return _prozess is not None and _prozess.poll() is None
 
 
-def _finde_piper() -> str | None:
-    """Sucht Piper — auch dort, wo pip es hinlegt.
+def _gesund(frist: float = 1.0) -> bool:
+    try:
+        with urllib.request.urlopen(f"{_URL}/voices", timeout=frist):
+            return True
+    except OSError:
+        return False
 
-    Startet man den Server mit .venv/bin/python, liegt .venv/bin trotzdem
-    nicht im Suchpfad. Also erst dort nachsehen, wo unser eigenes Python liegt.
-    """
-    neben_python = Path(sys.executable).parent / "piper"
-    if neben_python.is_file():
-        return str(neben_python)
-    return shutil.which("piper")
+
+def _starten(warte: float = 20.0) -> None:
+    """Startet den Piper-Prozess, falls nötig, und wartet, bis er bereit ist."""
+    global _prozess
+    with _sperre:
+        if _laeuft() and _gesund():
+            return
+        if _prozess is not None and not _laeuft():
+            _prozess = None       # toter Rest vom letzten Mal
+
+        # Mit der gewählten Stimme starten, nicht mit der Standard-Stimme:
+        # So ist genau das Modell sofort warm, das gleich sprechen soll. Alle
+        # weiteren Stimmen lädt Piper bei Bedarf aus dem Stimmen-Ordner nach.
+        datei = modell()
+        if not datei.exists():
+            raise TTSError(f"Die Stimme fehlt: {datei.name}")
+
+        _LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(_LOG, "ab") as log:
+            _prozess = subprocess.Popen(
+                [
+                    sys.executable, "-m", "piper.http_server",
+                    "-m", str(datei),
+                    "--host", "127.0.0.1",
+                    "--port", str(_PORT),
+                    "--data-dir", str(STIMMEN),
+                ],
+                stdout=log,
+                stderr=log,
+            )
+
+    frist = time.monotonic() + warte
+    while time.monotonic() < frist:
+        if _gesund():
+            return
+        if not _laeuft():
+            raise TTSError(
+                "Der Piper-Prozess ist beim Start gestorben — siehe ~/.hetzner-app/piper.log"
+            )
+        time.sleep(0.2)
+    raise TTSError("Der Piper-Prozess wurde nicht rechtzeitig bereit.")
+
+
+def _beenden() -> None:
+    """Den Piper-Prozess sauber stoppen (beim Herunterfahren des Dienstes)."""
+    if _laeuft():
+        _prozess.terminate()
+        try:
+            _prozess.wait(3)
+        except subprocess.TimeoutExpired:
+            _prozess.kill()
+
+
+atexit.register(_beenden)
 
 
 def _sprechen(text: str, name: str) -> bytes:
     """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
     weiter antwortet, während gesprochen wird."""
     stem, sprecher = _zerlegen_stimme(name)
-    voice = _stimme_laden(stem)
 
-    # Bei mehrstimmigen Modellen den gewählten Sprecher setzen; bei
-    # Einzelstimmen bleibt es beim Standard.
-    from piper import SynthesisConfig
-    cfg = SynthesisConfig(speaker_id=sprecher) if sprecher is not None else None
+    anfrage: dict = {"text": text, "voice": stem}
+    if sprecher is not None:
+        # Bei mehrstimmigen Modellen den gewählten Sprecher setzen; bei
+        # Einzelstimmen bleibt es beim Standard.
+        anfrage["speaker_id"] = sprecher
+    daten = json.dumps(anfrage).encode()
 
-    puffer = io.BytesIO()
-    with wave.open(puffer, "wb") as wav:
-        voice.synthesize_wav(text, wav, syn_config=cfg)
-    return puffer.getvalue()
+    for versuch in (1, 2):
+        _starten()
+        try:
+            aufruf = urllib.request.Request(
+                _URL, data=daten, headers={"Content-Type": "application/json"}
+            )
+            # Lange Absätze brauchen ihre Zeit — großzügig bemessen.
+            with urllib.request.urlopen(aufruf, timeout=120) as antwort:
+                return antwort.read()
+        except OSError:
+            if versuch == 2:
+                raise TTSError(
+                    "Piper antwortet nicht — siehe ~/.hetzner-app/piper.log"
+                )
+            # Vermutlich ist der Prozess gestorben. Einmal neu starten,
+            # nochmal versuchen — erst dann aufgeben.
+            _beenden()
+    raise TTSError("Unerreichbar")   # nur für den Typ-Prüfer; oben kehrt immer zurück
 
 
 def vorladen() -> None:
-    """Die gewählte Stimme beim Start in den Speicher holen."""
+    """Den Piper-Prozess samt gewählter Stimme beim Start hochfahren."""
     try:
-        _stimme_laden(_zerlegen_stimme(gewaehlte_stimme())[0])
+        _starten()
     except Exception:
         # Fehlt die Stimme, merkt man es beim ersten Vorlesen — der Dienst darf
         # daran nicht scheitern.
