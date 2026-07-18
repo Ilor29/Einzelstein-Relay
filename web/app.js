@@ -1064,6 +1064,9 @@ document.addEventListener("click", (e) => {
 // diesem Gerät, nicht in der Wolke; ein zweites Handy sähe sie (noch) nicht.
 const BEFEHLE_SPEICHER = "eigene-schnellbefehle";
 
+// Welcher Befehl gerade bearbeitet wird (sein Index) — oder null beim Neuanlegen.
+let befehlBearbeitung = null;
+
 function eigeneBefehleLesen() {
   try { return JSON.parse(localStorage.getItem(BEFEHLE_SPEICHER)) || []; }
   catch { return []; }
@@ -1101,15 +1104,19 @@ function befehleListeZeichnen() {
   }
   befehle.forEach((b, i) => {
     const zeile = document.createElement("div");
-    zeile.className = "befehl-zeile";
+    zeile.className = "befehl-zeile" + (i === befehlBearbeitung ? " wird-bearbeitet" : "");
 
-    const text = document.createElement("div");
+    // Ein Tipp auf den Text lädt den Befehl ins Formular zum Ändern.
+    const text = document.createElement("button");
+    text.type = "button";
     text.className = "befehl-text";
+    text.setAttribute("aria-label", "Befehl bearbeiten");
     const name = document.createElement("strong");
     name.textContent = b.label;
     const satz = document.createElement("span");
     satz.textContent = b.text;
     text.append(name, satz);
+    text.addEventListener("click", () => befehlBearbeiten(i));
 
     const weg = document.createElement("button");
     weg.type = "button";
@@ -1120,6 +1127,7 @@ function befehleListeZeichnen() {
       const rest = eigeneBefehleLesen();
       rest.splice(i, 1);
       eigeneBefehleSchreiben(rest);
+      befehlFormZuruecksetzen();     // ein evtl. laufendes Bearbeiten passt nach dem Löschen nicht mehr
       befehleListeZeichnen();
       eigeneBefehleZeichnen();
     });
@@ -1129,9 +1137,28 @@ function befehleListeZeichnen() {
   });
 }
 
-function befehleBlattAuf() {
+// Formular leeren und zurück in den Neuanlegen-Zustand (Knopf: „Hinzufügen").
+function befehlFormZuruecksetzen() {
+  befehlBearbeitung = null;
   $("befehl-label").value = "";
   $("befehl-text").value = "";
+  $("befehl-hinzufuegen").textContent = "Hinzufügen";
+}
+
+// Einen bestehenden Befehl zum Ändern ins Formular holen.
+function befehlBearbeiten(i) {
+  const b = eigeneBefehleLesen()[i];
+  if (!b) return;
+  befehlBearbeitung = i;
+  $("befehl-label").value = b.label;
+  $("befehl-text").value = b.text;
+  $("befehl-hinzufuegen").textContent = "Speichern";
+  befehleListeZeichnen();       // hebt die Zeile hervor, die gerade dran ist
+  $("befehl-label").focus();
+}
+
+function befehleBlattAuf() {
+  befehlFormZuruecksetzen();
   befehleListeZeichnen();
   $("befehle-blatt").hidden = false;
 }
@@ -1148,13 +1175,21 @@ $("befehl-hinzufuegen").addEventListener("click", () => {
     return;
   }
   const befehle = eigeneBefehleLesen();
-  befehle.push({ label, text });
-  eigeneBefehleSchreiben(befehle);
-  $("befehl-label").value = "";
-  $("befehl-text").value = "";
-  befehleListeZeichnen();
-  eigeneBefehleZeichnen();
-  melde("Befehl angelegt.");
+  if (befehlBearbeitung !== null && befehle[befehlBearbeitung]) {
+    befehle[befehlBearbeitung] = { label, text };   // bestehenden ändern
+    eigeneBefehleSchreiben(befehle);
+    befehlFormZuruecksetzen();
+    befehleListeZeichnen();
+    eigeneBefehleZeichnen();
+    melde("Befehl geändert.");
+  } else {
+    befehle.push({ label, text });                  // neuen anlegen
+    eigeneBefehleSchreiben(befehle);
+    befehlFormZuruecksetzen();
+    befehleListeZeichnen();
+    eigeneBefehleZeichnen();
+    melde("Befehl angelegt.");
+  }
 });
 
 // Beim Start die gespeicherten Befehle ins Menü holen.
@@ -2398,6 +2433,20 @@ function favoritUmschalten(id) {
   catch { /* nicht merkbar — dann eben nur für diese Sitzung */ }
 }
 
+// Zuletzt benutzt — wann welcher Skill zuletzt kopiert/eingefügt wurde. Damit
+// rutscht, was du gerade oft brauchst, von selbst nach oben, ohne Stern.
+const BENUTZT_SPEICHER = "skill-benutzt";
+function benutztLesen() {
+  try { return JSON.parse(localStorage.getItem(BENUTZT_SPEICHER)) || {}; }
+  catch { return {}; }
+}
+function benutztMerken(id) {
+  const b = benutztLesen();
+  b[id] = Date.now();
+  try { localStorage.setItem(BENUTZT_SPEICHER, JSON.stringify(b)); }
+  catch { /* nicht merkbar — dann bleibt die Reihenfolge eben, wie sie ist */ }
+}
+
 // Ein paar Kategorien zum Anfangen — sie stehen beim Benennen gleich als
 // Vorschlag bereit, damit man nicht vor einem leeren Feld sitzt und rätselt,
 // was man eintippen könnte. Eigene Kategorien darf man trotzdem frei tippen.
@@ -2504,10 +2553,17 @@ function zeigeSkills() {
     return;
   }
 
-  // Favoriten nach oben. Die Grundsortierung (alphabetisch vom Server) bleibt
-  // sonst erhalten — moderne Browser sortieren stabil.
+  // Reihenfolge: erst Favoriten, dann zuletzt Benutztes (neuestes oben), dann
+  // der Rest in der Grundsortierung (alphabetisch vom Server — stabil erhalten).
   const favs = new Set(favoritenLesen());
-  sichtbar = [...sichtbar].sort((a, b) => (favs.has(b.id) ? 1 : 0) - (favs.has(a.id) ? 1 : 0));
+  const benutzt = benutztLesen();
+  const rang = (s) => (favs.has(s.id) ? 0 : benutzt[s.id] ? 1 : 2);
+  sichtbar = [...sichtbar].sort((a, b) => {
+    const ra = rang(a), rb = rang(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 1) return (benutzt[b.id] || 0) - (benutzt[a.id] || 0);  // Benutzte: neueste zuerst
+    return 0;                                                          // Favoriten & Ungenutzte: Reihenfolge lassen
+  });
 
   liste.replaceChildren(...sichtbar.map(skillKarte));
 }
@@ -2576,6 +2632,7 @@ function skillKarte(s) {
 async function skillKopieren(s, knopf) {
   try {
     await navigator.clipboard.writeText(s.befehl);
+    benutztMerken(s.id);
     knopf.classList.add("getan");
     knopf.querySelector("use").setAttribute("href", "#i-haken");
     setTimeout(() => {
@@ -2589,6 +2646,7 @@ async function skillKopieren(s, knopf) {
 
 function skillEinfuegen(s) {
   if (!bibZiel) return;
+  benutztMerken(s.id);
   // Nicht sofort abschicken: Der Befehl landet im Eingabefeld, damit du noch
   // etwas dahinter schreiben kannst — die meisten Skills nehmen ja einen Auftrag.
   const feld = $("eingabe");
