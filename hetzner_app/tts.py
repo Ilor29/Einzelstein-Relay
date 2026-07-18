@@ -23,38 +23,34 @@ from pathlib import Path
 STIMMEN = Path.home() / ".hetzner-app" / "stimmen"
 EINSTELLUNG = Path.home() / ".hetzner-app" / "stimme.txt"
 
-# Einzelstimmen: eine Datei = eine Stimme. Namen, die ein Mensch versteht statt
-# der technischen Piper-Kennungen. Die zwei "Jonas" sind dieselbe Stimme in zwei
-# Qualitäten: "Jonas" spricht schnell, "Jonas · fein" klingt etwas klarer, ist
-# aber deutlich langsamer.
+# Das Stimmen-Angebot: EINE Datei = eine Stimme. Namen, die ein Mensch versteht
+# statt der technischen Piper-Kennungen. Die zwei "Jonas" sind dieselbe Stimme in
+# zwei Qualitäten.
 #
-# Nur Stimmen mit klarer Lizenz fürs Verkaufen: Thorsten (Jonas/Max) und Kerstin
-# (Marie) stehen unter CC0 (gemeinfrei). Die früheren Lena/Finn/Sophia (aus dem
-# M-AILABS-Datensatz, Lizenz nicht bestätigbar) sind bewusst raus.
+# Bewusst NUR gemeinfreie Stimmen (CC0): Thorsten (Jonas/Jonas·fein/Max) und
+# Kerstin (Marie). Die sind ohne jede Auflage verkaufbar — keine Namensnennung
+# nötig. Die früheren MLS-Probestimmen (standen unter CC-BY, hätten einen Credit
+# gebraucht) und die lizenz-unklaren M-AILABS-Stimmen sind bewusst raus (Stand
+# 18.07.2026), damit an den Stimmen beim Verkauf keine Rechts-Auflage hängt.
+#
+# Tempo/Server (gemessen 18.07. auf dem kleinen Server): "Jonas" (medium) erzeugt
+# Piper ~5x schneller als der Ton dauert → läuft flüssig, auch auf schwacher CPU.
+# "Jonas · fein" (high) braucht etwa so lange wie der Ton selbst → auf dem kleinen
+# Server entstehen Lücken zwischen den Sätzen. Sie ist die Premium-Stimme für
+# einen stärkeren Server ("besserer Server, schönerer Klang"). Standard ist darum
+# bewusst die schnelle.
 KATALOG = {
-    "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell"),
-    "de_DE-thorsten-high": ("Jonas · fein", "ruhig, besonders klar, etwas langsamer"),
+    "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell — flüssig auch auf kleinem Server"),
+    "de_DE-thorsten-high": ("Jonas · fein", "besonders klar — braucht einen stärkeren Server"),
     "de_DE-kerstin-low": ("Marie", "weiblich, klar"),
     "de_DE-thorsten_emotional-medium": ("Max", "lebhaft, betont"),
 }
 
-# Mehrstimmige Modelle: aus EINER Datei viele Sprecher. Wir picken einzelne
-# heraus und geben ihnen einen Namen. Schlüssel: "<datei>#<sprecher-nr>".
-#
-# mls (medium) steht unter CC-BY 4.0 — verkaufbar MIT Namensnennung (Credit im
-# Impressum: "Stimmen: MLS, CC-BY 4.0"). Hier stecken die besseren, auch
-# weiblichen Stimmen. Die Sprecher-Nummern kommen aus einer Tonhöhen-Analyse.
-_MLS = "de_DE-mls-medium"
-MEHRSTIMMIG: dict[str, tuple[str, str]] = {
-    # Aus einer Tonhöhen-Analyse ausgesuchte weibliche Stimmen (über 210 Hz).
-    # Probe-Stimmen: Roli hört sie im Menü an und behält die schönste, der Rest
-    # fliegt dann wieder raus.
-    f"{_MLS}#12":  ("Klara (Probe)", "weiblich, hoch & klar"),
-    f"{_MLS}#15":  ("Nora (Probe)", "weiblich, hell"),
-    f"{_MLS}#102": ("Greta (Probe)", "weiblich, ruhig"),
-    f"{_MLS}#30":  ("Lea (Probe)", "weiblich, weich"),
-    f"{_MLS}#69":  ("Mia (Probe)", "weiblich, warm"),
-}
+# Mehrstimmige Modelle (ein Modell, viele Sprecher) bieten wir derzeit NICHT an —
+# die einzigen, die wir hatten (MLS), standen unter CC-BY. Die Maschinerie dafür
+# (siehe _zerlegen_stimme und speaker_id in _sprechen) bleibt für später stehen;
+# das Angebot ist leer.
+MEHRSTIMMIG: dict[str, tuple[str, str]] = {}
 
 STANDARD = "de_DE-thorsten-medium"
 

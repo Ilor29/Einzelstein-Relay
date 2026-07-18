@@ -37,11 +37,14 @@ hiermit richtiggestellt.
 Getrennt von der Piper-Software zu betrachten — die Modelle haben eigene Lizenzen
 (siehe die Kommentare in `hetzner_app/tts.py`):
 
-- **Thorsten** („Jonas", „Jonas · fein", „Max") und **Kerstin** („Marie") — als
-  Stimmen mit klarer, verkaufbarer Lizenz ausgewählt.
-- **MLS (medium)** — steht unter **CC-BY 4.0**: verkaufbar, aber **nur mit
-  Namensnennung**. Wird die MLS-Stimme mitgeliefert, muss im Impressum/Abspann
-  ein Credit stehen: „Stimmen: MLS, CC-BY 4.0". Sonst die MLS-Stimme entfernen.
+- **Angeboten werden nur gemeinfreie Stimmen (CC0):** **Thorsten** („Jonas",
+  „Jonas · fein", „Max") und **Kerstin** („Marie"). CC0 ist ohne jede Auflage
+  kommerziell nutzbar — **keine Namensnennung nötig**.
+- **Entfernt am 18.07.2026:** die **MLS-Probestimmen** (standen unter CC-BY 4.0,
+  hätten einen Credit gebraucht) sowie lizenz-unklare M-AILABS-Stimmen. Damit
+  hängt an den ausgelieferten Stimmen **keine** Lizenz-Auflage mehr.
+- Vor Verkauf pro Stimme die CC0-Angabe an der Modellkarte gegenprüfen
+  (Thorsten ist gesichert CC0; Kerstin bestätigen).
 
 ---
 
