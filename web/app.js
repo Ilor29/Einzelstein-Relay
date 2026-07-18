@@ -2382,6 +2382,22 @@ let bearbeiteterSkill = null;
 const skillName = (s) => s.name || s.original_name;
 const skillText = (s) => s.beschreibung || s.original_beschreibung;
 
+// Favoriten — die Skills, die du dauernd brauchst. Ihre IDs liegen im
+// Gerätespeicher; in der Liste rutschen sie nach oben, damit du sie sofort hast.
+const FAV_SPEICHER = "skill-favoriten";
+function favoritenLesen() {
+  try { return JSON.parse(localStorage.getItem(FAV_SPEICHER)) || []; }
+  catch { return []; }
+}
+function istFavorit(id) { return favoritenLesen().includes(id); }
+function favoritUmschalten(id) {
+  const favs = favoritenLesen();
+  const i = favs.indexOf(id);
+  if (i >= 0) favs.splice(i, 1); else favs.push(id);
+  try { localStorage.setItem(FAV_SPEICHER, JSON.stringify(favs)); }
+  catch { /* nicht merkbar — dann eben nur für diese Sitzung */ }
+}
+
 // Ein paar Kategorien zum Anfangen — sie stehen beim Benennen gleich als
 // Vorschlag bereit, damit man nicht vor einem leeren Feld sitzt und rätselt,
 // was man eintippen könnte. Eigene Kategorien darf man trotzdem frei tippen.
@@ -2488,6 +2504,11 @@ function zeigeSkills() {
     return;
   }
 
+  // Favoriten nach oben. Die Grundsortierung (alphabetisch vom Server) bleibt
+  // sonst erhalten — moderne Browser sortieren stabil.
+  const favs = new Set(favoritenLesen());
+  sichtbar = [...sichtbar].sort((a, b) => (favs.has(b.id) ? 1 : 0) - (favs.has(a.id) ? 1 : 0));
+
   liste.replaceChildren(...sichtbar.map(skillKarte));
 }
 
@@ -2500,6 +2521,7 @@ function skillKarte(s) {
     <div class="bib-kopf">
       <span class="bib-name"></span>
       ${s.kategorie ? '<span class="bib-fach"></span>' : ""}
+      <button class="bib-stern" aria-label="Als Favorit merken"></button>
     </div>
     <div class="bib-desc"></div>
     <div class="bib-fuss">
@@ -2517,6 +2539,20 @@ function skillKarte(s) {
   if (s.kategorie) el.querySelector(".bib-fach").textContent = s.kategorie;
   el.querySelector(".bib-desc").textContent = skillText(s) || "—";
   el.querySelector(".bib-herkunft").textContent = s.herkunft;
+
+  // Der Stern: Favorit an/aus. Zeigt gefüllt/leer und färbt sich, wenn an.
+  const stern = el.querySelector(".bib-stern");
+  const sternMalen = () => {
+    const an = istFavorit(s.id);
+    stern.textContent = an ? "★" : "☆";
+    stern.classList.toggle("an", an);
+  };
+  sternMalen();
+  stern.addEventListener("click", (e) => {
+    e.stopPropagation();          // nicht gleichzeitig das Benennen-Blatt öffnen
+    favoritUmschalten(s.id);
+    zeigeSkills();                // neu zeichnen — Favoriten rutschen nach oben
+  });
 
   // Ein Tipp auf die Karte: benennen.
   el.addEventListener("click", () => skillBearbeiten(s));

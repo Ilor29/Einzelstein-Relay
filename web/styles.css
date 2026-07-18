@@ -1359,6 +1359,24 @@ html, body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Der Favoriten-Stern rechts in der Kopfzeile. */
+.bib-stern {
+  margin-left: auto;      /* schiebt sich (und ein evtl. Fach davor) nach rechts */
+  flex: none;
+  border: 0;
+  background: none;
+  padding: .1rem .25rem;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--schrift-schwach);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bib-stern.an { color: var(--akzent); }
+/* Steht ein Fach-Schild daneben, braucht der Stern die auto-Marge nicht mehr —
+   dann schiebt schon das Fach die beiden nach rechts. */
+.bib-fach + .bib-stern { margin-left: .1rem; }
+
 /* Das Fach — ein kleines Schild rechts, in der Akzentfarbe. */
 .bib-fach {
   margin-left: auto;
