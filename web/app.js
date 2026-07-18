@@ -1872,20 +1872,52 @@ let sprechLauf = 0;           // Zähler, mit dem ein alter Vortrag abbricht
 let restStuecke = [];         // was vom Vortrag noch aussteht
 let restText = "";            // beim Klingeln abgeschnitten — hierher gerettet
 
-// Die kleine Dauer-Anzeige neben dem Lautsprecher (wie Grok „0:15 / 4:20").
-// „gerade / gesamt": links wie weit du bist, rechts wie lang das bisher
-// Bekannte ist. Im Folge-Modus wächst „gesamt" mit, während Claude nachschreibt.
-const dauerEl = $("vorlese-dauer");
-let dauerTakt = null;         // der Sekundentakt, der die Zahl mitlaufen lässt
+// Die Vorlese-Leiste (Abspiel-Pille über der Eingabe): Pause/Weiter, die
+// verstrichene Zeit und ein Kreuz. Erscheint nur während des Vorlesens.
+const leisteEl = $("vorlese-leiste");
+const zeitEl = $("vl-zeit");
+const pauseKnopf = $("vl-pause");
+let dauerTakt = null;         // der Sekundentakt, der die Zeit mitlaufen lässt
+let manuellPausiert = false;  // von Hand pausiert — unterscheidet vom Anruf
 
 function zeitFormat(sek) {
   sek = Math.max(0, Math.round(sek));
   return Math.floor(sek / 60) + ":" + String(sek % 60).padStart(2, "0");
 }
 
+// Das Pause/Weiter-Symbol: zwei Balken, wenn es läuft (Druck pausiert); ein
+// Dreieck, wenn es steht (Druck spielt weiter).
+function pauseSymbol(pausiert) {
+  pauseKnopf?.querySelector("use")?.setAttribute("href", pausiert ? "#i-abspielen" : "#i-pause");
+  pauseKnopf?.setAttribute("aria-label", pausiert ? "Weiter" : "Pause");
+}
+
+function leisteAn() {
+  manuellPausiert = false;
+  pauseSymbol(false);
+  if (zeitEl) zeitEl.textContent = "0:00";
+  if (leisteEl) leisteEl.hidden = false;
+}
+
 function dauerAus() {
   if (dauerTakt) { clearInterval(dauerTakt); dauerTakt = null; }
-  if (dauerEl) { dauerEl.hidden = true; dauerEl.textContent = ""; }
+  manuellPausiert = false;
+  if (leisteEl) leisteEl.hidden = true;
+}
+
+// Ein Schlaf, der die TON-Uhr abwartet, nicht die Wanduhr: Wir warten, bis
+// `hörCtx.currentTime` die Zielzeit erreicht. Diese Uhr steht still, solange der
+// Kontext pausiert ist — so hält der ganze Vortrag bei „Pause" an, ohne dass die
+// Einreih-Schleife im Leerlauf weiterrennt und zu früh alles wegräumt. `abbruch`
+// löst sofort aus, wenn der Vortrag gestoppt oder überholt wurde.
+function warteBisTonzeit(ziel, abbruch) {
+  return new Promise((fertig) => {
+    const pruefe = () => {
+      if (!hörCtx || abbruch() || hörCtx.currentTime >= ziel) { fertig(); return; }
+      setTimeout(pruefe, 80);
+    };
+    pruefe();
+  });
 }
 
 function tonKontext() {
@@ -1988,8 +2020,10 @@ function pruefeObTonZurueck() {
 
 function tonKontextUeberwachen(c) {
   c.addEventListener("statechange", () => {
-    // Ton weg, obwohl wir mitten im Satz sind: Da klingelt etwas.
-    if (spricht && c.state !== "running") {
+    // Ton weg, obwohl wir mitten im Satz sind: Da klingelt etwas. Eine
+    // Hand-Pause (manuellPausiert) hält den Ton bewusst an — die ist gemeint,
+    // nicht ein Anruf, also hier nicht abbrechen.
+    if (spricht && !manuellPausiert && c.state !== "running") {
       unterbrechen();
       return;
     }
@@ -2099,13 +2133,12 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     // (das Holen dauert). `startZeit` ist dann das Ende des zuletzt Eingereihten,
     // also ist „startZeit − sprechBeginn" die bislang bekannte Gesamtdauer.
     let sprechBeginn = null;
-    dauerEl.hidden = false;
-    dauerEl.textContent = "0:00";
+    leisteAn();
     dauerTakt = setInterval(() => {
       if (sprechBeginn === null) return;
       const gesamt = Math.max(0, startZeit - sprechBeginn);
       const jetzt = Math.min(Math.max(0, c.currentTime - sprechBeginn), gesamt);
-      dauerEl.textContent = zeitFormat(jetzt) + " / " + zeitFormat(gesamt);
+      if (zeitEl) zeitEl.textContent = zeitFormat(jetzt);
     }, 500);
 
     while (true) {
@@ -2143,16 +2176,15 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
       aktiveQuellen.push(quelle);
 
       // Bis kurz vor das Ende warten — dann hängen wir das (bereits dekodierte)
-      // nächste Stück an, bevor überhaupt Stille entstehen kann.
-      const wartenMs = (startZeit - c.currentTime) * 1000 - 250;
-      await new Promise((r) => setTimeout(r, Math.max(0, wartenMs)));
+      // nächste Stück an, bevor überhaupt Stille entstehen kann. Gemessen an der
+      // Ton-Uhr, damit „Pause" hier sauber anhält (siehe warteBisTonzeit).
+      await warteBisTonzeit(startZeit - 0.25, abgebrochen);
       if (abgebrochen()) return;
       i++;
     }
 
     // Auf das Ende des letzten Stücks warten, dann aufräumen.
-    const restMs = (startZeit - c.currentTime) * 1000;
-    await new Promise((r) => setTimeout(r, Math.max(0, restMs)));
+    await warteBisTonzeit(startZeit, abgebrochen);
     if (!abgebrochen()) stille();
   } catch (err) {
     if (lauf === sprechLauf) {
@@ -2219,6 +2251,26 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     alert(err.message);
   }
 });
+
+// Pause/Weiter der Leiste. Wir halten den ganzen Ton-Kontext an (suspend) und
+// lassen ihn wieder an (resume) — so bleibt die eingereihte Kette stehen und
+// spielt lückenlos weiter, ohne dass etwas neu geholt werden muss. Das Merken
+// als „von Hand pausiert" verhindert, dass der Anruf-Melder das als Anruf nimmt.
+async function pauseUmschalten() {
+  if (!hörCtx || (!spricht && !manuellPausiert)) return;
+  if (manuellPausiert) {
+    manuellPausiert = false;              // erst freigeben, dann anwerfen
+    pauseSymbol(false);
+    try { await hörCtx.resume(); } catch { /* dann bleibt's eben stehen */ }
+  } else {
+    manuellPausiert = true;               // erst merken, dann anhalten
+    pauseSymbol(true);
+    try { await hörCtx.suspend(); } catch { /* dann eben nicht */ }
+  }
+}
+
+$("vl-pause").addEventListener("click", pauseUmschalten);
+$("vl-schliessen").addEventListener("click", stille);
 
 // --- Freisprech-Modus --------------------------------------------------------
 //

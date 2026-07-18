@@ -202,6 +202,16 @@
       <path d="M7 7l10 10M17 7L7 17"/>
     </g>
 
+    <!-- Pause (zwei Balken) und Weiter (Dreieck): die Steuerung der
+         Vorlese-Leiste. -->
+    <g id="i-pause" fill="currentColor" stroke="none">
+      <rect x="7" y="6" width="3.4" height="12" rx="1.1"/>
+      <rect x="13.6" y="6" width="3.4" height="12" rx="1.1"/>
+    </g>
+    <g id="i-abspielen" fill="currentColor" stroke="none">
+      <path d="M8 6.2v11.6a1 1 0 0 0 1.5.87l9.2-5.8a1 1 0 0 0 0-1.74L9.5 5.33A1 1 0 0 0 8 6.2z"/>
+    </g>
+
     <!-- Eine Uhr mit Pfeil: den Stand festhalten, damit man später zurück kann. -->
     <g id="i-sichern" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
@@ -288,8 +298,6 @@
     <button id="knopf-vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">
       <svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>
     </button>
-    <!-- Läuft nur während des Vorlesens mit: gerade gehört / gesamt bekannt. -->
-    <span id="vorlese-dauer" class="vorlese-dauer" aria-hidden="true" hidden></span>
     <button id="knopf-freisprech" class="knopf-blank" aria-label="Freisprech-Modus: Antwort vorlesen und danach Mikrofon öffnen">
       <svg viewBox="0 0 24 24"><use href="#i-freisprech"/></svg>
     </button>
@@ -334,6 +342,19 @@
   <!-- Ein-Tipp-Befehle fürs Immerwiederkehrende. Wischbar, damit viele
        hineinpassen, ohne die Eingabe zu verdrängen. Der data-text ist, was
        wirklich an Claude geht — die Aufschrift bleibt kurz. -->
+  <!-- Die Vorlese-Leiste, nach Vorbild einer Abspielleiste: erscheint nur,
+       während vorgelesen wird, und schwebt über der Eingabe. Pause/Weiter, die
+       verstrichene Zeit und ein Kreuz zum Beenden. Satz-vor/-zurück und Tempo
+       kommen als eigener Stein dazu. -->
+  <div id="vorlese-leiste" class="vorlese-leiste" hidden>
+    <button type="button" id="vl-pause" class="vl-knopf" aria-label="Pause">
+      <svg viewBox="0 0 24 24"><use href="#i-pause"/></svg>
+    </button>
+    <span id="vl-zeit" class="vl-zeit" aria-hidden="true">0:00</span>
+    <button type="button" id="vl-schliessen" class="vl-knopf" aria-label="Vorlesen beenden">
+      <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+    </button>
+  </div>
   <div id="schnellbefehle" class="schnellbefehle">
     <div class="chip-reihe">
       <button type="button" class="chip" data-text="Ja, super — leg los.">Los geht's</button>
