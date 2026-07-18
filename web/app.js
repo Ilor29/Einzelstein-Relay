@@ -608,6 +608,26 @@ $("verlauf").addEventListener("scroll", () => {
   folgeUnten = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
 });
 
+// Aufeinanderfolgende Claude-Stücke zu EINER Antwort zusammenfassen. Eine
+// Antwort mit Werkzeug-Einsatz zerfällt in der Mitschrift in mehrere Text-Stücke
+// (Text · Werkzeug · Text …). Die Werkzeug-Stücke fliegen hier ohnehin raus —
+// dann gehören die übrigen Text-Stücke zusammen und bekommen EINEN Lautsprecher
+// und EINEN Kopieren-Knopf, statt dass man jedes Bruchstück einzeln anhören muss.
+function zusammenfassen(bloecke) {
+  const raus = [];
+  for (const b of bloecke) {
+    if (b.typ === "werkzeug") continue;
+    const letzter = raus[raus.length - 1];
+    if (b.typ === "claude" && letzter && letzter.typ === "claude") {
+      // Ans Laufende anhängen — mit Leerzeile, damit Absätze erhalten bleiben.
+      letzter.text = `${letzter.text}\n\n${b.text}`;
+    } else {
+      raus.push({ ...b });     // Kopie: das Original im Zwischenspeicher bleibt unberührt
+    }
+  }
+  return raus;
+}
+
 async function ladeVerlauf() {
   if (!aktuelleSitzung || imTerminal) return;
 
@@ -631,9 +651,7 @@ async function ladeVerlauf() {
   // Die Werkzeug-Kästen ("Bash(…)", "Read(…)") gehören ins Terminal, nicht ins
   // Gespräch. Die Lese-Ansicht zeigt, was Claude *sagt* — wer sehen will, was es
   // *tut*, schaltet oben aufs Terminal.
-  behaelter.replaceChildren(
-    ...bloecke.filter((b) => b.typ !== "werkzeug").map(verlaufBlock)
-  );
+  behaelter.replaceChildren(...zusammenfassen(bloecke).map(verlaufBlock));
 
   // Ans Ende ziehen, wenn wir mitlaufen sollen — aber erst in der nächsten
   // Bildwiederholung, wenn der neue Inhalt wirklich vermessen ist. Sofort wäre
@@ -2282,17 +2300,30 @@ navigator.serviceWorker?.addEventListener("message", async (e) => {
 
 // --- Einstellungen: die Stimme ------------------------------------------------
 
-// Der Text der Stimmprobe. Bewusst neutral: spricht niemanden mit Namen an und
-// nennt keine fremde Marke — er läuft ja auch in der verkauften Fassung, wo ihn
-// Fremde hören. Zeigt die Stimme in ihrer Bandbreite: ruhige Sätze, eine Frage,
-// ein Innehalten am Komma.
-const PROBE =
-  "Willkommen. Nehmen Sie sich einen Augenblick und hören Sie einfach zu. " +
-  "Eine gute Stimme hat es nicht eilig — sie nimmt sich Zeit für den Satz, " +
-  "hält kurz inne beim Komma und lässt das letzte Wort in Ruhe ausklingen. " +
-  "Sie liest Ihnen vor, was Sie sonst selbst lesen müssten: eine Notiz am " +
-  "Morgen, einen längeren Text am Abend, unterwegs und ganz nebenbei. Passt " +
-  "dieser Klang zu Ihnen? Dann haben Sie Ihre Stimme gefunden.";
+// Die Texte der Stimmprobe — VIER verschiedene, jeder rund fünfzehn Sekunden.
+// Beim Durchhören der Stimmen bekommt jede einen anderen, damit man nicht
+// viermal dasselbe hört. Alle bewusst neutral: sprechen niemanden mit Namen an
+// und nennen keine fremde Marke (die Probe läuft auch in der verkauften Fassung,
+// wo Fremde sie hören), und sie sind selbst geschrieben — also ohne jede
+// Urheberrechts- oder GEMA-Frage. Jeder zeigt die Stimme etwas anders: mal eine
+// Frage, mal ein Innehalten, mal eine Zahl.
+const PROBEN = [
+  "Willkommen. Hören Sie einfach einen Augenblick zu. Eine gute Stimme hat es " +
+  "nicht eilig — sie nimmt sich Zeit für den Satz und lässt das letzte Wort in " +
+  "Ruhe ausklingen. Passt dieser Klang zu Ihnen?",
+
+  "So klingt es, wenn Ihnen vorgelesen wird, was Sie sonst selbst lesen " +
+  "müssten. Eine kurze Notiz am Morgen, ein längerer Text am Abend — unterwegs, " +
+  "freihändig und ganz nebenbei.",
+
+  "Manchmal ist das Schönste, kurz innezuhalten. Ein Wort in Ruhe hören, dem " +
+  "nächsten Satz nachlauschen, und dabei merken, dass nichts drängt. So darf " +
+  "sich Zuhören anfühlen.",
+
+  "Eine klare Stimme spricht jeden Satz gleich sicher — eine ruhige Aussage, " +
+  "eine Frage, oder eine Zahl wie dreihundertsiebenundzwanzig. Klingt das gut " +
+  "für Sie? Dann bleiben Sie dabei.",
+];
 
 $("knopf-einstellungen").addEventListener("click", async () => {
   stoppeListe();
@@ -2313,7 +2344,13 @@ $("knopf-einstellungen").addEventListener("click", async () => {
     return;
   }
 
+  let probeNr = 0;
   for (const s of stimmen) {
+    // Jede Stimme bekommt einen anderen Probetext (reihum) — so hört man beim
+    // Durchprobieren nicht viermal denselben Satz.
+    const probeText = PROBEN[probeNr % PROBEN.length];
+    probeNr++;
+
     const el = document.createElement("div");
     el.className = "ordner" + (s.gewaehlt ? " gewaehlt" : "");
     el.innerHTML = `
@@ -2334,7 +2371,7 @@ $("knopf-einstellungen").addEventListener("click", async () => {
         stille();
         return;
       }
-      await sprich(PROBE, knopf, s.name);
+      await sprich(probeText, knopf, s.name);
     });
 
     // Wählen.
