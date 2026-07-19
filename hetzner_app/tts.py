@@ -189,6 +189,13 @@ def _starten(warte: float = 20.0) -> None:
         # Der Kindprozess braucht unsere Geheimnisse nicht (Zugangswort in
         # HETZNER_*-Variablen) — also bekommt er sie gar nicht erst.
         umgebung = {k: v for k, v in os.environ.items() if not k.startswith("HETZNER_")}
+        # Die glibc-Speicherverwaltung zähmen: Ohne Deckel legt sie je Faden
+        # eigene Speicher-Arenen an, und Piper hielt so 1,2 GB fest — mit
+        # Deckel sind es ~160 MB nach dem Start und ~250 MB beim Sprechen,
+        # bei UNVERÄNDERTEM Tempo (gemessen 19.07.: Jonas 0,16× Echtzeit, wie
+        # vorher). Auf der kleinen Maschine ist das der Unterschied zwischen
+        # eng und entspannt.
+        umgebung.setdefault("MALLOC_ARENA_MAX", "2")
         # "wb": Bei jedem Prozess-Start beginnt das Log frisch. So enthält es
         # immer den letzten Lauf — und wächst nicht über Monate ins Uferlose.
         with open(_LOG, "wb") as log:
