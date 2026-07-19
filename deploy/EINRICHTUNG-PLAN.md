@@ -4,6 +4,27 @@ Das Herz des Produkts: Ein Käufer ohne Entwickler-Wissen bekommt seinen
 eigenen Claude-Code-Server aufs Handy. Dieses Dokument hält fest, was dafür
 gebaut werden muss, was schon da ist, und welche Entscheidungen offen sind.
 
+## Geschäftsmodell — festgelegt (Roli, 20.07.2026)
+
+- **Verkauft wird NUR die App**, nicht der Server. Wir hosten/betreiben NICHTS
+  für den Kunden — bewusst, für minimales Risiko (keine fremden Daten, keine
+  Haftung, keine Infrastruktur-Pflege). Weg A (nackte IP + IP-Zertifikat) ist
+  damit gesetzt; eigene Kunden-Domains (Weg B) sind RAUS.
+- **Vertrieb über den App Store**, als **native Hülle** um die PWA (Wrapper).
+  **Android/Play Store zuerst**, Apple später prüfen. Der Kunde installiert
+  also wie jede App — kein Code-Download, kein Kommandozeilen-Kram.
+- **Zwei Teile, ein Erlebnis:** Für den Kunden ist es „eine App aus dem Store".
+  Technisch gehören zusammen: (1) die **Handy-App** (die Hülle/Fernbedienung
+  aus dem Store) und (2) ein **kleines Server-Programm** (der „Motor", der mit
+  Claude Code über tmux redet). Die App richtet den Motor beim ersten Start auf
+  dem Kunden-Server ein. → Der Motor-Auslieferungsweg ist der eine noch offene
+  Entwurf (siehe Frage b unten); die Handy-Hälfte ist über den Store gelöst.
+- **Kopplung per QR-Code** (Rolis Wunsch, früher schon angedacht, gut befunden):
+  Der Server zeigt einen QR; die App scannt ihn und bekommt in EINEM Schritt
+  (a) die Server-Adresse und (b) einen Einmal-Schlüssel zur Freischaltung.
+  Kein Abtippen von IP oder Code → laientauglich und risikoärmer als ein
+  getippter Kopplungscode. Ersetzt den getippten Code aus dem früheren Plan.
+
 ## Das Zielbild (die Reise des Kunden)
 
 1. **Kaufen.** Kunde kauft die Einzelstein Fernbedienung (Digistore24 o. Ä.).
@@ -105,10 +126,11 @@ API-Schlüssel-Gehampel nötig.
 
 ## Offene Entscheidungen für Roli
 
-- **Adresse:** Weg A (nackte IP mit IP-Zertifikat, empfohlen) — oder wollen
-  wir Kunden schöne Einzelstein-Unterdomains anbieten und die Abhängigkeit
-  in Kauf nehmen?
-- **Auslieferung des Codes:** Wie kommt die App auf den Kunden-Server? Das
-  Repo ist privat. (Tarball beim Kauf? Eigenes Auslieferungs-Repo mit
-  Kauf-Schlüssel? Entscheidung vor Stein 3 nötig.)
-- **Kopplungscode-Weg** so wie oben beschrieben in Ordnung?
+- ~~Adresse~~ — ENTSCHIEDEN: Weg A, nackte IP. Weg B raus.
+- ~~Kopplung~~ — ENTSCHIEDEN: QR-Code statt getipptem Code.
+- **(b) Auslieferung des „Motors" auf den Kunden-Server** — WEITER OFFEN, der
+  eine Knackpunkt. Das Repo ist privat. Wie landet das Server-Programm auf dem
+  Server? (Tarball beim Kauf / eigenes Auslieferungs-Repo mit Kauf-Schlüssel,
+  löst zugleich die Update-Pflicht / die App bündelt es und schiebt es rauf.)
+  Entscheidung vor dem Cloud-Init-/Setup-Stein nötig.
+- **Apple später:** ob eine iOS-Fassung machbar/gewollt ist — erst nach Android.
