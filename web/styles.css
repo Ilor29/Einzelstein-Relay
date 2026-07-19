@@ -269,6 +269,25 @@ html, body {
 }
 .befehl-weg:active { background: var(--linie); }
 
+/* Der Stift-Knopf zum Ändern — gleiche runde Form wie das Löschen, aber im
+   Akzent, damit „hier kann man bearbeiten" sofort ins Auge fällt. */
+.befehl-stift {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--erhoben-2);
+  color: var(--akzent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.befehl-stift svg { width: 18px; height: 18px; }
+.befehl-stift:active { background: var(--linie); }
+
 /* Die Symbol-Legende in den Einstellungen: Icon links, Erklärung rechts. */
 .symbol-gruppe {
   margin: .7rem 0 .1rem;

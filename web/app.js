@@ -1230,6 +1230,15 @@ function befehleListeZeichnen() {
     text.append(name, satz);
     text.addEventListener("click", () => befehlBearbeiten(i));
 
+    // Ein sichtbarer Stift-Knopf — damit man das Ändern nicht erraten muss (der
+    // Tipp auf den Namen tut dasselbe, war aber unsichtbar).
+    const stift = document.createElement("button");
+    stift.type = "button";
+    stift.className = "befehl-stift";
+    stift.setAttribute("aria-label", "Befehl ändern");
+    stift.innerHTML = '<svg viewBox="0 0 24 24"><use href="#i-stift"/></svg>';
+    stift.addEventListener("click", () => befehlBearbeiten(i));
+
     const weg = document.createElement("button");
     weg.type = "button";
     weg.className = "befehl-weg";
@@ -1252,7 +1261,7 @@ function befehleListeZeichnen() {
     leiste.textContent = "Leiste";
     leiste.addEventListener("click", () => befehlLeisteUmschalten(i));
 
-    zeile.append(text, leiste, weg);
+    zeile.append(text, stift, leiste, weg);
     liste.appendChild(zeile);
   });
 }
