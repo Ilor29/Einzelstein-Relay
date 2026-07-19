@@ -356,12 +356,13 @@
     </button>
   </div>
   <div id="schnellbefehle" class="schnellbefehle">
+    <!-- Die sichtbare Reihe ist komplett selbst bestimmt: Alle Befehle — auch
+         die früher fest eingebauten „Los geht's/Weiter/Zusammenfassen" — kommen
+         jetzt aus dem Gerätespeicher und werden von der App hier eingefüllt (die
+         mit „Leiste"-Schalter). Beim allerersten Start legt die App die alten
+         Sätze als Standard an; ändern, löschen, umsortieren geht über „Eigene
+         Befehle". -->
     <div class="chip-reihe">
-      <button type="button" class="chip" data-text="Ja, super — leg los.">Los geht's</button>
-      <button type="button" class="chip" data-text="Mach bitte weiter.">Weiter</button>
-      <button type="button" class="chip" data-text="Fass mir das bitte kurz zusammen.">Zusammenfassen</button>
-      <!-- Hierhin füllt die App deine eigenen Befehle, die du „in die Leiste"
-           gestellt hast — sie stehen dann neben den festen dreien. -->
       <span id="chip-reihe-eigene"></span>
     </div>
     <!-- Der Zauberstab klappt die weiteren Befehle nach OBEN auf — als kleines
@@ -369,9 +370,8 @@
          Seite scrollen zu müssen. -->
     <div class="befehle-wand-wrap">
       <div id="befehle-mehr" class="befehle-mehr" hidden>
-        <button type="button" class="chip-menu" data-text="Fass dich bitte kürzer.">Kürzer</button>
-        <button type="button" class="chip-menu" data-text="Erklär's mir bitte einfacher.">Einfacher</button>
-        <!-- Deine eigenen Befehle — kommen aus dem Gerätespeicher. -->
+        <!-- Auch die Menü-Befehle („Kürzer", „Einfacher" …) kommen aus dem
+             Gerätespeicher und werden hier eingefüllt — alle frei änderbar. -->
         <div id="eigene-befehle"></div>
         <button type="button" id="knopf-befehle-verwalten" class="chip-menu chip-menu-aktion">＋ Eigene Befehle</button>
       </div>

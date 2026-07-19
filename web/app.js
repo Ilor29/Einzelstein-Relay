@@ -1127,15 +1127,55 @@ document.addEventListener("click", (e) => {
 // Knopf, ein fertiger Satz dahinter. Sie liegen im Gerätespeicher — also auf
 // diesem Gerät, nicht in der Wolke; ein zweites Handy sähe sie (noch) nicht.
 const BEFEHLE_SPEICHER = "eigene-schnellbefehle";
+// Merker, dass die Erstbefüllung mit den Standard-Sätzen schon lief. Ohne den
+// würde ein gelöschter Standard bei jedem Laden wiederkommen.
+const BEFEHLE_INIT = "eigene-schnellbefehle-init";
+
+// Die früher fest verdrahteten Sätze — jetzt nur noch die STARTausstattung. Beim
+// allerersten Laden landen sie im Gerätespeicher und sind ab dann ganz normale,
+// änder- und löschbare Befehle. Die ersten drei stehen in der sichtbaren Leiste.
+const STANDARD_BEFEHLE = [
+  { label: "Los geht's",     text: "Ja, super — leg los.",             leiste: true  },
+  { label: "Weiter",         text: "Mach bitte weiter.",               leiste: true  },
+  { label: "Zusammenfassen", text: "Fass mir das bitte kurz zusammen.", leiste: true  },
+  { label: "Kürzer",         text: "Fass dich bitte kürzer.",          leiste: false },
+  { label: "Einfacher",      text: "Erklär's mir bitte einfacher.",    leiste: false },
+];
 
 // Welcher Befehl gerade bearbeitet wird (sein Index) — oder null beim Neuanlegen.
 let befehlBearbeitung = null;
 
+// Die Befehle im Arbeitsspeicher — die Quelle der Wahrheit. Der Gerätespeicher
+// ist nur die Sicherung nach außen; klappt die nicht (strenger Privatmodus),
+// gelten die Befehle wenigstens für diese Sitzung, statt ganz zu verschwinden.
+let eigeneBefehle = null;
+
 function eigeneBefehleLesen() {
-  try { return JSON.parse(localStorage.getItem(BEFEHLE_SPEICHER)) || []; }
-  catch { return []; }
+  if (eigeneBefehle) return eigeneBefehle;
+
+  let gespeichert = null;
+  try { gespeichert = JSON.parse(localStorage.getItem(BEFEHLE_SPEICHER)); } catch { /* kein Speicher */ }
+  gespeichert = Array.isArray(gespeichert) ? gespeichert : null;
+
+  let schonBefuellt = null;
+  try { schonBefuellt = localStorage.getItem(BEFEHLE_INIT); } catch { /* kein Speicher */ }
+
+  if (schonBefuellt) {
+    // Schon umgestellt: nehmen, was da ist (auch eine leere Liste — dann hat man
+    // bewusst alles gelöscht, und nichts kommt ungefragt zurück).
+    eigeneBefehle = gespeichert || [];
+  } else {
+    // Erstmalige Umstellung: die Standard-Sätze VOR die evtl. schon vorhandenen
+    // eigenen stellen, dann als erledigt merken.
+    eigeneBefehle = [...STANDARD_BEFEHLE, ...(gespeichert || [])];
+    eigeneBefehleSchreiben(eigeneBefehle);
+    try { localStorage.setItem(BEFEHLE_INIT, "1"); } catch { /* dann eben diese Sitzung */ }
+  }
+  return eigeneBefehle;
 }
+
 function eigeneBefehleSchreiben(liste) {
+  eigeneBefehle = liste;      // immer im Arbeitsspeicher halten
   try { localStorage.setItem(BEFEHLE_SPEICHER, JSON.stringify(liste)); }
   catch { /* nicht merkbar — dann gelten sie eben nur für diese Sitzung */ }
 }
