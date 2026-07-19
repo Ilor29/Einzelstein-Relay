@@ -48,11 +48,22 @@ KATALOG = {
     # gemeinfreie weibliche Stimme als Ersatz.
 }
 
-# Mehrstimmige Modelle (ein Modell, viele Sprecher) bieten wir derzeit NICHT an —
-# die einzigen, die wir hatten (MLS), standen unter CC-BY. Die Maschinerie dafür
-# (siehe _zerlegen_stimme und speaker_id in _sprechen) bleibt für später stehen;
-# das Angebot ist leer.
-MEHRSTIMMIG: dict[str, tuple[str, str]] = {}
+# Mehrstimmige Modelle: ein Modell, viele Sprecher, per "#<nummer>" gewählt.
+#
+# Das Modell "de_DE-mls-medium" (mittlere Qualität, 236 Sprecher) steht unter
+# CC-BY 4.0 — es braucht also eine Nennungszeile (siehe THIRD-PARTY-LICENSES.md).
+# Weil es keine gute gemeinfreie deutsche FRAUENstimme gibt, ist dies bewusst der
+# eingegangene Kompromiss. Aus den 236 Sprechern haben wir per Tonhöhe- und
+# Klarheits-Analyse die klarsten weiblichen herausgesucht; diese sechs stehen zur
+# PROBE, bis Roli seine zwei ausgewählt hat — danach bleiben nur die zwei stehen.
+MEHRSTIMMIG: dict[str, tuple[str, str]] = {
+    "de_DE-mls-medium#166": ("Stimme 1 (weiblich)", "warm, etwas tiefer — Probe"),
+    "de_DE-mls-medium#125": ("Stimme 2 (weiblich)", "warm — Probe"),
+    "de_DE-mls-medium#26":  ("Stimme 3 (weiblich)", "mittel, sehr gleichmäßig — Probe"),
+    "de_DE-mls-medium#106": ("Stimme 4 (weiblich)", "mittel — Probe"),
+    "de_DE-mls-medium#10":  ("Stimme 5 (weiblich)", "hell, klar — Probe"),
+    "de_DE-mls-medium#15":  ("Stimme 6 (weiblich)", "hell, höher — Probe"),
+}
 
 STANDARD = "de_DE-thorsten-medium"
 
