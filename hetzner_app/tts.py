@@ -63,6 +63,11 @@ MEHRSTIMMIG: dict[str, tuple[str, str]] = {
     "de_DE-mls-medium#106": ("Stimme 4 (weiblich)", "mittel — Probe"),
     "de_DE-mls-medium#10":  ("Stimme 5 (weiblich)", "hell, klar — Probe"),
     "de_DE-mls-medium#15":  ("Stimme 6 (weiblich)", "hell, höher — Probe"),
+    # Drei männliche Proben aus demselben Modell (nur zur Abwechslung — die
+    # Klangqualität liegt unter Jonas·fein). Klarste mit gutem Tonhöhen-Abstand.
+    "de_DE-mls-medium#35":  ("Mann 1 (männlich)", "heller, höher — Probe"),
+    "de_DE-mls-medium#139": ("Mann 2 (männlich)", "mittel, klar — Probe"),
+    "de_DE-mls-medium#178": ("Mann 3 (männlich)", "warm, tiefer — Probe"),
 }
 
 STANDARD = "de_DE-thorsten-medium"
