@@ -65,6 +65,101 @@ MEHRSTIMMIG: dict[str, tuple[str, str]] = {}
 STANDARD = "de_DE-thorsten-medium"
 
 
+# --- ElevenLabs: optionale Wolken-Stimmen ------------------------------------
+#
+# Standard bleibt Piper (lokal, kostenlos, nichts verlässt den Server). Wer
+# schönere Stimmen will — vor allem gute FRAUENstimmen, die es lokal nicht gibt —
+# hinterlegt seinen EIGENEN ElevenLabs-Schlüssel in der Umgebung und zahlt selbst
+# dafür. Beim Sprechen geht der Text dann an ElevenLabs; das ist der bewusste
+# Tausch (siehe Diktat-Entscheidung: lokal vs. Wolke, der Nutzer wählt).
+#
+# Die Stimme wird über den Namen "el:<voice_id>" gewählt — daran erkennt der
+# Code, dass NICHT Piper, sondern ElevenLabs sprechen soll.
+_EL_KEY = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+_EL_PRAEFIX = "el:"
+# turbo_v2_5: mehrsprachig (spricht Deutsch), schnell und günstig — dasselbe
+# Modell, das Jarvis/Alfred nutzt.
+_EL_MODELL = "eleven_turbo_v2_5"
+
+_el_cache: list[dict] | None = None
+_el_cache_zeit = 0.0
+
+
+def _elevenlabs_stimmen() -> list[dict]:
+    """Die anbietbaren ElevenLabs-Stimmen des Kontos — gefiltert und gepuffert.
+
+    Nur weibliche und ausdrücklich deutsche Stimmen: Der Grund für ElevenLabs ist
+    die gute Frauenstimme, die Piper nicht hat; die Männer deckt Jonas schon ab.
+    Eine Stunde gepuffert, damit nicht jede Stimmen-Liste einen Netzaufruf macht.
+    """
+    global _el_cache, _el_cache_zeit
+    if not _EL_KEY:
+        return []
+    if _el_cache is not None and time.time() - _el_cache_zeit < 3600:
+        return _el_cache
+    try:
+        req = urllib.request.Request(
+            "https://api.elevenlabs.io/v1/voices", headers={"xi-api-key": _EL_KEY}
+        )
+        with urllib.request.urlopen(req, timeout=10) as antwort:
+            data = json.load(antwort)
+    except (OSError, ValueError):
+        return _el_cache or []       # kein Netz/Fehler → das zuletzt Bekannte
+
+    ergebnis = []
+    for v in data.get("voices", []):
+        roh = v.get("name", "Stimme")
+        labels = v.get("labels", {})
+        weiblich = labels.get("gender", "") == "female"
+        deutsch = "german" in (labels.get("accent", "") + " " + roh).lower() \
+            or "deutsch" in roh.lower()
+        if not weiblich and not deutsch:
+            continue
+        # "Sarah - Mature, Reassuring" → Name "Sarah", Beschreibung als Art.
+        name = roh.split(" - ")[0].strip()
+        beschr = roh.split(" - ", 1)[1].strip() if " - " in roh else ""
+        art = "ElevenLabs · Wolke" + (f" — {beschr}" if beschr else "")
+        ergebnis.append({
+            "voice_id": v["voice_id"],
+            "anzeige": f"{name} (ElevenLabs)",
+            "art": art,
+        })
+    _el_cache, _el_cache_zeit = ergebnis, time.time()
+    return ergebnis
+
+
+def _elevenlabs_sprechen(text: str, voice_id: str) -> bytes:
+    """Text an ElevenLabs schicken und die (mp3-)Tonbytes zurückgeben.
+
+    Das Handy dekodiert mp3 wie WAV über Web Audio — Format egal. Fehler werden
+    als TTSError gemeldet, damit die App eine verständliche Meldung zeigt statt
+    eines nackten Fehlers."""
+    if not _EL_KEY:
+        raise TTSError("Für ElevenLabs ist kein Schlüssel hinterlegt.")
+    daten = json.dumps({
+        "text": text,
+        "model_id": _EL_MODELL,
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.85},
+    }).encode()
+    req = urllib.request.Request(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+        data=daten,
+        headers={
+            "xi-api-key": _EL_KEY,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as antwort:
+            return antwort.read()
+    except urllib.error.HTTPError as fehler:
+        # 401 = Schlüssel falsch, 429 = Kontingent erschöpft (Gratis-Rahmen voll).
+        raise TTSError(f"ElevenLabs lehnt ab (HTTP {fehler.code}).")
+    except OSError:
+        raise TTSError("ElevenLabs ist gerade nicht erreichbar.")
+
+
 def _zerlegen_stimme(name: str) -> tuple[str, int | None]:
     """Aus "datei#7" wird ("datei", 7); aus "datei" wird ("datei", None)."""
     if "#" in name:
@@ -74,6 +169,9 @@ def _zerlegen_stimme(name: str) -> tuple[str, int | None]:
 
 
 def _stimme_gueltig(name: str) -> bool:
+    # ElevenLabs-Stimme: gültig, solange ein Schlüssel hinterlegt ist.
+    if name.startswith(_EL_PRAEFIX):
+        return bool(_EL_KEY)
     stem, _ = _zerlegen_stimme(name)
     return (STIMMEN / f"{stem}.onnx").is_file() and (
         name in MEHRSTIMMIG or "#" not in name
@@ -100,6 +198,12 @@ def stimmen() -> list[dict]:
         if (STIMMEN / f"{stem}.onnx").is_file():
             liste.append({"name": key, "anzeige": anzeige, "art": art,
                           "gewaehlt": key == gewaehlt})
+
+    # Die ElevenLabs-Stimmen ans Ende — nur wenn ein Schlüssel da ist.
+    for v in _elevenlabs_stimmen():
+        key = _EL_PRAEFIX + v["voice_id"]
+        liste.append({"name": key, "anzeige": v["anzeige"], "art": v["art"],
+                      "gewaehlt": key == gewaehlt})
     return liste
 
 
@@ -119,7 +223,13 @@ def stimme_waehlen(name: str) -> None:
 
 
 def modell(name: str | None = None) -> Path:
-    stem, _ = _zerlegen_stimme(name or gewaehlte_stimme())
+    name = name or gewaehlte_stimme()
+    # Ist eine ElevenLabs-Stimme gewählt, wird Piper trotzdem gebraucht (für die
+    # anderen Stimmen und die Hörproben) — dann mit dem Standard-Modell warm
+    # halten, nicht mit einem "el:"-Namen, den es als Datei nicht gibt.
+    if name.startswith(_EL_PRAEFIX):
+        name = STANDARD
+    stem, _ = _zerlegen_stimme(name)
     return STIMMEN / f"{stem}.onnx"
 
 
@@ -240,6 +350,10 @@ atexit.register(_beenden)
 def _sprechen(text: str, name: str) -> bytes:
     """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
     weiter antwortet, während gesprochen wird."""
+    # Eine ElevenLabs-Stimme spricht die Wolke, nicht Piper.
+    if name.startswith(_EL_PRAEFIX):
+        return _elevenlabs_sprechen(text, name[len(_EL_PRAEFIX):])
+
     stem, sprecher = _zerlegen_stimme(name)
 
     anfrage: dict = {"text": text, "voice": stem}
