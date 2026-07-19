@@ -1301,6 +1301,15 @@ html, body {
   font-size: .78rem;
   line-height: 1.5;
 }
+/* Der Link im Fuß der Einstellungen zur Marken-Seite. Im Akzent, klar als Link
+   erkennbar, mit genug Höhe zum bequemen Antippen. */
+.fuss-link {
+  display: inline-block;
+  padding: .25rem 0;
+  color: var(--akzent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 /* Der öffentliche Schlüssel. Lang, hässlich, harmlos. */
 .schluessel {
