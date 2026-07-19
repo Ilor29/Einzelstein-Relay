@@ -154,7 +154,19 @@ def _elevenlabs_sprechen(text: str, voice_id: str) -> bytes:
         with urllib.request.urlopen(req, timeout=60) as antwort:
             return antwort.read()
     except urllib.error.HTTPError as fehler:
-        # 401 = Schlüssel falsch, 429 = Kontingent erschöpft (Gratis-Rahmen voll).
+        # ElevenLabs verpackt den Grund im Körper. Ihn auslesen, damit die App
+        # eine VERSTÄNDLICHE Meldung zeigt statt eines nackten HTTP-Codes —
+        # gerade "Kontingent aufgebraucht" (kommt als 401!) muss klar sein.
+        code = ""
+        try:
+            d = json.loads(fehler.read().decode()).get("detail", {})
+            code = d.get("code", "") if isinstance(d, dict) else ""
+        except Exception:
+            pass
+        if code == "quota_exceeded":
+            raise TTSError("Dein ElevenLabs-Guthaben ist aufgebraucht — der Gratis-Rahmen ist voll.")
+        if fehler.code == 401:
+            raise TTSError("ElevenLabs nimmt den Schlüssel nicht an (falsch oder ohne Berechtigung).")
         raise TTSError(f"ElevenLabs lehnt ab (HTTP {fehler.code}).")
     except OSError:
         raise TTSError("ElevenLabs ist gerade nicht erreichbar.")
