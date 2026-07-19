@@ -1093,6 +1093,10 @@ function befehlsmenue(auf) {
 }
 
 $("schnellbefehle").addEventListener("click", (e) => {
+  // War das gerade ein langer Druck? Dann wurde der Satz schon ins Feld gelegt —
+  // den nachklappernden Klick nicht auch noch als Senden werten.
+  if (langerDruckAus) { langerDruckAus = false; return; }
+
   // Der Zauberstab klappt das Menü nach oben auf oder wieder zu.
   if (e.target.closest("#knopf-mehr-befehle")) {
     befehlsmenue($("befehle-mehr").hidden);
@@ -1120,6 +1124,61 @@ $("schnellbefehle").addEventListener("click", (e) => {
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".befehle-wand-wrap")) befehlsmenue(false);
 });
+
+// --- Langer Druck auf einen Schnellbefehl: erst ins Feld statt sofort senden ---
+//
+// Kurzer Tipp sendet wie gewohnt (der schnelle Weg). Hältst du einen Befehl
+// dagegen einen Moment, wandert sein Satz ins Textfeld — dann kannst du noch
+// etwas anhängen und selbst senden. Ein Wischen (die Chip-Reihe ist scrollbar)
+// soll das nicht auslösen, darum bricht eine größere Fingerbewegung ab.
+let druckZeit = null;         // Timer, der den langen Druck erkennt
+let druckStart = null;        // wo der Finger aufsetzte — für die Wisch-Schwelle
+let langerDruckAus = false;   // löste gerade ein langer Druck aus? (Klick unterdrücken)
+
+function chipInsFeld(text) {
+  const feld = $("eingabe");
+  const vorher = feld.value.trim();
+  feld.value = (vorher ? vorher + " " : "") + text;
+  feldAnpassen();
+  feld.focus();
+  const ende = feld.value.length;
+  try { feld.setSelectionRange(ende, ende); } catch { /* manche Felder mögen das nicht */ }
+  try { navigator.vibrate?.(15); } catch { /* Handy ohne Vibration */ }
+  melde("In die Eingabe gelegt — ergänze noch etwas und sende selbst.");
+}
+
+function druckAbbrechen() {
+  if (druckZeit) { clearTimeout(druckZeit); druckZeit = null; }
+  druckStart = null;
+}
+
+$("schnellbefehle").addEventListener("pointerdown", (e) => {
+  langerDruckAus = false;                    // jeder neue Druck fängt sauber an
+  const chip = e.target.closest(".chip, .chip-menu");
+  // Nur echte Befehls-Chips — nicht der „Eigene Befehle"-Knopf (trägt zwar
+  // chip-menu, aber keinen data-text).
+  if (!chip || chip.id === "knopf-befehle-verwalten" || !chip.dataset.text) return;
+
+  druckStart = { x: e.clientX, y: e.clientY };
+  druckZeit = setTimeout(() => {
+    langerDruckAus = true;
+    chipInsFeld(chip.dataset.text);
+    if (chip.classList.contains("chip-menu")) befehlsmenue(false);
+    druckZeit = null;
+  }, 500);
+});
+
+$("schnellbefehle").addEventListener("pointermove", (e) => {
+  // Erst eine deutliche Bewegung (Wischen/Scrollen) bricht ab — kleines Zittern
+  // beim Halten nicht.
+  if (!druckStart) return;
+  if (Math.abs(e.clientX - druckStart.x) > 10 || Math.abs(e.clientY - druckStart.y) > 10) {
+    druckAbbrechen();
+  }
+});
+
+$("schnellbefehle").addEventListener("pointerup", druckAbbrechen);
+$("schnellbefehle").addEventListener("pointercancel", druckAbbrechen);
 
 // --- Eigene Schnellbefehle ---------------------------------------------------
 //
