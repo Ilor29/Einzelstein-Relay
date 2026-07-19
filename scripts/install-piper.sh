@@ -10,10 +10,12 @@ NAME="de_DE-thorsten-medium"
 QUELLE="https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE/thorsten/medium"
 
 echo "→ Piper installieren …"
+# Flask gehört dazu: Piper läuft bei uns als eigener HTTP-Dienst
+# (piper.http_server), und der braucht es — ohne Flask startet er nicht.
 if [ -x .venv/bin/pip ]; then
-  .venv/bin/pip install --quiet piper-tts
+  .venv/bin/pip install --quiet piper-tts flask
 else
-  pip install --quiet piper-tts
+  pip install --quiet piper-tts flask
 fi
 
 echo "→ Stimme »Thorsten« herunterladen …"

@@ -1,0 +1,11 @@
+# Was der Dienst selbst braucht — die einzige Quelle der Wahrheit fürs
+# Einrichten (setup.sh installiert genau diese Liste).
+#
+# Piper (Sprachausgabe, GPL) steht BEWUSST nicht hier: Es ist ein getrennter
+# Prozess und wird über scripts/install-piper.sh als eigener Schritt
+# installiert — siehe die Lizenz-Notizen in hetzner_app/tts.py.
+fastapi
+uvicorn[standard]
+websockets
+cryptography
+pywebpush
