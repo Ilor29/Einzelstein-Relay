@@ -1066,9 +1066,20 @@ async function schnellbefehl(text) {
     return;
   }
   hoertStoppen?.();
+
+  // Hängen Fotos oder Dateien am Feld, gehen sie mit — genau wie beim Senden
+  // über die Eingabezeile. Sonst tippt man "Los geht's" und die eben angehängten
+  // Bilder bleiben unbemerkt liegen. Pfade zuerst, der Befehlssatz dahinter.
+  const pfade = anhaenge.map((a) => a.pfad);
+  const gesamt = [...pfade, text].filter(Boolean).join(" ");
+  const gemerkt = anhaenge;
+  anhaengeLeeren();
+
   try {
-    await sendeInSitzung(text);
+    await sendeInSitzung(gesamt);
   } catch (err) {
+    anhaenge = gemerkt;          // ging nicht raus — Anhänge zurück
+    anhangStreifenZeichnen();
     beschaeftigt = false;
     sendeSperren(false);
     melde(err.message);
