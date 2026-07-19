@@ -43,32 +43,24 @@ KATALOG = {
     "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell — flüssig auch auf kleinem Server"),
     "de_DE-thorsten-high": ("Jonas · fein", "besonders klar — braucht einen stärkeren Server"),
     "de_DE-thorsten_emotional-medium": ("Max", "lebhaft, betont"),
-    # "Marie" (de_DE-kerstin-low) am 18.07. raus: das einzige verfügbare Modell
-    # war "low"-Qualität und klang rau. Suchen eine bessere, ebenfalls
-    # gemeinfreie weibliche Stimme als Ersatz.
+    # "Marie" (de_DE-kerstin-low) am 18.07. raus: rau, "low"-Qualität. Am
+    # 19.07. dann MLS (CC-BY) durchprobiert — alle Frauenstimmen von Roli
+    # verworfen (Aussprachefehler). Fazit: es gibt keine gute gemeinfreie
+    # deutsche Frauenstimme. Bewusst KEINE im Angebot; wir bleiben bei Thorsten.
 }
 
-# Mehrstimmige Modelle: ein Modell, viele Sprecher, per "#<nummer>" gewählt.
+# Mehrstimmige Modelle (ein Modell, viele Sprecher) bieten wir derzeit NICHT an —
+# die einzigen, die wir hatten (MLS), standen unter CC-BY. Die Maschinerie dafür
+# (siehe _zerlegen_stimme und speaker_id in _sprechen) bleibt für später stehen;
+# das Angebot ist leer.
 #
-# Das Modell "de_DE-mls-medium" (mittlere Qualität, 236 Sprecher) steht unter
-# CC-BY 4.0 — es braucht also eine Nennungszeile (siehe THIRD-PARTY-LICENSES.md).
-# Weil es keine gute gemeinfreie deutsche FRAUENstimme gibt, ist dies bewusst der
-# eingegangene Kompromiss. Aus den 236 Sprechern haben wir per Tonhöhe- und
-# Klarheits-Analyse die klarsten weiblichen herausgesucht; diese sechs stehen zur
-# PROBE, bis Roli seine zwei ausgewählt hat — danach bleiben nur die zwei stehen.
-MEHRSTIMMIG: dict[str, tuple[str, str]] = {
-    "de_DE-mls-medium#166": ("Stimme 1 (weiblich)", "warm, etwas tiefer — Probe"),
-    "de_DE-mls-medium#125": ("Stimme 2 (weiblich)", "warm — Probe"),
-    "de_DE-mls-medium#26":  ("Stimme 3 (weiblich)", "mittel, sehr gleichmäßig — Probe"),
-    "de_DE-mls-medium#106": ("Stimme 4 (weiblich)", "mittel — Probe"),
-    "de_DE-mls-medium#10":  ("Stimme 5 (weiblich)", "hell, klar — Probe"),
-    "de_DE-mls-medium#15":  ("Stimme 6 (weiblich)", "hell, höher — Probe"),
-    # Drei männliche Proben aus demselben Modell (nur zur Abwechslung — die
-    # Klangqualität liegt unter Jonas·fein). Klarste mit gutem Tonhöhen-Abstand.
-    "de_DE-mls-medium#35":  ("Mann 1 (männlich)", "heller, höher — Probe"),
-    "de_DE-mls-medium#139": ("Mann 2 (männlich)", "mittel, klar — Probe"),
-    "de_DE-mls-medium#178": ("Mann 3 (männlich)", "warm, tiefer — Probe"),
-}
+# Am 19.07.2026 wurde MLS ausprobiert (das einzige deutsche Modell mit
+# Frauenstimmen in „medium"): 236 Sprecher, per Tonhöhe/Klarheit die besten
+# weiblichen herausgefiltert, sechs zur Probe eingebaut. Roli hat sie durchgehört
+# und ALLE verworfen — Aussprachefehler, unsaubere Laute. Ergebnis: kein gutes
+# gemeinfreies deutsches Frauenmodell verfügbar. Bewusste Entscheidung: wir
+# bleiben rein bei Thorsten (CC0, keine Nennungsauflage), auch ohne Frauenstimme.
+MEHRSTIMMIG: dict[str, tuple[str, str]] = {}
 
 STANDARD = "de_DE-thorsten-medium"
 
