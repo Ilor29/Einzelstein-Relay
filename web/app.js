@@ -147,6 +147,7 @@ const ETIKETT = {
   running: "läuft",
   waiting: "wartet auf dich",
   idle: "ruht",
+  sleeping: "schläft — antippen weckt",
 };
 
 function alter(sekunden) {
@@ -185,6 +186,9 @@ function karte(sitzung) {
       <button class="nadel" aria-label="Anheften">
         <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
       </button>
+      <button class="mond" aria-label="Sitzung schlafen legen — Speicher freigeben">
+        <svg viewBox="0 0 24 24"><use href="#i-mond"/></svg>
+      </button>
     </div>
     <div class="vorschau"></div>
     <div class="angaben">
@@ -217,7 +221,40 @@ function karte(sitzung) {
   el.querySelector(".vorschau").textContent = sitzung.preview || "—";
   el.querySelector(".wann").textContent = alter(sitzung.idleSeconds);
 
-  el.addEventListener("click", () => oeffneSitzung(sitzung));
+  // Eine schlafende Sitzung wacht beim Antippen erst auf: Claude startet im
+  // alten Ordner und setzt das Gespräch fort — das braucht einen Moment.
+  el.addEventListener("click", async () => {
+    if (sitzung.state !== "sleeping") {
+      oeffneSitzung(sitzung);
+      return;
+    }
+    try {
+      melde("Ich wecke die Sitzung — einen Moment …");
+      await api(`/sessions/${encodeURIComponent(sitzung.name)}/wecken`, { method: "POST" });
+    } catch (err) {
+      melde(err.message || "Das Aufwecken hat nicht geklappt.");
+      return;
+    }
+    oeffneSitzung({ ...sitzung, state: "idle" });
+    ladeListe();
+  });
+
+  // Der Mond legt die Sitzung schlafen: Terminal weg, Speicher frei, Karte
+  // bleibt. Nur bei eigenen, wachen Sitzungen — fremde fasst die App nicht an.
+  const mond = el.querySelector(".mond");
+  if (!sitzung.eigen || sitzung.state === "sleeping") {
+    mond.hidden = true;
+  }
+  mond.addEventListener("click", async (e) => {
+    e.stopPropagation();   // sonst öffnet sich gleichzeitig die Sitzung
+    try {
+      await api(`/sessions/${encodeURIComponent(sitzung.name)}/schlafen`, { method: "POST" });
+      melde("Schläft — der Speicher ist frei. Antippen weckt sie wieder.");
+      ladeListe();
+    } catch (err) {
+      melde(err.message || "Schlafen legen ging gerade nicht.");
+    }
+  });
 
   el.querySelector(".nadel").addEventListener("click", async (e) => {
     e.stopPropagation();   // sonst öffnet sich gleichzeitig die Sitzung

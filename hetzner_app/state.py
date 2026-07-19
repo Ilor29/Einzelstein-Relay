@@ -25,9 +25,10 @@ STATE_FILE = Path.home() / ".hetzner-app" / "sitzungen.json"
 _sperre = threading.Lock()
 
 # Zustände, die wir in der Übersicht anzeigen.
-RUNNING = "running"   # Claude arbeitet gerade
-WAITING = "waiting"   # Claude wartet auf eine Antwort von dir
-IDLE = "idle"         # nichts los
+RUNNING = "running"    # Claude arbeitet gerade
+WAITING = "waiting"    # Claude wartet auf eine Antwort von dir
+IDLE = "idle"          # nichts los
+SLEEPING = "sleeping"  # schlafen gelegt — Terminal beendet, Gespräch auf der Platte
 
 
 @dataclass
@@ -46,6 +47,16 @@ class Meta:
     # wird, und dann eine Benachrichtigung schicken können.
     last_state: str = IDLE
     tags: list[str] = field(default_factory=list)
+    # Schlafen gelegt: Das Terminal ist beendet (Speicher frei), aber die
+    # Sitzung bleibt als Karte in der Liste und wacht auf Antippen wieder auf.
+    # Dafür müssen wir uns merken, was tmux dann nicht mehr weiß: den Ordner,
+    # den Startmodus, wann sie einschlief — und was zuletzt zu sehen war,
+    # damit die Karte nicht leer dasteht.
+    schlaeft: bool = False
+    cwd: str = ""
+    ohne_rueckfragen: bool = False
+    schlaf_zeit: int = 0
+    letzte_vorschau: str = ""
 
 
 def _load() -> dict[str, Meta]:
@@ -349,6 +360,31 @@ def overview() -> list[dict]:
             "anzeige": meta.anzeige or Path(cwd).name,
             # Wie viele Terminals hinter dem einen Schild stecken.
             "terminals": len(sitzungen),
+        })
+
+    # Die schlafen gelegten Sitzungen dazu — als eigene Karten, damit sie nicht
+    # aus der Liste verschwinden, nur weil ihr Terminal beendet ist. Läuft im
+    # selben Ordner inzwischen wieder etwas Lebendiges, führt dessen Karte das
+    # Wort; die schlafende hält sich solange zurück.
+    for name, meta in metas.items():
+        if not meta.schlaeft or not meta.cwd or meta.cwd in projekte:
+            continue
+        result.append({
+            "name": name,
+            "cwd": meta.cwd,
+            "pinned": meta.pinned,
+            "notifyWhenDone": meta.notify_when_done,
+            "state": SLEEPING,
+            "preview": meta.letzte_vorschau,
+            "lastActivity": meta.schlaf_zeit,
+            "idleSeconds": now - meta.schlaf_zeit if meta.schlaf_zeit else None,
+            "attached": False,
+            "eigen": True,
+            "modell": meta.modell,
+            "kontext": None,
+            "modus": None,
+            "anzeige": meta.anzeige or Path(meta.cwd).name,
+            "terminals": 0,
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.

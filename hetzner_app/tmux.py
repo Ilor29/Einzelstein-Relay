@@ -156,17 +156,26 @@ def create(
     cwd: str,
     first_prompt: str | None = None,
     ohne_rueckfragen: bool = False,
+    fortsetzen: bool = False,
 ) -> None:
     """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
 
     Mit ohne_rueckfragen läuft Claude im Modus "fragt nie" — er führt auch
     Befehle ohne Rückfrage aus. Das lässt sich nur beim Start setzen, nicht
     später umschalten, darum steckt es hier.
+
+    Mit fortsetzen wacht eine schlafen gelegte Sitzung wieder auf: Claude
+    setzt das jüngste Gespräch dieses Ordners fort (--continue), statt leer
+    anzufangen. Gibt es dort noch gar kein Gespräch, schlägt --continue fehl —
+    dafür steht der Rückfall dahinter: dann eben frisch. tmux reicht die eine
+    Befehlszeile an die Shell durch, darum funktioniert das ||.
     """
     if exists(name):
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
 
     befehl = "claude --dangerously-skip-permissions" if ohne_rueckfragen else "claude"
+    if fortsetzen:
+        befehl = f"{befehl} --continue || {befehl}"
 
     _run(
         "new-session",

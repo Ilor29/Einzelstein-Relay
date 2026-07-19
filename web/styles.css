@@ -683,6 +683,7 @@ html, body {
 .karte .streifen.running { background: var(--laeuft); }
 .karte .streifen.waiting { background: var(--wartet); }
 .karte .streifen.idle    { background: transparent; }
+.karte .streifen.sleeping { background: #9AA8C7; }
 
 .karte .zeile-oben { display: flex; align-items: center; gap: .45rem; }
 .karte .name {
@@ -706,6 +707,19 @@ html, body {
 }
 .karte .nadel svg { width: 16px; height: 16px; }
 .karte.angeheftet .nadel { color: var(--akzent); }
+
+/* Der Mond legt die Sitzung schlafen — gleiches stilles Grau wie die Nadel,
+   rechts außen. */
+.karte .mond {
+  flex: none;
+  background: none;
+  border: 0;
+  padding: .2rem;
+  color: var(--schrift-schwach);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.karte .mond svg { width: 16px; height: 16px; }
 
 .karte .vorschau {
   font-size: .78rem;
@@ -743,6 +757,8 @@ html, body {
 .etikett.running { color: var(--laeuft); background: color-mix(in srgb, var(--laeuft) 14%, transparent); }
 .etikett.waiting { color: var(--wartet); background: color-mix(in srgb, var(--wartet) 16%, transparent); }
 .etikett.idle    { color: var(--ruht);   background: color-mix(in srgb, var(--ruht) 16%, transparent); }
+/* Schläft: ein kühles Nachtblau — klar von „ruht" zu unterscheiden. */
+.etikett.sleeping { color: #9AA8C7; background: color-mix(in srgb, #9AA8C7 16%, transparent); }
 
 .leer {
   text-align: center;

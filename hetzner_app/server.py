@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 86
+VERSION = 87
 
 
 @app.get("/api/version")
@@ -312,6 +312,11 @@ async def create_session(body: NewSession) -> dict:
         pinned=body.pinned,
         notify_when_done=body.notify_when_done,
         created_prompt=body.first_prompt,
+        # Fürs spätere Schlafen/Aufwecken: den Ordner und den Startmodus
+        # merken — tmux weiß beides nicht mehr, sobald die Sitzung beendet ist.
+        cwd=str(cwd),
+        ohne_rueckfragen=body.ohne_rueckfragen,
+        schlaeft=False,
     )
 
     if body.first_prompt:
@@ -338,7 +343,9 @@ async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
 
 @app.patch("/api/sessions/{name}", dependencies=[Depends(require_auth)])
 def patch_session(name: str, body: Patch) -> dict:
-    if not tmux.exists(name):
+    # Auch eine schlafende Sitzung darf man anheften oder umbenennen — sie hat
+    # nur kein Terminal, aber sehr wohl eine Karte in der Liste.
+    if not tmux.exists(name) and not state.get(name).schlaeft:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
     changes = {}
@@ -363,6 +370,11 @@ def patch_session(name: str, body: Patch) -> dict:
 def delete_session(name: str) -> dict:
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
+        # Eine schlafende Sitzung hat kein Terminal mehr — löschen heißt hier
+        # nur noch: die Karte und das Gemerkte wegräumen.
+        if state.get(name).schlaeft:
+            state.forget(name)
+            return {"ok": True}
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
     # Fremde Sitzungen — etwa die, in der Claude Code selbst läuft — darf man
@@ -373,6 +385,65 @@ def delete_session(name: str) -> dict:
 
     tmux.kill(name)
     state.forget(name)
+    return {"ok": True}
+
+
+@app.post("/api/sessions/{name}/schlafen", dependencies=[Depends(require_auth)])
+def session_schlafen(name: str) -> dict:
+    """Die Sitzung schlafen legen: Terminal beenden, Speicher freigeben.
+
+    Das Gespräch bleibt auf der Platte; die Karte bleibt in der Liste und
+    wacht auf Antippen wieder auf. Der Sinn: Jede offene Claude-Sitzung hält
+    ein paar hundert MB fest — auf der kleinen Maschine wird das schnell eng,
+    wenn mehrere Projekte zugleich offen stehen (so starb am 17.07. das Brain).
+    """
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if not treffer:
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    if not treffer[0].eigen:
+        raise HTTPException(403, "Diese Sitzung gehört nicht der App — sie bleibt.")
+
+    # Mitten in der Arbeit wird nicht geschlafen: Ein Abriss jetzt hieße, dass
+    # Claude einen halb ausgeführten Auftrag liegen lässt.
+    if state.detect(name) == state.RUNNING:
+        raise HTTPException(409, "Claude arbeitet dort gerade — erst fertig arbeiten lassen oder anhalten.")
+
+    # Festhalten, was zum Aufwecken gebraucht wird — und wie die Karte zuletzt
+    # aussah, damit sie nicht leer in der Liste steht.
+    state.update(
+        name,
+        schlaeft=True,
+        cwd=treffer[0].cwd,
+        schlaf_zeit=int(time.time()),
+        letzte_vorschau=state.preview(name),
+    )
+    tmux.kill(name)
+    return {"ok": True}
+
+
+@app.post("/api/sessions/{name}/wecken", dependencies=[Depends(require_auth)])
+def session_wecken(name: str) -> dict:
+    """Eine schlafende Sitzung aufwecken — mit ihrem alten Gespräch.
+
+    Claude startet im gemerkten Ordner und setzt dort das jüngste Gespräch
+    fort. Der Startmodus (fragt / fragt nie) bleibt, wie er beim Anlegen war.
+    """
+    meta = state.get(name)
+    if tmux.exists(name):
+        # Schon wach — etwa von Hand neu gestartet. Dann nur den Merker lösen.
+        state.update(name, schlaeft=False)
+        return {"ok": True}
+    if not meta.schlaeft or not meta.cwd:
+        raise HTTPException(404, "Diese Sitzung schläft nicht.")
+    if not Path(meta.cwd).is_dir():
+        raise HTTPException(409, f"Den Ordner {meta.cwd} gibt es nicht mehr.")
+
+    try:
+        tmux.create(name, meta.cwd, ohne_rueckfragen=meta.ohne_rueckfragen, fortsetzen=True)
+    except tmux.TmuxError as error:
+        raise HTTPException(409, str(error))
+
+    state.update(name, schlaeft=False)
     return {"ok": True}
 
 
