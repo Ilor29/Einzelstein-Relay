@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import base64
 import json
 import os
 import re
@@ -172,6 +173,109 @@ def _elevenlabs_sprechen(text: str, voice_id: str) -> bytes:
         raise TTSError("ElevenLabs ist gerade nicht erreichbar.")
 
 
+# --- Google Cloud: die günstige, muttersprachliche Wolken-Stimme -------------
+#
+# Für Deutsch der eigentliche Gewinner: echte deutsche Neural-Stimmen (kein
+# englischer Akzent wie bei ElevenLabs), ~1 Mio. Zeichen im Monat gratis, danach
+# fast umsonst. Angesprochen mit EINEM Schlüssel (REST + ?key=…), also genauso
+# einfach wie ElevenLabs. Stimme wird über "gc:<voice_name>" gewählt.
+_GC_KEY = os.environ.get("GOOGLE_TTS_API_KEY", "").strip()
+_GC_PRAEFIX = "gc:"
+_GC_BASIS = "https://texttospeech.googleapis.com/v1"
+
+_gc_cache: list[dict] | None = None
+_gc_cache_zeit = 0.0
+
+
+def _google_stimmen() -> list[dict]:
+    """Die deutschen Frauenstimmen des Kontos — gefiltert und gepuffert.
+
+    Nur weiblich (der Zweck ist die gute Frauenstimme) und nur die schönen
+    Stufen (Neural2, Wavenet, Studio, Chirp) — die „Standard"-Stimmen klingen
+    blechern. Wir holen die Liste live, damit wir keine Namen erfinden, die es
+    im Konto gar nicht gibt.
+    """
+    global _gc_cache, _gc_cache_zeit
+    if not _GC_KEY:
+        return []
+    if _gc_cache is not None and time.time() - _gc_cache_zeit < 3600:
+        return _gc_cache
+    try:
+        req = urllib.request.Request(
+            f"{_GC_BASIS}/voices?languageCode=de-DE&key={_GC_KEY}"
+        )
+        with urllib.request.urlopen(req, timeout=10) as antwort:
+            data = json.load(antwort)
+    except (OSError, ValueError):
+        return _gc_cache or []
+
+    gut = ("Neural2", "Wavenet", "Studio", "Chirp")
+    ergebnis = []
+    for v in data.get("voices", []):
+        name = v.get("name", "")
+        if v.get("ssmlGender") != "FEMALE":
+            continue
+        if not any(stufe in name for stufe in gut):
+            continue
+        # "de-DE-Neural2-C" → Anzeige "Google C · Neural2".
+        kennung = name.split("-")[-1]
+        stufe = next((s for s in gut if s in name), "")
+        ergebnis.append({
+            "voice_id": name,
+            "anzeige": f"Google {kennung} (weiblich)",
+            "art": f"Google · Wolke — {stufe}, muttersprachlich",
+        })
+    # Die feineren Stufen zuerst (Chirp/Studio/Neural2 vor Wavenet).
+    rang = {"Chirp": 0, "Studio": 1, "Neural2": 2, "Wavenet": 3}
+    ergebnis.sort(key=lambda e: next((rang[s] for s in rang if s in e["art"]), 9))
+    _gc_cache, _gc_cache_zeit = ergebnis, time.time()
+    return ergebnis
+
+
+def _google_sprechen(text: str, voice_name: str) -> bytes:
+    """Text an Google Cloud schicken und die (mp3-)Tonbytes zurückgeben.
+
+    Google liefert das mp3 base64-verpackt in JSON — wir packen es aus. Das
+    Handy dekodiert mp3 wie WAV über Web Audio."""
+    if not _GC_KEY:
+        raise TTSError("Für Google ist kein Schlüssel hinterlegt.")
+    daten = json.dumps({
+        "input": {"text": text},
+        "voice": {"languageCode": "de-DE", "name": voice_name},
+        "audioConfig": {"audioEncoding": "MP3"},
+    }).encode()
+    req = urllib.request.Request(
+        f"{_GC_BASIS}/text:synthesize?key={_GC_KEY}",
+        data=daten,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as antwort:
+            inhalt = json.load(antwort)
+        roh = inhalt.get("audioContent")
+        if not roh:
+            raise TTSError("Google hat keinen Ton geliefert.")
+        return base64.b64decode(roh)
+    except urllib.error.HTTPError as fehler:
+        status, meldung = "", ""
+        try:
+            err = json.loads(fehler.read().decode()).get("error", {})
+            status, meldung = err.get("status", ""), err.get("message", "")
+        except Exception:
+            pass
+        # Ein ungültiger Schlüssel kommt als 400/INVALID_ARGUMENT mit „API key"
+        # in der Meldung — den vom echten Stimm-/Sprachfehler trennen.
+        if fehler.code in (401, 403) or "api key" in meldung.lower():
+            raise TTSError("Google nimmt den Schlüssel nicht an (falsch oder Dienst nicht freigeschaltet).")
+        if fehler.code == 429:
+            raise TTSError("Dein Google-Kontingent ist für diesen Monat aufgebraucht.")
+        if fehler.code == 400 and status == "INVALID_ARGUMENT":
+            raise TTSError("Google lehnt die Anfrage ab (Stimme/Sprache prüfen).")
+        raise TTSError(f"Google lehnt ab (HTTP {fehler.code}).")
+    except OSError:
+        raise TTSError("Google ist gerade nicht erreichbar.")
+
+
 def _zerlegen_stimme(name: str) -> tuple[str, int | None]:
     """Aus "datei#7" wird ("datei", 7); aus "datei" wird ("datei", None)."""
     if "#" in name:
@@ -180,10 +284,17 @@ def _zerlegen_stimme(name: str) -> tuple[str, int | None]:
     return name, None
 
 
+def _ist_wolke(name: str) -> bool:
+    """Eine Wolken-Stimme (ElevenLabs/Google) statt des lokalen Piper?"""
+    return name.startswith(_EL_PRAEFIX) or name.startswith(_GC_PRAEFIX)
+
+
 def _stimme_gueltig(name: str) -> bool:
-    # ElevenLabs-Stimme: gültig, solange ein Schlüssel hinterlegt ist.
+    # Wolken-Stimme: gültig, solange der zugehörige Schlüssel hinterlegt ist.
     if name.startswith(_EL_PRAEFIX):
         return bool(_EL_KEY)
+    if name.startswith(_GC_PRAEFIX):
+        return bool(_GC_KEY)
     stem, _ = _zerlegen_stimme(name)
     return (STIMMEN / f"{stem}.onnx").is_file() and (
         name in MEHRSTIMMIG or "#" not in name
@@ -211,9 +322,13 @@ def stimmen() -> list[dict]:
             liste.append({"name": key, "anzeige": anzeige, "art": art,
                           "gewaehlt": key == gewaehlt})
 
-    # Die ElevenLabs-Stimmen ans Ende — nur wenn ein Schlüssel da ist.
+    # Die Wolken-Stimmen ans Ende — jeweils nur, wenn ein Schlüssel da ist.
     for v in _elevenlabs_stimmen():
         key = _EL_PRAEFIX + v["voice_id"]
+        liste.append({"name": key, "anzeige": v["anzeige"], "art": v["art"],
+                      "gewaehlt": key == gewaehlt})
+    for v in _google_stimmen():
+        key = _GC_PRAEFIX + v["voice_id"]
         liste.append({"name": key, "anzeige": v["anzeige"], "art": v["art"],
                       "gewaehlt": key == gewaehlt})
     return liste
@@ -236,10 +351,10 @@ def stimme_waehlen(name: str) -> None:
 
 def modell(name: str | None = None) -> Path:
     name = name or gewaehlte_stimme()
-    # Ist eine ElevenLabs-Stimme gewählt, wird Piper trotzdem gebraucht (für die
+    # Ist eine Wolken-Stimme gewählt, wird Piper trotzdem gebraucht (für die
     # anderen Stimmen und die Hörproben) — dann mit dem Standard-Modell warm
-    # halten, nicht mit einem "el:"-Namen, den es als Datei nicht gibt.
-    if name.startswith(_EL_PRAEFIX):
+    # halten, nicht mit einem "el:"/"gc:"-Namen, den es als Datei nicht gibt.
+    if _ist_wolke(name):
         name = STANDARD
     stem, _ = _zerlegen_stimme(name)
     return STIMMEN / f"{stem}.onnx"
@@ -362,9 +477,11 @@ atexit.register(_beenden)
 def _sprechen(text: str, name: str) -> bytes:
     """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
     weiter antwortet, während gesprochen wird."""
-    # Eine ElevenLabs-Stimme spricht die Wolke, nicht Piper.
+    # Eine Wolken-Stimme spricht der jeweilige Dienst, nicht Piper.
     if name.startswith(_EL_PRAEFIX):
         return _elevenlabs_sprechen(text, name[len(_EL_PRAEFIX):])
+    if name.startswith(_GC_PRAEFIX):
+        return _google_sprechen(text, name[len(_GC_PRAEFIX):])
 
     stem, sprecher = _zerlegen_stimme(name)
 
