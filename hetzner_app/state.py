@@ -29,6 +29,7 @@ RUNNING = "running"    # Claude arbeitet gerade
 WAITING = "waiting"    # Claude wartet auf eine Antwort von dir
 IDLE = "idle"          # nichts los
 SLEEPING = "sleeping"  # schlafen gelegt — Terminal beendet, Gespräch auf der Platte
+CRASHED = "crashed"    # Terminal weg, ohne dass wir es beendet haben — Gespräch auf der Platte
 
 
 @dataclass
@@ -327,6 +328,14 @@ def overview() -> list[dict]:
         eigene_metas = [metas.get(s.name, Meta()) for s in sitzungen]
         meta = eigene_metas[0]
 
+        # Den Ordner nebenbei merken, solange die Sitzung lebt — nicht erst
+        # beim Schlafen legen. Stirbt sie sonst irgendwann von selbst (Absturz,
+        # Server-Neustart), wüssten wir sonst nicht, wo sie weiterlebt, und die
+        # Karte verschwände einfach aus der Liste statt als "abgestürzt".
+        if meta.cwd != cwd:
+            update(fuehrend.name, cwd=cwd)
+            meta.cwd = cwd
+
         # Arbeitet irgendwo im Projekt gerade Claude, arbeitet das Projekt.
         zustaende = [detect(s.name) for s in sitzungen]
         zustand = (
@@ -376,6 +385,37 @@ def overview() -> list[dict]:
             "notifyWhenDone": meta.notify_when_done,
             "state": SLEEPING,
             "preview": meta.letzte_vorschau,
+            "lastActivity": meta.schlaf_zeit,
+            "idleSeconds": now - meta.schlaf_zeit if meta.schlaf_zeit else None,
+            "attached": False,
+            "eigen": True,
+            "modell": meta.modell,
+            "kontext": None,
+            "modus": None,
+            "anzeige": meta.anzeige or Path(meta.cwd).name,
+            "terminals": 0,
+        })
+
+    # Sitzungen, die niemand schlafen gelegt hat und die trotzdem kein
+    # Terminal mehr haben — abgestürzt, meist weil der Server selbst neu
+    # gestartet ist und den tmux-Server mit sich gerissen hat (siehe 28.07.).
+    # Ohne diese Karte verschwindet das Gespräch aus der Liste, obwohl die
+    # Mitschrift unversehrt auf der Platte liegt — genau das hat Roli
+    # erschreckt. Wecken funktioniert genauso wie bei einer schlafenden
+    # Sitzung, die Karte sagt nur ehrlich, dass es kein sanftes Einschlafen war.
+    for name, meta in metas.items():
+        if meta.schlaeft or not meta.cwd or meta.cwd in projekte:
+            continue
+        result.append({
+            "name": name,
+            "cwd": meta.cwd,
+            "pinned": meta.pinned,
+            "notifyWhenDone": meta.notify_when_done,
+            "state": CRASHED,
+            "preview": meta.letzte_vorschau or (
+                "Abgestürzt — vermutlich ist der Server neu gestartet. "
+                "Antippen setzt das Gespräch fort."
+            ),
             "lastActivity": meta.schlaf_zeit,
             "idleSeconds": now - meta.schlaf_zeit if meta.schlaf_zeit else None,
             "attached": False,

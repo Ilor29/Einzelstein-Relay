@@ -343,9 +343,11 @@ async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
 
 @app.patch("/api/sessions/{name}", dependencies=[Depends(require_auth)])
 def patch_session(name: str, body: Patch) -> dict:
-    # Auch eine schlafende Sitzung darf man anheften oder umbenennen — sie hat
-    # nur kein Terminal, aber sehr wohl eine Karte in der Liste.
-    if not tmux.exists(name) and not state.get(name).schlaeft:
+    # Auch eine schlafende oder abgestürzte Sitzung darf man anheften oder
+    # umbenennen — sie hat nur kein Terminal, aber sehr wohl eine Karte in der
+    # Liste. Beide erkennt man am gemerkten Ordner, ob sanft eingeschlafen
+    # oder abgerissen spielt hier keine Rolle.
+    if not tmux.exists(name) and not state.get(name).cwd:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
     changes = {}
@@ -370,9 +372,9 @@ def patch_session(name: str, body: Patch) -> dict:
 def delete_session(name: str) -> dict:
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
-        # Eine schlafende Sitzung hat kein Terminal mehr — löschen heißt hier
-        # nur noch: die Karte und das Gemerkte wegräumen.
-        if state.get(name).schlaeft:
+        # Eine schlafende oder abgestürzte Sitzung hat kein Terminal mehr —
+        # löschen heißt hier nur noch: die Karte und das Gemerkte wegräumen.
+        if state.get(name).cwd:
             state.forget(name)
             return {"ok": True}
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
