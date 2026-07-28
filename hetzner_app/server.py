@@ -425,18 +425,20 @@ def session_schlafen(name: str) -> dict:
 
 @app.post("/api/sessions/{name}/wecken", dependencies=[Depends(require_auth)])
 def session_wecken(name: str) -> dict:
-    """Eine schlafende Sitzung aufwecken — mit ihrem alten Gespräch.
+    """Eine schlafende oder abgestürzte Sitzung aufwecken — mit ihrem alten Gespräch.
 
     Claude startet im gemerkten Ordner und setzt dort das jüngste Gespräch
     fort. Der Startmodus (fragt / fragt nie) bleibt, wie er beim Anlegen war.
+    Ob die Sitzung sanft eingeschlafen ist oder abgestürzt, macht hier keinen
+    Unterschied — in beiden Fällen ist nur der Ordner gemerkt, kein Terminal.
     """
     meta = state.get(name)
     if tmux.exists(name):
         # Schon wach — etwa von Hand neu gestartet. Dann nur den Merker lösen.
         state.update(name, schlaeft=False)
         return {"ok": True}
-    if not meta.schlaeft or not meta.cwd:
-        raise HTTPException(404, "Diese Sitzung schläft nicht.")
+    if not meta.cwd:
+        raise HTTPException(404, "Für diese Sitzung ist kein Ordner gemerkt.")
     if not Path(meta.cwd).is_dir():
         raise HTTPException(409, f"Den Ordner {meta.cwd} gibt es nicht mehr.")
 

@@ -684,6 +684,7 @@ html, body {
 .karte .streifen.waiting { background: var(--wartet); }
 .karte .streifen.idle    { background: transparent; }
 .karte .streifen.sleeping { background: #9AA8C7; }
+.karte .streifen.crashed  { background: #C4622E; }
 
 .karte .zeile-oben { display: flex; align-items: center; gap: .45rem; }
 .karte .name {
@@ -759,6 +760,8 @@ html, body {
 .etikett.idle    { color: var(--ruht);   background: color-mix(in srgb, var(--ruht) 16%, transparent); }
 /* Schläft: ein kühles Nachtblau — klar von „ruht" zu unterscheiden. */
 .etikett.sleeping { color: #9AA8C7; background: color-mix(in srgb, #9AA8C7 16%, transparent); }
+/* Abgestürzt: warmes Terrakotta — sichtbar anders als das sanfte Schlafblau. */
+.etikett.crashed { color: #C4622E; background: color-mix(in srgb, #C4622E 16%, transparent); }
 
 .leer {
   text-align: center;

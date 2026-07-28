@@ -148,6 +148,7 @@ const ETIKETT = {
   waiting: "wartet auf dich",
   idle: "ruht",
   sleeping: "schläft — antippen weckt",
+  crashed: "abgestürzt — antippen setzt fort",
 };
 
 function alter(sekunden) {
@@ -221,10 +222,13 @@ function karte(sitzung) {
   el.querySelector(".vorschau").textContent = sitzung.preview || "—";
   el.querySelector(".wann").textContent = alter(sitzung.idleSeconds);
 
-  // Eine schlafende Sitzung wacht beim Antippen erst auf: Claude startet im
-  // alten Ordner und setzt das Gespräch fort — das braucht einen Moment.
+  // Eine schlafende oder abgestürzte Sitzung wacht beim Antippen erst auf:
+  // Claude startet im alten Ordner und setzt das Gespräch fort — das
+  // braucht einen Moment. Für beide Zustände gilt dasselbe, nur wie sie dort
+  // hingekommen sind, unterscheidet sich (sanft eingeschlafen vs. abgerissen).
+  const weckbar = sitzung.state === "sleeping" || sitzung.state === "crashed";
   el.addEventListener("click", async () => {
-    if (sitzung.state !== "sleeping") {
+    if (!weckbar) {
       oeffneSitzung(sitzung);
       return;
     }
@@ -242,7 +246,7 @@ function karte(sitzung) {
   // Der Mond legt die Sitzung schlafen: Terminal weg, Speicher frei, Karte
   // bleibt. Nur bei eigenen, wachen Sitzungen — fremde fasst die App nicht an.
   const mond = el.querySelector(".mond");
-  if (!sitzung.eigen || sitzung.state === "sleeping") {
+  if (!sitzung.eigen || weckbar) {
     mond.hidden = true;
   }
   mond.addEventListener("click", async (e) => {
