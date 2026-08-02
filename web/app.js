@@ -930,7 +930,7 @@ function oeffneSitzung(sitzung) {
   // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
   // Öffnen "Modell wählen", obwohl längst eines gesetzt ist.
   modelleHolen().then(() => {
-    zeigeModell(sitzung.modell);
+    zeigeModell(sitzung.modell, sitzung.modellAufgeloest);
     zeigeSitzungInfo(null);
   });
   zeigeModus(sitzung.modus);
@@ -1829,11 +1829,13 @@ async function modelleHolen() {
   return modelle;
 }
 
-function zeigeModell(name) {
+function zeigeModell(name, aufgeloest) {
   const treffer = modelle.find((m) => m.name === name);
-  // Ohne bekanntes Modell steht dort nur "Modell" — behaupten, es liefe Opus,
-  // wäre geraten. Claude Code sagt uns nicht, womit es gestartet ist.
-  $("modell-name").textContent = treffer ? treffer.anzeige : "Modell";
+  // Kennen wir Claude Codes eigene Bestätigung ("Opus 5"), zeigen wir die —
+  // ehrlicher als der Alias-Name, der jede neue Version stillschweigend
+  // mitnimmt. Ohne Bestätigung und ohne bekanntes Modell steht dort nur
+  // "Modell": irgendeinen Namen zu behaupten, wäre geraten.
+  $("modell-name").textContent = aufgeloest || (treffer ? treffer.anzeige : "Modell");
   $("knopf-modell").classList.toggle("gesetzt", Boolean(treffer));
 }
 
@@ -1867,8 +1869,12 @@ function malInfoLeiste() {
 
 function zeigeSitzungInfo(jetzt) {
   const teile = [];
+  // Der aufgelöste Name ("Opus 5") geht vor dem bloßen Alias-Etikett
+  // ("Opus") — siehe zeigeModell().
+  const aufgeloest = jetzt?.modellAufgeloest || aktuelleSitzung?.modellAufgeloest;
   const m = modelle.find((x) => x.name === aktuelleSitzung?.modell);
-  if (m) teile.push(m.anzeige);
+  if (aufgeloest) teile.push(aufgeloest);
+  else if (m) teile.push(m.anzeige);
   if (jetzt && typeof jetzt.kontext === "number") {
     teile.push(`Kontext ${jetzt.kontext}% übrig`);
   }
@@ -1932,13 +1938,17 @@ $("knopf-modell").addEventListener("click", async () => {
 async function waehleModell(m) {
   blattZu();
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modell`, {
+    // Die Antwort trägt schon Claude Codes eigene Bestätigung — das braucht
+    // ein paar Sekunden (die App wartet serverseitig darauf), zeigt dafür
+    // aber gleich den echten Namen statt nur des Alias.
+    const antwort = await (await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modell`, {
       method: "POST",
       body: JSON.stringify({ name: m.name }),
-    });
+    })).json();
     aktuelleSitzung.modell = m.name;
-    zeigeModell(m.name);
-    melde(`${m.anzeige} — ${m.art}`);
+    aktuelleSitzung.modellAufgeloest = antwort.modellAufgeloest;
+    zeigeModell(m.name, antwort.modellAufgeloest);
+    melde(antwort.modellAufgeloest ? `${antwort.modellAufgeloest} — ${m.art}` : `${m.anzeige} — ${m.art}`);
     setTimeout(ladeVerlauf, 800);
   } catch (err) {
     melde(err.message);

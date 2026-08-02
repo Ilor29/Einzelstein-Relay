@@ -37,9 +37,13 @@ class Meta:
     pinned: bool = False
     notify_when_done: bool = False
     created_prompt: str = ""
-    # Welches Modell wir zuletzt gewählt haben. Claude Code sagt es uns nicht,
-    # also merken wir es uns selbst.
+    # Welches Modell wir zuletzt gewählt haben (der Alias, z. B. "opus").
     modell: str = ""
+    # Wie Claude Code den Alias tatsächlich aufgelöst hat (z. B. "Opus 5") —
+    # aus seiner eigenen Bestätigung nach dem Wechsel abgelesen, siehe
+    # modell_bestaetigung(). Leer, solange nie wirklich wechselte: dann wäre
+    # jeder Name geraten.
+    modell_aufgeloest: str = ""
     # Wie die Sitzung im Handy heißen soll. Leer heißt: ihr technischer Name.
     # Der bleibt unangetastet — an ihm hängen tmux, der Ordner und die
     # Mitschrift. Wir benennen nur das Schild an der Tür um, nicht das Haus.
@@ -278,6 +282,32 @@ def kontext(name: str) -> int | None:
     return wert if 0 <= wert <= 100 else None
 
 
+# Claude Codes eigene Bestätigung nach einem Modellwechsel — "Set model to
+# Opus 5 and saved as your default for new sessions". Der einzige Ort, an dem
+# wir ehrlich erfahren, was ein Alias wie "opus" gerade wirklich trifft,
+# statt es zu erraten oder eine Versionsnummer im Code fest zu verdrahten.
+_MODELL_BESTAETIGT = re.compile(r"Set model to (.+?) and saved")
+
+
+def modell_bestaetigung(name: str, sekunden: float = 6, schritt: float = 0.3) -> str:
+    """Wartet kurz auf Claude Codes eigene Bestätigung nach /model.
+
+    Liefert den Namen, den Claude Code selbst nennt (z. B. "Opus 5") — oder
+    einen leeren Text, wenn in der gegebenen Zeit keine Bestätigung auftaucht.
+    """
+    ende = time.time() + sekunden
+    while time.time() < ende:
+        try:
+            screen = tmux.capture(name, lines=None)
+        except tmux.TmuxError:
+            return ""
+        treffer = _MODELL_BESTAETIGT.search(screen)
+        if treffer:
+            return treffer.group(1).strip()
+        time.sleep(schritt)
+    return ""
+
+
 def preview(name: str, max_len: int = 90) -> str:
     """Die eine Zeile, die in der Übersicht unter dem Sitzungsnamen steht.
 
@@ -359,6 +389,7 @@ def overview() -> list[dict]:
             # darf man ansehen und bedienen, aber nicht beenden.
             "eigen": fuehrend.eigen,
             "modell": meta.modell,
+            "modellAufgeloest": meta.modell_aufgeloest,
             # Der Kontext-Rest, wenn Claude Code ihn nennt — sonst None, dann
             # zeigt das Handy dazu schlicht nichts.
             "kontext": kontext(fuehrend.name),
@@ -390,6 +421,7 @@ def overview() -> list[dict]:
             "attached": False,
             "eigen": True,
             "modell": meta.modell,
+            "modellAufgeloest": meta.modell_aufgeloest,
             "kontext": None,
             "modus": None,
             "anzeige": meta.anzeige or Path(meta.cwd).name,
@@ -421,6 +453,7 @@ def overview() -> list[dict]:
             "attached": False,
             "eigen": True,
             "modell": meta.modell,
+            "modellAufgeloest": meta.modell_aufgeloest,
             "kontext": None,
             "modus": None,
             "anzeige": meta.anzeige or Path(meta.cwd).name,

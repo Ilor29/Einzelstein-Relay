@@ -825,8 +825,13 @@ async def modell_wechseln(name: str, body: Modell) -> dict:
     await asyncio.sleep(0.4)
     tmux.send_key(name, "Enter")
 
-    state.update(name, modell=body.name)
-    return {"ok": True, "modell": body.name}
+    # Claude Code bestätigt selbst, welches Modell der Alias getroffen hat
+    # ("Set model to Opus 5 …") — das lesen wir mit, statt im Code eine
+    # Versionsnummer zu raten, die beim nächsten Modell-Release schon wieder
+    # veraltet wäre.
+    aufgeloest = await asyncio.to_thread(state.modell_bestaetigung, name)
+    state.update(name, modell=body.name, modell_aufgeloest=aufgeloest)
+    return {"ok": True, "modell": body.name, "modellAufgeloest": aufgeloest}
 
 
 # --- Die Bibliothek ----------------------------------------------------------
