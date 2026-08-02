@@ -98,7 +98,7 @@ html, body {
 .modus-pille {
   flex: none;
   background: var(--erhoben-2);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 999px;
   padding: .25rem .6rem;
   font-family: var(--sans);
@@ -106,7 +106,10 @@ html, body {
   white-space: nowrap;
   color: var(--schrift-leise);
 }
-.modus-pille.gesetzt { color: var(--schrift); }
+/* Ein Rahmen im Akzentton, sobald der Modus bekannt ist — sonst geht der
+   Knopf in der stillen Info-Zeile unter. Genau das ist Roli passiert: den
+   Knopf gab's längst, gesehen hat er ihn nie. */
+.modus-pille.gesetzt { color: var(--schrift); border-color: var(--akzent); }
 .modus-pille:active { filter: brightness(1.25); }
 
 /* Während geglättet wird, funkelt der Knopf im Akzent und lässt sich nicht
