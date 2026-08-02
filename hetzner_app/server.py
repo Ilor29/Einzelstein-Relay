@@ -787,11 +787,17 @@ class Modell(BaseModel):
 # Was Claude Code versteht — und was ein Mensch darunter versteht.
 # Die Kurznamen links sind die, die `claude --model` annimmt; die Zahlen dahinter
 # ändern sich mit jeder Modellgeneration, die Kurznamen nicht.
+
+# Namen ohne Versionsnummer, absichtlich: "/model opus" u.ä. sind Aliase, die
+# Claude Code selbst immer auf die neueste Version dieser Familie auflöst
+# (Stand 2.1.220). Stünde hier "Opus 4.8" fest im Text, veraltete das Etikett
+# bei jedem neuen Claude-Modell, obwohl die Auswahl technisch längst die
+# neueste Version trifft — genau das hat Roli am 02.08. verwirrt.
 MODELLE = {
-    "fable": ("Fable 5", "das neueste"),
-    "opus": ("Opus 4.8", "am stärksten, verbraucht die Limits schneller"),
-    "sonnet": ("Sonnet 5", "am effizientesten für Alltagsaufgaben"),
-    "haiku": ("Haiku 4.5", "am schnellsten für kurze Antworten"),
+    "fable": ("Fable", "das neueste"),
+    "opus": ("Opus", "am stärksten, verbraucht die Limits schneller"),
+    "sonnet": ("Sonnet", "am effizientesten für Alltagsaufgaben"),
+    "haiku": ("Haiku", "am schnellsten für kurze Antworten"),
 }
 
 
