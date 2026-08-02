@@ -2062,17 +2062,54 @@ function pauseSymbol(pausiert) {
   pauseKnopf?.setAttribute("aria-label", pausiert ? "Weiter" : "Pause");
 }
 
+// Der Media Session sagen "hier läuft echte Wiedergabe" — ohne das drosseln
+// vor allem iPhones den Ton binnen Sekunden, sobald der Bildschirm sperrt,
+// und ein langer Vortrag bricht mitten im Satz ab. Mit der Anmeldung zeigt
+// das Handy sogar Titel und Pause/Weiter/Stopp auf dem Sperrbildschirm und
+// behandelt die Wiedergabe entsprechend nachsichtiger. Rein kosmetisch fürs
+// System — geht sie schief (ältere Browser, kein MediaMetadata), soll das nie
+// das eigentliche Vorlesen stören, darum alles in try/catch.
+function medienSitzungAn() {
+  if (!("mediaSession" in navigator)) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: "Antwort wird vorgelesen",
+      artist: aktuelleSitzung ? benannt(aktuelleSitzung) : "Einzelstein Relay",
+    });
+    navigator.mediaSession.playbackState = "playing";
+    navigator.mediaSession.setActionHandler("pause", () => {
+      if (!manuellPausiert) pauseUmschalten();
+    });
+    navigator.mediaSession.setActionHandler("play", () => {
+      if (manuellPausiert) pauseUmschalten();
+    });
+    navigator.mediaSession.setActionHandler("stop", () => stille());
+  } catch { /* dann eben ohne Sperrbildschirm-Anzeige */ }
+}
+
+function medienSitzungAus() {
+  if (!("mediaSession" in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = "none";
+    navigator.mediaSession.setActionHandler("pause", null);
+    navigator.mediaSession.setActionHandler("play", null);
+    navigator.mediaSession.setActionHandler("stop", null);
+  } catch { /* dann eben ohne Sperrbildschirm-Anzeige */ }
+}
+
 function leisteAn() {
   manuellPausiert = false;
   pauseSymbol(false);
   if (zeitEl) zeitEl.textContent = "0:00";
   if (leisteEl) leisteEl.hidden = false;
+  medienSitzungAn();
 }
 
 function dauerAus() {
   if (dauerTakt) { clearInterval(dauerTakt); dauerTakt = null; }
   manuellPausiert = false;
   if (leisteEl) leisteEl.hidden = true;
+  medienSitzungAus();
 }
 
 // Ein Schlaf, der die TON-Uhr abwartet, nicht die Wanduhr: Wir warten, bis
@@ -2431,10 +2468,12 @@ async function pauseUmschalten() {
   if (manuellPausiert) {
     manuellPausiert = false;              // erst freigeben, dann anwerfen
     pauseSymbol(false);
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
     try { await hörCtx.resume(); } catch { /* dann bleibt's eben stehen */ }
   } else {
     manuellPausiert = true;               // erst merken, dann anhalten
     pauseSymbol(true);
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
     try { await hörCtx.suspend(); } catch { /* dann eben nicht */ }
   }
 }
