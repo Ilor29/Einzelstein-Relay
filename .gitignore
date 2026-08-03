@@ -19,3 +19,6 @@ stimmen/
 Thumbs.db
 .idea/
 .vscode/
+
+# Vox-Installationsdateien (Durchgangsware, gehören nicht ins Repo)
+web/dl/
