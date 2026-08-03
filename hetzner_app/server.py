@@ -1200,6 +1200,10 @@ def index() -> Response:
     sich die App in eine Neulade-Schleife und man flog heraus. Diese zweite
     Nummer gibt es nicht mehr.
     """
+    return _index_html()
+
+
+def _index_html() -> Response:
     html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
     html = html.replace("__VERSION__", str(VERSION))
     return Response(
@@ -1207,6 +1211,16 @@ def index() -> Response:
         media_type="text/html; charset=utf-8",
         headers={"Cache-Control": "no-store"},
     )
+
+
+@app.get("/teilen")
+def teilen_ziel() -> Response:
+    """Landeplatz für den Teilen-Knopf anderer Apps ("share_target" im Manifest).
+
+    Dieselbe Seite wie "/" — Titel/Text/URL aus der Adresszeile wertet app.js
+    selbst aus, sobald die Anmeldung steht (siehe kurzbefehlAusfuehren()).
+    """
+    return _index_html()
 
 
 app.mount("/", StaticFiles(directory=WEB_DIR), name="web")

@@ -2042,6 +2042,17 @@ let sprechLauf = 0;           // Zähler, mit dem ein alter Vortrag abbricht
 let restStuecke = [];         // was vom Vortrag noch aussteht
 let restText = "";            // beim Klingeln abgeschnitten — hierher gerettet
 
+// Vor/Zurück per Kopfhörer- oder Lenkradtaste (Media Session, siehe unten).
+// aktuellerIndex sagt springe(), wo der Vortrag gerade steht; sprungZiel ist
+// der Wunsch, den die Sprech-Schleife am Kopf jeder Runde bedient.
+let aktuellerIndex = null;
+let sprungZiel = null;
+
+function springe(richtung) {
+  if (!spricht || aktuellerIndex === null) return;
+  sprungZiel = aktuellerIndex + richtung;
+}
+
 // Die Vorlese-Leiste (Abspiel-Pille über der Eingabe): Pause/Weiter, die
 // verstrichene Zeit und ein Kreuz. Erscheint nur während des Vorlesens.
 const leisteEl = $("vorlese-leiste");
@@ -2065,10 +2076,11 @@ function pauseSymbol(pausiert) {
 // Der Media Session sagen "hier läuft echte Wiedergabe" — ohne das drosseln
 // vor allem iPhones den Ton binnen Sekunden, sobald der Bildschirm sperrt,
 // und ein langer Vortrag bricht mitten im Satz ab. Mit der Anmeldung zeigt
-// das Handy sogar Titel und Pause/Weiter/Stopp auf dem Sperrbildschirm und
-// behandelt die Wiedergabe entsprechend nachsichtiger. Rein kosmetisch fürs
-// System — geht sie schief (ältere Browser, kein MediaMetadata), soll das nie
-// das eigentliche Vorlesen stören, darum alles in try/catch.
+// das Handy sogar Titel und Pause/Weiter/Stopp auf dem Sperrbildschirm — und
+// Kopfhörer- oder Lenkradtasten steuern "einen Satz vor/zurück" (springe()),
+// ganz ohne aufs Handy zu schauen. Rein kosmetisch fürs System — geht sie
+// schief (ältere Browser, kein MediaMetadata), soll das nie das eigentliche
+// Vorlesen stören, darum alles in try/catch.
 function medienSitzungAn() {
   if (!("mediaSession" in navigator)) return;
   try {
@@ -2084,6 +2096,8 @@ function medienSitzungAn() {
       if (manuellPausiert) pauseUmschalten();
     });
     navigator.mediaSession.setActionHandler("stop", () => stille());
+    navigator.mediaSession.setActionHandler("previoustrack", () => springe(-1));
+    navigator.mediaSession.setActionHandler("nexttrack", () => springe(1));
   } catch { /* dann eben ohne Sperrbildschirm-Anzeige */ }
 }
 
@@ -2094,6 +2108,8 @@ function medienSitzungAus() {
     navigator.mediaSession.setActionHandler("pause", null);
     navigator.mediaSession.setActionHandler("play", null);
     navigator.mediaSession.setActionHandler("stop", null);
+    navigator.mediaSession.setActionHandler("previoustrack", null);
+    navigator.mediaSession.setActionHandler("nexttrack", null);
   } catch { /* dann eben ohne Sperrbildschirm-Anzeige */ }
 }
 
@@ -2155,6 +2171,8 @@ function stille() {
   }
   aktiveQuellen = [];
   restStuecke = [];           // von Hand gestoppt heißt: nichts steht mehr aus
+  aktuellerIndex = null;
+  sprungZiel = null;
   dauerAus();
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
@@ -2349,6 +2367,20 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     }, 500);
 
     while (true) {
+      // Ein Sprung wartet: laufende Quellen abwürgen und an der Zielstelle neu
+      // einreihen. Zu weit vor/zurück wird an den Rand geklemmt, statt zu
+      // scheitern — am Anfang oder Ende ist "noch einer weiter" kein Fehler.
+      if (sprungZiel !== null) {
+        i = Math.max(0, Math.min(sprungZiel, stuecke.length - 1));
+        sprungZiel = null;
+        for (const q of aktiveQuellen) {
+          try { q.stop(); } catch { /* war schon vorbei */ }
+        }
+        aktiveQuellen = [];
+        startZeit = c.currentTime + 0.08;
+        naechstes = hole(stuecke[i]);
+      }
+
       // Bekannte Stücke aufgebraucht? Im Folge-Modus fragen wir nach, ob Claude
       // inzwischen weitergeschrieben hat — sonst ist hier Schluss.
       if (i >= stuecke.length) {
@@ -2368,6 +2400,9 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 
       const puffer = await naechstes;
       if (abgebrochen()) return;
+      // Während des Holens kam ein Sprung dazwischen — dieses Stück ist schon
+      // überholt, nicht mehr abspielen, sondern am Kopf der Schleife springen.
+      if (sprungZiel !== null) continue;
 
       // Das übernächste Stück schon dekodieren, solange dieses läuft — sofern in
       // der bekannten Liste noch eins steht.
@@ -2378,14 +2413,17 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
       quelle.connect(c.destination);
       const start = Math.max(startZeit, c.currentTime);
       quelle.start(start);
+      aktuellerIndex = i;
       if (sprechBeginn === null) sprechBeginn = start;   // ab hier läuft die Uhr
       startZeit = start + puffer.duration;   // das nächste schließt nahtlos an
       aktiveQuellen.push(quelle);
 
       // Bis kurz vor das Ende warten — dann hängen wir das (bereits dekodierte)
       // nächste Stück an, bevor überhaupt Stille entstehen kann. Gemessen an der
-      // Ton-Uhr, damit „Pause" hier sauber anhält (siehe warteBisTonzeit).
-      await warteBisTonzeit(startZeit - 0.25, abgebrochen);
+      // Ton-Uhr, damit „Pause" hier sauber anhält (siehe warteBisTonzeit). Ein
+      // Sprung soll nicht erst das Stückende abwarten, darum bricht er die
+      // Wartezeit hier mit ab — den Kopf der Schleife holt er sich gleich selbst.
+      await warteBisTonzeit(startZeit - 0.25, () => abgebrochen() || sprungZiel !== null);
       if (abgebrochen()) return;
       i++;
     }
@@ -3307,6 +3345,42 @@ function zeigeNetzHinweis() {
   window.addEventListener("online", () => start(), { once: true });
 }
 
+// Zwei Wege, wie das Handy die App mit einem Auftrag im Gepäck öffnet — beide
+// erst NACH der Anmeldung auswerten, sonst öffnete sich das Blatt hinter dem
+// Anmelde-Bildschirm, unsichtbar und ohne Wirkung. Beide räumen ihre Adresse
+// danach weg, sonst öffnet ein bloßes Neuladen sie ein zweites Mal.
+
+// Kurzbefehl vom Homescreen: langer Druck aufs Icon, siehe "shortcuts" im
+// Manifest, kommt als "?neu=1" herein.
+function kurzbefehlAusfuehren() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("neu") !== "1") return;
+  history.replaceState(null, "", location.pathname);
+  $("knopf-neu").click();
+}
+
+// Teilen aus einer anderen App: "share_target" im Manifest schickt Titel,
+// Text und/oder Link als Adresszeile "/teilen?...". Landet im Auftragsfeld
+// der Neue-Sitzung-Ansicht — der Knopf baut das Formular, das Feld selbst
+// rührt er nicht an, also ist das Nachtragen direkt danach unproblematisch.
+function teilenAusfuehren() {
+  if (location.pathname !== "/teilen") return;
+  const params = new URLSearchParams(location.search);
+  const teile = [params.get("titel"), params.get("text"), params.get("url")]
+    .map((t) => t?.trim())
+    .filter(Boolean);
+  history.replaceState(null, "", "/");
+  if (!teile.length) return;
+  $("knopf-neu").click();
+  $("neu-auftrag").value = teile.join("\n\n");
+}
+
+function nachAnmeldung() {
+  starteListe();
+  kurzbefehlAusfuehren();
+  teilenAusfuehren();
+}
+
 async function start() {
   zeige("anmeldung");
   $("anmelde-fehler").hidden = true;
@@ -3314,7 +3388,7 @@ async function start() {
   // Schon angemeldet?
   try {
     await (await api("/sessions")).json();
-    starteListe();
+    nachAnmeldung();
     return;
   } catch (err) {
     if (istNetzfehler(err)) { zeigeNetzHinweis(); return; }
@@ -3323,7 +3397,7 @@ async function start() {
 
   try {
     await anmelden();
-    starteListe();
+    nachAnmeldung();
   } catch (err) {
     if (istNetzfehler(err)) { zeigeNetzHinweis(); return; }
     // Wirklich nicht freigeschaltet: den öffentlichen Schlüssel zeigen. Auch

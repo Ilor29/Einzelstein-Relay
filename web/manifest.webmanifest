@@ -14,5 +14,23 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Neue Sitzung",
+      "short_name": "Neu",
+      "description": "Direkt eine neue Sitzung starten",
+      "url": "/?neu=1",
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ],
+  "share_target": {
+    "action": "/teilen",
+    "method": "GET",
+    "params": {
+      "title": "titel",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
