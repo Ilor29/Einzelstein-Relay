@@ -1,0 +1,15 @@
+[Unit]
+Description=Speicher-Wächter der Hetzner-App — eine Messung
+# Absichtlich ein eigener, kurzer Lauf statt einer Schleife im App-Dienst:
+# Läuft der Speicher wirklich voll, ist der App-Dienst selbst ein Kandidat
+# fürs Abgeräumtwerden — ein Wächter, der mit dem Bewachten stirbt, taugt
+# nichts. Gestartet wird er vom speicher-waechter.timer.
+
+[Service]
+Type=oneshot
+User=roli
+WorkingDirectory=/home/roli/projekte/Hetzner-App
+ExecStart=/home/roli/projekte/Hetzner-App/.venv/bin/python -m hetzner_app.speicher
+# Für die Push-Meldung (Betreiber-Kontakt), wie beim App-Dienst selbst.
+EnvironmentFile=-/home/roli/.hetzner-app/umgebung
+Environment=HOME=/home/roli
