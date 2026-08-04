@@ -84,6 +84,31 @@ html, body {
   border-bottom: 1px solid var(--linie);
   flex: none;
 }
+/* Die Speicher-Ampel über der Sitzungsliste — eine stille Zeile, die nur
+   dann laut wird, wenn sie rot ist. */
+.speicher-zeile {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem 1rem;
+  font-size: .72rem;
+  font-family: var(--mono);
+  color: var(--schrift-schwach);
+  border-bottom: 1px solid var(--linie);
+  flex: none;
+}
+.speicher-punkt {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ruht);
+}
+.speicher-zeile.gruen .speicher-punkt { background: var(--laeuft); }
+.speicher-zeile.gelb  .speicher-punkt { background: var(--wartet); }
+.speicher-zeile.rot   .speicher-punkt { background: #D9534F; }
+.speicher-zeile.rot { color: #D9534F; }
+
 .sitzung-info {
   display: flex;
   align-items: center;

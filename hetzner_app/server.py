@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import bibliothek, geraete, melden, mitschrift, state, tmux, tts, verlauf
+from . import bibliothek, geraete, melden, mitschrift, speicher, state, tmux, tts, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -799,6 +799,19 @@ MODELLE = {
     "sonnet": ("Sonnet", "am effizientesten für Alltagsaufgaben"),
     "haiku": ("Haiku", "am schnellsten für kurze Antworten"),
 }
+
+
+@app.get("/api/speicher", dependencies=[Depends(require_auth)])
+def speicher_stand() -> dict:
+    """Der letzte Stand des Speicher-Wächters — für die Ampel oben in der App.
+
+    Gemessen wird nicht hier, sondern vom systemd-Timer (speicher-waechter);
+    wir reichen nur seine letzte Messung durch. Gibt es (noch) keine, sagen
+    wir das ehrlich, statt selbst zu messen — sonst merkte niemand, dass der
+    Wächter gar nicht läuft.
+    """
+    stand = speicher.lesen()
+    return stand if stand else {"ampel": None}
 
 
 @app.get("/api/modelle", dependencies=[Depends(require_auth)])

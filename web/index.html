@@ -290,6 +290,12 @@
       <svg viewBox="0 0 24 24"><use href="#i-zahnrad"/></svg>
     </button>
   </header>
+  <!-- Die Speicher-Ampel des Wächters (systemd-Timer). Steht nur da, wenn es
+       eine Messung gibt — sonst würde eine leere Zeile Platz fressen. -->
+  <div id="speicher-zeile" class="speicher-zeile" hidden>
+    <span id="speicher-punkt" class="speicher-punkt"></span>
+    <span id="speicher-text"></span>
+  </div>
   <div id="liste" class="liste"></div>
   <div class="fuss">
     <button id="knopf-neu" class="knopf-voll">

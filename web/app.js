@@ -355,20 +355,51 @@ async function ladeListe() {
   gruppe("Läuft auch auf dem Server", fremde, { zu: true });
 }
 
+// Die Speicher-Ampel des Wächters (siehe hetzner_app/speicher.py): grün /
+// gelb / rot samt Zahlen; bei Rot mit dem dicksten Chat dahinter. Eigener,
+// langsamer Takt — der Wächter misst nur alle drei Minuten, öfter fragen
+// bringt nichts Neues.
+async function ladeSpeicher() {
+  let stand;
+  try {
+    stand = await (await api("/speicher")).json();
+  } catch {
+    return;   // nicht angemeldet oder Funkloch — dann bleibt die alte Anzeige
+  }
+  const zeile = $("speicher-zeile");
+  if (!stand?.ampel) { zeile.hidden = true; return; }
+
+  zeile.classList.remove("gruen", "gelb", "rot");
+  zeile.classList.add(stand.ampel);
+  let text = `Speicher: ${stand.verfuegbarMb} MB verfügbar · `
+    + `Swap ${stand.swapBenutztMb}/${stand.swapGesamtMb} MB`;
+  if (stand.ampel === "rot" && stand.dicksterChat) {
+    text += ` — am dicksten: ${stand.dicksterChat.name} (${stand.dicksterChat.mb} MB)`;
+  }
+  $("speicher-text").textContent = text;
+  zeile.hidden = false;
+}
+
 let listenTakt = null;
+let speicherTakt = null;
 
 function starteListe() {
   zeige("liste");
   ladeListe();
+  ladeSpeicher();
   clearInterval(listenTakt);
   // Alle fünf Sekunden nachsehen — so wandert eine Sitzung von "läuft" nach
   // "wartet auf dich", ohne dass du etwas tun musst.
   listenTakt = setInterval(ladeListe, 5000);
+  clearInterval(speicherTakt);
+  speicherTakt = setInterval(ladeSpeicher, 60000);
 }
 
 function stoppeListe() {
   clearInterval(listenTakt);
   listenTakt = null;
+  clearInterval(speicherTakt);
+  speicherTakt = null;
 }
 
 // --- Eine Sitzung ------------------------------------------------------------
