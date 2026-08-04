@@ -1171,7 +1171,9 @@ html, body {
 .knopf-senden:active { filter: brightness(.9); }
 .knopf-senden svg { width: 17px; height: 17px; }
 
-/* Das Mikrofon. Im Auto der wichtigste Knopf der App. */
+/* Das Mikrofon. Im Auto der wichtigste Knopf der App.
+   Gleiche kräftige Icon-Farbe wie die Knöpfe unter den Antworten
+   (Lautsprecher/Kopieren/Teilen) — die leise Fassung war Roli zu dunkel. */
 .knopf-diktat {
   display: flex;
   align-items: center;
@@ -1179,7 +1181,7 @@ html, body {
   width: 34px; height: 34px;
   flex: none;
   background: none;
-  color: var(--schrift-leise);
+  color: var(--schrift);
   border: 0;
   border-radius: 50%;
   cursor: pointer;
