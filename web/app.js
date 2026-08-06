@@ -2159,6 +2159,36 @@ function dauerAus() {
   medienSitzungAus();
 }
 
+// Die stille Dauerquelle — sie hält die Ton-Leitung offen, solange der Vortrag
+// läuft. Der Grund: Zwischen zwei Häppchen spielt manchmal sekundenlang gar
+// nichts (Piper braucht für den nächsten Satz auf der kleinen Maschine seine
+// Zeit). Geht in genau so einer Lücke der Bildschirm aus, sieht Android einen
+// Ton-Kontext ohne einen einzigen aktiven Ton — und legt ihn schlafen. Der
+// Vortrag bricht mitten in der Antwort ab, obwohl der nächste Satz schon
+// unterwegs war. Eine endlos laufende Schleife aus purer Stille (ein leerer
+// Puffer, unhörbar, kostet nichts) überbrückt die Lücken: Für das System
+// spielt IMMER etwas, also bleibt der Ton auch bei dunklem Bildschirm am
+// Leben. Genau so löst es Rolis Vox-App auf Android — das hier ist das
+// PWA-Gegenstück.
+let dauerTon = null;
+
+function dauerTonAn() {
+  if (dauerTon || !hörCtx) return;
+  try {
+    const quelle = hörCtx.createBufferSource();
+    quelle.buffer = hörCtx.createBuffer(1, hörCtx.sampleRate, hörCtx.sampleRate);
+    quelle.loop = true;
+    quelle.connect(hörCtx.destination);
+    quelle.start();
+    dauerTon = quelle;
+  } catch { /* dann eben ohne — schlimmstenfalls wie vorher */ }
+}
+
+function dauerTonAus() {
+  try { dauerTon?.stop(); } catch { /* war schon aus */ }
+  dauerTon = null;
+}
+
 // Ein Schlaf, der die TON-Uhr abwartet, nicht die Wanduhr: Wir warten, bis
 // `hörCtx.currentTime` die Zielzeit erreicht. Diese Uhr steht still, solange der
 // Kontext pausiert ist — so hält der ganze Vortrag bei „Pause" an, ohne dass die
@@ -2204,6 +2234,7 @@ function stille() {
   restStuecke = [];           // von Hand gestoppt heißt: nichts steht mehr aus
   aktuellerIndex = null;
   sprungZiel = null;
+  dauerTonAus();
   dauerAus();
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
@@ -2365,6 +2396,9 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
   let stuecke = haeppchen(text);   // wächst im Folge-Modus per Nachschub
   const c = tonKontext();
   try { await c.resume(); } catch { /* Autoplay-Sperre — dann eben nicht */ }
+  // Die Leitung offen halten, bevor die erste Synthese-Lücke entsteht —
+  // sonst schläft der Ton bei dunklem Bildschirm ein (siehe dauerTonAn).
+  dauerTonAn();
 
   async function hole(stueck) {
     const antwort = await api("/speak", {
