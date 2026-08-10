@@ -1606,17 +1606,32 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
   }
 }
 
+// Das Anhängen-Blatt. Der Fortschritt beim Hochladen zeigt sich am Plus-Knopf —
+// die einzelnen Symbole gibt es ja nicht mehr, sie stecken jetzt hier drin.
+function anhangBlattAuf() { $("anhang-blatt").hidden = false; }
+function anhangBlattZu() { $("anhang-blatt").hidden = true; }
+
+$("knopf-anhang").addEventListener("click", anhangBlattAuf);
+$("anhang-schatten").addEventListener("click", anhangBlattZu);
+$("anhang-schliessen").addEventListener("click", anhangBlattZu);
+
+// Erst das Blatt schließen, dann den Wähler öffnen: Sonst liegt das Blatt beim
+// Zurückkommen aus der Kamera noch über der Eingabe.
+function ausBlatt(waehler) {
+  return () => { anhangBlattZu(); $(waehler).click(); };
+}
+
 // Die Kamera direkt: capture="environment" am Wähler öffnet sofort die
 // Kamera-App statt der Galerie — Foto knipsen, hängt dran, fertig. Der
 // Galerie-Weg daneben bleibt für Screenshots und alte Bilder.
-$("knopf-kamera").addEventListener("click", () => $("kamera-waehler").click());
+$("kachel-kamera").addEventListener("click", ausBlatt("kamera-waehler"));
 $("kamera-waehler").addEventListener("change", (e) => {
   const dateien = [...e.target.files];
   e.target.value = "";
-  anhaengeHochladen(dateien, "bild", "bild", $("knopf-kamera"));
+  anhaengeHochladen(dateien, "bild", "bild", $("knopf-anhang"));
 });
 
-$("knopf-bild").addEventListener("click", () => $("bild-waehler").click());
+$("kachel-bild").addEventListener("click", ausBlatt("bild-waehler"));
 $("bild-waehler").addEventListener("change", (e) => {
   // ERST die Auswahl in ein eigenes Array kopieren, DANN das Feld leeren.
   // e.target.files ist eine lebende Liste — leert man das Feld vorher, ist die
@@ -1624,14 +1639,14 @@ $("bild-waehler").addEventListener("change", (e) => {
   // Foto-Senden: auswählen ging, absenden nicht.
   const dateien = [...e.target.files];
   e.target.value = "";                 // damit dieselbe Auswahl nochmal ginge
-  anhaengeHochladen(dateien, "bild", "bild", $("knopf-bild"));
+  anhaengeHochladen(dateien, "bild", "bild", $("knopf-anhang"));
 });
 
-$("knopf-datei").addEventListener("click", () => $("datei-waehler").click());
+$("kachel-datei").addEventListener("click", ausBlatt("datei-waehler"));
 $("datei-waehler").addEventListener("change", (e) => {
   const dateien = [...e.target.files];
   e.target.value = "";
-  anhaengeHochladen(dateien, "datei", "datei", $("knopf-datei"));
+  anhaengeHochladen(dateien, "datei", "datei", $("knopf-anhang"));
 });
 
 // --- Das Eingabefeld wächst mit ----------------------------------------------
@@ -3163,7 +3178,10 @@ async function oeffneBibliothek(ziel) {
 }
 
 $("knopf-bibliothek").addEventListener("click", () => oeffneBibliothek(null));
-$("knopf-skill").addEventListener("click", () => oeffneBibliothek(aktuelleSitzung));
+$("kachel-skill").addEventListener("click", () => {
+  anhangBlattZu();
+  oeffneBibliothek(aktuelleSitzung);
+});
 
 // Die Lupe: tippt man, wird sofort gefiltert.
 $("bib-suchfeld").addEventListener("input", (e) => {
