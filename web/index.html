@@ -353,6 +353,17 @@
     <p id="frage-text" class="frage-text"></p>
     <div id="frage-knoepfe" class="frage-knoepfe"></div>
   </div>
+  <!-- Claude Code will neu angemeldet werden: /login druckt eine lange
+       OAuth-Adresse, die sich am Handy nicht aus dem Terminal kopieren lässt.
+       Die App fischt sie vom Bildschirm und macht Knöpfe daraus. -->
+  <div id="anmelde-link" class="frage" hidden>
+    <p class="frage-text">Claude Code braucht eine neue Anmeldung. Link öffnen,
+      anmelden — den Code danach einfach unten ins Eingabefeld setzen.</p>
+    <div class="frage-knoepfe">
+      <button type="button" id="anmelde-oeffnen" class="frage-knopf ja">Anmelde-Link öffnen</button>
+      <button type="button" id="anmelde-kopieren" class="frage-knopf">Link kopieren</button>
+    </div>
+  </div>
   <!-- Zwei Zeilen, wie in der offiziellen App: oben der Text über die volle
        Breite, unten die Knöpfe. Nebeneinander gedrängt blieb dem Textfeld
        nichts mehr übrig, sobald Kreuz und Modellwähler dazukamen. -->

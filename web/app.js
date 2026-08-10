@@ -789,6 +789,10 @@ async function pruefeFrage() {
     return;
   }
 
+  // Der Anmelde-Link fährt in derselben Antwort huckepack mit (siehe
+  // Server). Er hat seinen eigenen Kasten und stört die Rückfragen nicht.
+  zeigeAnmeldeLink(frage.anmeldeLink);
+
   const kasten = $("frage");
   if (!frage.moeglichkeiten) {
     kasten.hidden = true;
@@ -815,6 +819,33 @@ async function pruefeFrage() {
   );
   kasten.hidden = false;
 }
+
+// Der Anmelde-Kasten: erscheint, wenn Claude Code nach /login seine lange
+// OAuth-Adresse auf den Bildschirm gedruckt hat. Öffnen startet die Anmeldung
+// im Browser; den Code, den man dort bekommt, setzt man danach ganz normal
+// unten ins Eingabefeld. Kopieren als zweiter Weg, falls man den Link lieber
+// woanders öffnet.
+let anmeldeLink = "";
+
+function zeigeAnmeldeLink(url) {
+  const kasten = $("anmelde-link");
+  anmeldeLink = url || "";
+  kasten.hidden = !anmeldeLink;
+}
+
+$("anmelde-oeffnen").addEventListener("click", () => {
+  if (anmeldeLink) window.open(anmeldeLink, "_blank", "noopener");
+});
+
+$("anmelde-kopieren").addEventListener("click", async () => {
+  if (!anmeldeLink) return;
+  try {
+    await navigator.clipboard.writeText(anmeldeLink);
+    melde("Link kopiert.");
+  } catch {
+    melde("Kopieren ging nicht — nimm den Öffnen-Knopf.");
+  }
+});
 
 async function antworte(nummer) {
   const kasten = $("frage");
@@ -977,6 +1008,7 @@ function oeffneSitzung(sitzung) {
 
   $("verlauf").replaceChildren();
   $("frage").hidden = true;
+  zeigeAnmeldeLink(null);
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
   folgeUnten = true;       // beim Öffnen ans Ende, zum Neuesten

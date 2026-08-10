@@ -272,7 +272,7 @@ def send_key(name: str, key: str) -> None:
     _run("send-keys", "-t", sitzung, key, socket=socket)
 
 
-def capture(name: str, lines: int | None = 200) -> str:
+def capture(name: str, lines: int | None = 200, verbunden: bool = False) -> str:
     """Liest den Inhalt der Sitzung als Text.
 
     Mit `lines` bekommst du so viele Zeilen Verlauf dazu — das brauchen wir
@@ -280,9 +280,16 @@ def capture(name: str, lines: int | None = 200) -> str:
     der entscheidende Unterschied: Nur dort verrät die Fußzeile, ob Claude
     gerade arbeitet. Im Verlauf stehen alte Kreisel-Zeilen für immer herum
     und würden jede Sitzung auf ewig als "läuft" ausweisen.
+
+    Mit `verbunden` fügt tmux umbrochene Zeilen wieder zusammen (-J). Das
+    braucht, wer nach etwas sucht, das länger ist als eine Terminalzeile —
+    eine lange Web-Adresse etwa zerfällt sonst in zwei Hälften, und kein
+    Muster der Welt findet sie wieder.
     """
     socket, sitzung = _zerlegen(name)
     args = ["capture-pane", "-p", "-t", sitzung]
+    if verbunden:
+        args.append("-J")
     if lines is not None:
         args += ["-S", f"-{lines}"]
     return _run(*args, socket=socket)

@@ -282,6 +282,30 @@ def kontext(name: str) -> int | None:
     return wert if 0 <= wert <= 100 else None
 
 
+# Der Anmelde-Link von Claude Code. Läuft die Anmeldung ab, verlangt Claude
+# Code "/login" und druckt eine lange OAuth-Adresse ins Terminal. Am Handy
+# ließ die sich aus dem Terminal nicht herauskopieren — Roli musste sie am
+# 10.08. über einen zweiten Chat auslesen lassen, anmelden, den Code zurück-
+# tippen. Darum fischt die App den Link jetzt selbst vom Bildschirm und macht
+# einen Knopf daraus. Absichtlich NUR Anthropic-Anmeldeadressen, keine
+# beliebigen Links — sonst poppte der Knopf bei jeder Adresse im Gespräch auf.
+_ANMELDE_LINK = re.compile(
+    r"https://(?:claude\.ai|console\.anthropic\.com)/oauth[^\s\"'│┃]*"
+)
+
+
+def anmelde_link(name: str) -> str | None:
+    """Die Anmelde-Adresse, falls gerade eine auf dem Bildschirm steht."""
+    try:
+        # verbunden=True: die Adresse ist länger als eine Terminalzeile und
+        # wäre sonst in Hälften zerbrochen, die kein Muster findet.
+        screen = tmux.capture(name, lines=None, verbunden=True)
+    except tmux.TmuxError:
+        return None
+    treffer = _ANMELDE_LINK.findall(screen)
+    return treffer[-1] if treffer else None
+
+
 # Claude Codes eigene Bestätigung nach einem Modellwechsel — "Set model to
 # Opus 5 and saved as your default for new sessions". Der einzige Ort, an dem
 # wir ehrlich erfahren, was ein Alias wie "opus" gerade wirklich trifft,

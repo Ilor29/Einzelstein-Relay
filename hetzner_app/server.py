@@ -915,10 +915,21 @@ class Antwort(BaseModel):
 
 @app.get("/api/sessions/{name}/frage", dependencies=[Depends(require_auth)])
 def session_frage(name: str) -> dict:
-    """Hängt die Sitzung gerade an einer Rückfrage? Dann hier, mit Antworten."""
+    """Hängt die Sitzung gerade an einer Rückfrage? Dann hier, mit Antworten.
+
+    Huckepack fährt der Anmelde-Link mit: Steht auf dem Bildschirm eine
+    OAuth-Adresse von Claude Code (nach "/login"), liefern wir sie als
+    anmeldeLink — die App macht daraus einen Öffnen-Knopf, statt dass man
+    die Adresse aus dem Terminal abtippen muss. Im selben Aufruf, weil die
+    App hier ohnehin alle paar Sekunden nachschaut.
+    """
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
-    return state.frage(name) or {}
+    antwort = state.frage(name) or {}
+    link = state.anmelde_link(name)
+    if link:
+        antwort["anmeldeLink"] = link
+    return antwort
 
 
 @app.post("/api/sessions/{name}/antwort", dependencies=[Depends(require_auth)])
