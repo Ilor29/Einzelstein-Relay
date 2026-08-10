@@ -1606,6 +1606,16 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
   }
 }
 
+// Die Kamera direkt: capture="environment" am Wähler öffnet sofort die
+// Kamera-App statt der Galerie — Foto knipsen, hängt dran, fertig. Der
+// Galerie-Weg daneben bleibt für Screenshots und alte Bilder.
+$("knopf-kamera").addEventListener("click", () => $("kamera-waehler").click());
+$("kamera-waehler").addEventListener("change", (e) => {
+  const dateien = [...e.target.files];
+  e.target.value = "";
+  anhaengeHochladen(dateien, "bild", "bild", $("knopf-kamera"));
+});
+
 $("knopf-bild").addEventListener("click", () => $("bild-waehler").click());
 $("bild-waehler").addEventListener("change", (e) => {
   // ERST die Auswahl in ein eigenes Array kopieren, DANN das Feld leeren.

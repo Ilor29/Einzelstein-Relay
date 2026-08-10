@@ -162,6 +162,13 @@
       <path d="M21 16l-4.5-4.5L7 21"/>
     </g>
 
+    <!-- Eine Kamera: Foto direkt aufnehmen statt aus der Galerie suchen. -->
+    <g id="i-kamera" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>
+      <circle cx="12" cy="13" r="3.2"/>
+    </g>
+
     <!-- Ein Blatt mit umgeknickter Ecke: eine Datei (PDF, Word, Text …). -->
     <g id="i-datei" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
@@ -419,6 +426,12 @@
               rows="1" autocomplete="off" autocapitalize="sentences"
               enterkeyhint="send"></textarea>
     <div class="eingabe-knoepfe">
+      <button type="button" id="knopf-kamera" class="knopf-diktat" aria-label="Foto direkt aufnehmen">
+        <svg viewBox="0 0 24 24"><use href="#i-kamera"/></svg>
+      </button>
+      <!-- capture öffnet direkt die Kamera, statt erst die Galerie zu zeigen —
+           für den schnellen Schnappschuss vom Bildschirm nebenan. -->
+      <input type="file" id="kamera-waehler" accept="image/*" capture="environment" hidden>
       <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Fotos schicken">
         <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
       </button>
