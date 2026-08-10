@@ -426,25 +426,20 @@
               rows="1" autocomplete="off" autocapitalize="sentences"
               enterkeyhint="send"></textarea>
     <div class="eingabe-knoepfe">
-      <button type="button" id="knopf-kamera" class="knopf-diktat" aria-label="Foto direkt aufnehmen">
-        <svg viewBox="0 0 24 24"><use href="#i-kamera"/></svg>
+      <!-- Ein Knopf für alles zum Anhängen. Vier Symbole nebeneinander haben die
+           Zeile gesprengt — der Senden-Knopf rutschte auf schmalen Handys aus
+           dem Rahmen. Jetzt öffnet das Plus ein Blatt von unten, so wie es die
+           offizielle App macht. -->
+      <button type="button" id="knopf-anhang" class="knopf-diktat" aria-label="Etwas anhängen">
+        <svg viewBox="0 0 24 24"><use href="#i-plus"/></svg>
       </button>
       <!-- capture öffnet direkt die Kamera, statt erst die Galerie zu zeigen —
            für den schnellen Schnappschuss vom Bildschirm nebenan. -->
       <input type="file" id="kamera-waehler" accept="image/*" capture="environment" hidden>
-      <button type="button" id="knopf-bild" class="knopf-diktat" aria-label="Fotos schicken">
-        <svg viewBox="0 0 24 24"><use href="#i-bild"/></svg>
-      </button>
       <input type="file" id="bild-waehler" accept="image/*" multiple hidden>
-      <button type="button" id="knopf-datei" class="knopf-diktat" aria-label="Dateien schicken (PDF, Word, Markdown …)">
-        <svg viewBox="0 0 24 24"><use href="#i-datei"/></svg>
-      </button>
       <input type="file" id="datei-waehler"
              accept=".pdf,.md,.markdown,.txt,.text,.rtf,.doc,.docx,.odt,.csv,.tsv,.xls,.xlsx,.ods,.ppt,.pptx,.json,.yaml,.yml,.log,.xml,.html"
              multiple hidden>
-      <button type="button" id="knopf-skill" class="knopf-diktat" aria-label="Skill aus der Bibliothek einfügen">
-        <svg viewBox="0 0 24 24"><use href="#i-buch"/></svg>
-      </button>
       <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
         <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
       </button>
@@ -467,6 +462,43 @@
       </button>
     </div>
   </form>
+
+  <!-- Alles, was man an eine Nachricht hängen kann — in einem Blatt statt in
+       einer Knopfreihe. Oben die drei Wege zu einer Datei als Kacheln, darunter
+       die Skill-Bibliothek als Zeile. -->
+  <div id="anhang-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="anhang-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="anhang-schliessen" class="knopf-blank"
+                aria-label="Schließen">✕</button>
+        <h2>Anhängen</h2>
+      </div>
+      <div class="kachel-reihe">
+        <button type="button" id="kachel-kamera" class="kachel">
+          <span class="kachel-kreis"><svg viewBox="0 0 24 24"><use href="#i-kamera"/></svg></span>
+          <span class="kachel-name">Kamera</span>
+        </button>
+        <button type="button" id="kachel-bild" class="kachel">
+          <span class="kachel-kreis"><svg viewBox="0 0 24 24"><use href="#i-bild"/></svg></span>
+          <span class="kachel-name">Fotos</span>
+        </button>
+        <button type="button" id="kachel-datei" class="kachel">
+          <span class="kachel-kreis"><svg viewBox="0 0 24 24"><use href="#i-datei"/></svg></span>
+          <span class="kachel-name">Dateien</span>
+        </button>
+      </div>
+      <div class="blatt-liste">
+        <button type="button" id="kachel-skill" class="blatt-zeile">
+          <span class="kachel-kreis"><svg viewBox="0 0 24 24"><use href="#i-buch"/></svg></span>
+          <span class="blatt-zeile-text">
+            <span class="blatt-zeile-titel">Skill einfügen</span>
+            <span class="blatt-zeile-art">Aus der Bibliothek dieser Sitzung</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Die Modellauswahl, wie in der offiziellen App: ein Blatt von unten. -->
   <div id="modell-blatt" class="blatt" hidden>

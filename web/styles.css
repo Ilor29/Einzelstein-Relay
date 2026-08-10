@@ -509,6 +509,67 @@ html, body {
   margin-right: 2.2rem;
 }
 
+/* Die drei Kacheln im Anhängen-Blatt: Kamera, Fotos, Dateien nebeneinander.
+   Große Ziele für den Daumen — dafür ist das Blatt da. */
+.kachel-reihe {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .6rem;
+}
+.kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .55rem;
+  background: var(--erhoben-2);
+  border: 0;
+  border-radius: 14px;
+  padding: 1.1rem .5rem;
+  color: var(--schrift);
+  font-family: var(--sans);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.kachel:active,
+.blatt-zeile:active { filter: brightness(1.2); }
+.kachel-kreis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; height: 44px;
+  flex: none;
+  background: var(--erhoben);
+  border-radius: 50%;
+}
+.kachel-kreis svg { width: 21px; height: 21px; }
+.kachel-name { font-size: .85rem; }
+
+/* Zeilen unter den Kacheln — bislang nur die Skill-Bibliothek. */
+.blatt-liste {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-top: .6rem;
+}
+.blatt-zeile {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  width: 100%;
+  text-align: left;
+  background: var(--erhoben-2);
+  border: 0;
+  border-radius: 14px;
+  padding: .75rem 1rem;
+  color: var(--schrift);
+  font-family: var(--sans);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.blatt-zeile-text { display: flex; flex-direction: column; gap: .15rem; }
+.blatt-zeile-titel { font-size: .95rem; font-weight: 600; }
+.blatt-zeile-art { font-size: .8rem; color: var(--schrift-leise); }
+
 .modell-liste {
   display: flex;
   flex-direction: column;

@@ -2201,6 +2201,63 @@ function dauerAus() {
   medienSitzungAus();
 }
 
+// Wohin der Ton geht: NICHT geradewegs in den Lautsprecher (c.destination),
+// sondern über ein echtes <audio>-Element.
+//
+// Der Grund ist Android. Für das System ist Web Audio keine Medienwiedergabe —
+// nur ein Rechenwerk, das zufällig Töne macht. Ein Player, der im Sperrbildschirm
+// steht und in der Hosentasche weiterlaufen darf, ist ein <audio>-Element. Ohne
+// dieses Element dreht Android bei dunklem Bildschirm den Ton weg, während unsere
+// Zeitachse munter weiterläuft: Man schaltet den Bildschirm wieder ein und der
+// Vortrag ist zwanzig Sekunden weiter — genau die zwanzig Sekunden, die man nicht
+// gehört hat.
+//
+// Der Umweg kostet nichts und ändert am Vortrag nichts: Die Häppchen werden
+// weiterhin lückenlos auf der Ton-Uhr aneinandergereiht (siehe oben), nur landen
+// sie am Ende in einem Strom, den das <audio>-Element abspielt. Klappt das
+// Anwerfen nicht (ältere Browser, Autoplay-Sperre), geht es wie früher direkt in
+// den Lautsprecher — dann eben nur bei hellem Bildschirm zuverlässig.
+let tonAusgang = null;
+let playerLief = false;       // hat das <audio> schon einmal wirklich gespielt?
+
+async function tonAusgangAn(c) {
+  const el = $("stimme");
+  if (!tonAusgang) {
+    try {
+      const senke = c.createMediaStreamDestination();
+      el.srcObject = senke.stream;
+      tonAusgang = senke;
+    } catch {
+      tonAusgang = c.destination;      // kein Strom-Ziel: direkter Weg
+    }
+  }
+  if (tonAusgang === c.destination) return tonAusgang;
+  try {
+    await el.play();
+    playerLief = true;
+  } catch {
+    // Der Player springt nicht an. Beim ERSTEN Mal heißt das: Dieser Browser
+    // macht den Umweg nicht mit — lieber hörbar ohne Hosentaschen-Kniff als
+    // stumm mit, also zurück auf den direkten Weg, bevor das erste Häppchen
+    // eingereiht wird. Lief er dagegen schon einmal, ist es nur die
+    // Autoplay-Sperre nach einer Unterbrechung (Weiterlesen nach einem Anruf
+    // kommt ohne Fingertipp). Dann bleibt alles verbunden wie es ist, sonst
+    // hinge der halbe Vortrag am einen und der halbe am anderen Ausgang.
+    if (!playerLief) {
+      el.srcObject = null;
+      tonAusgang = c.destination;
+    }
+  }
+  return tonAusgang;
+}
+
+function tonAusgangAus() {
+  // Den Player anhalten, sonst bleibt die Wiedergabe-Anzeige im Sperrbildschirm
+  // stehen, obwohl längst nichts mehr kommt. Der Strom selbst bleibt bestehen
+  // und wird beim nächsten Vortrag einfach wieder angeworfen.
+  try { $("stimme").pause(); } catch { /* dann eben nicht */ }
+}
+
 // Die stille Dauerquelle — sie hält die Ton-Leitung offen, solange der Vortrag
 // läuft. Der Grund: Zwischen zwei Häppchen spielt manchmal sekundenlang gar
 // nichts (Piper braucht für den nächsten Satz auf der kleinen Maschine seine
@@ -2220,7 +2277,7 @@ function dauerTonAn() {
     const quelle = hörCtx.createBufferSource();
     quelle.buffer = hörCtx.createBuffer(1, hörCtx.sampleRate, hörCtx.sampleRate);
     quelle.loop = true;
-    quelle.connect(hörCtx.destination);
+    quelle.connect(tonAusgang || hörCtx.destination);
     quelle.start();
     dauerTon = quelle;
   } catch { /* dann eben ohne — schlimmstenfalls wie vorher */ }
@@ -2277,6 +2334,7 @@ function stille() {
   aktuellerIndex = null;
   sprungZiel = null;
   dauerTonAus();
+  tonAusgangAus();
   dauerAus();
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
@@ -2438,6 +2496,9 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
   let stuecke = haeppchen(text);   // wächst im Folge-Modus per Nachschub
   const c = tonKontext();
   try { await c.resume(); } catch { /* Autoplay-Sperre — dann eben nicht */ }
+  // Den Player anwerfen, BEVOR das erste Häppchen eingereiht wird — sonst hinge
+  // es noch am alten Ausgang (siehe tonAusgangAn).
+  await tonAusgangAn(c);
   // Die Leitung offen halten, bevor die erste Synthese-Lücke entsteht —
   // sonst schläft der Ton bei dunklem Bildschirm ein (siehe dauerTonAn).
   dauerTonAn();
@@ -2517,7 +2578,7 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 
       const quelle = c.createBufferSource();
       quelle.buffer = puffer;
-      quelle.connect(c.destination);
+      quelle.connect(tonAusgang || c.destination);
       const start = Math.max(startZeit, c.currentTime);
       quelle.start(start);
       aktuellerIndex = i;
