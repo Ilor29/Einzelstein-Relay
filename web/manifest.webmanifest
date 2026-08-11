@@ -26,11 +26,29 @@
   ],
   "share_target": {
     "action": "/teilen",
-    "method": "GET",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "titel",
       "text": "text",
-      "url": "url"
+      "url": "url",
+      "files": [
+        {
+          "name": "dateien",
+          "accept": [
+            "image/*",
+            "text/*",
+            "application/pdf",
+            "application/json",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".md", ".markdown", ".txt", ".text", ".csv", ".tsv", ".log",
+            ".json", ".yaml", ".yml", ".xml", ".html", ".rtf", ".odt",
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
+          ]
+        }
+      ]
     }
   }
 }

@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 92
+VERSION = 93
 
 
 @app.get("/api/version")
@@ -1241,10 +1241,27 @@ def _index_html() -> Response:
 def teilen_ziel() -> Response:
     """Landeplatz für den Teilen-Knopf anderer Apps ("share_target" im Manifest).
 
-    Dieselbe Seite wie "/" — Titel/Text/URL aus der Adresszeile wertet app.js
-    selbst aus, sobald die Anmeldung steht (siehe kurzbefehlAusfuehren()).
+    Dieselbe Seite wie "/" — was geteilt wurde, holt sich app.js selbst, sobald
+    die Anmeldung steht (siehe teilenAusfuehren()).
     """
     return _index_html()
+
+
+@app.post("/teilen")
+def teilen_ziel_post() -> Response:
+    """Notausgang, falls der Service Worker das Geteilte nicht abfängt.
+
+    Im Normalfall kommt hier nichts an: Android schickt Geteiltes als POST an
+    diese Adresse, und der Service Worker greift es vorher ab, weil nur er
+    Dateien entgegennehmen kann. Steht er noch nicht (frisch eingerichtet, kurz
+    nach einer Aktualisierung), landet das Formular beim Server. Dann geht die
+    App wenigstens auf, statt dem Nutzer einen Fehler zu zeigen — den Inhalt
+    bekommt sie so allerdings nicht, der muss nochmal geteilt werden.
+
+    303 statt 307: Der Browser soll die Seite danach mit GET holen, sonst
+    schickt ein Neuladen das Formular ein zweites Mal.
+    """
+    return Response(status_code=303, headers={"Location": "/teilen"})
 
 
 app.mount("/", StaticFiles(directory=WEB_DIR), name="web")

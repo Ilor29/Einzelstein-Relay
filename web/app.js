@@ -3545,21 +3545,145 @@ function kurzbefehlAusfuehren() {
   $("knopf-neu").click();
 }
 
-// Teilen aus einer anderen App: "share_target" im Manifest schickt Titel,
-// Text und/oder Link als Adresszeile "/teilen?...". Landet im Auftragsfeld
-// der Neue-Sitzung-Ansicht — der Knopf baut das Formular, das Feld selbst
-// rührt er nicht an, also ist das Nachtragen direkt danach unproblematisch.
-function teilenAusfuehren() {
-  if (location.pathname !== "/teilen") return;
+// --- Teilen aus einer anderen App --------------------------------------------
+//
+// Man liest etwas im Browser, schreibt anderswo eine Datei — und will es hier
+// weiterverarbeiten. Über "share_target" im Manifest steht die App im
+// Teilen-Menü von Android, zwischen Nachrichten und Mail.
+//
+// Android schickt das Geteilte allerdings nicht als Adresszeile, sondern als
+// echtes Formular mit Dateien daran. Eine Seite kann so etwas nicht annehmen;
+// das macht der Service Worker, der es kurz beiseitelegt (siehe sw.js). Hier
+// holen wir es wieder hervor und stellen die eine Frage, die die App nicht
+// raten kann: in welche Sitzung damit? Danach steht der Text im Eingabefeld und
+// die Datei als Anhang bereit — abgeschickt wird nichts von selbst.
+const TEILEN_LAGER = "geteiltes";
+
+let geteiltesGut = null;      // wartet darauf, in eine Sitzung zu wandern
+
+async function geteiltesHolen() {
+  // Der alte Weg über die Adresszeile bleibt: Wer nur Text teilt, kommt auch
+  // ohne Service Worker hier an — und beim allerersten Mal nach dem Einrichten
+  // steht der noch gar nicht.
   const params = new URLSearchParams(location.search);
-  const teile = [params.get("titel"), params.get("text"), params.get("url")]
-    .map((t) => t?.trim())
+  let texte = ["titel", "text", "url"]
+    .map((n) => params.get(n)?.trim())
     .filter(Boolean);
-  history.replaceState(null, "", "/");
-  if (!teile.length) return;
-  $("knopf-neu").click();
-  $("neu-auftrag").value = teile.join("\n\n");
+  const dateien = [];
+
+  if ("caches" in window) {
+    try {
+      const lager = await caches.open(TEILEN_LAGER);
+      const textAntwort = await lager.match("/geteilt/texte");
+      if (textAntwort) texte = texte.concat(await textAntwort.json());
+      const listeAntwort = await lager.match("/geteilt/dateien");
+      if (listeAntwort) {
+        for (const eintrag of await listeAntwort.json()) {
+          const antwort = await lager.match(eintrag.schluessel);
+          if (!antwort) continue;
+          const blob = await antwort.blob();
+          dateien.push(new File([blob], eintrag.name, {
+            type: eintrag.typ || blob.type,
+          }));
+        }
+      }
+      // Einmal geholt ist geholt — sonst hinge dieselbe Datei beim nächsten
+      // Öffnen der App nochmal an.
+      await caches.delete(TEILEN_LAGER);
+    } catch { /* dann eben nur, was in der Adresszeile stand */ }
+  }
+  return { text: texte.join("\n\n"), dateien };
 }
+
+async function teilenAusfuehren() {
+  if (location.pathname !== "/teilen") return;
+  const gut = await geteiltesHolen();
+  history.replaceState(null, "", "/");
+  if (!gut.text && !gut.dateien.length) return;
+  geteiltesGut = gut;
+  await teilenBlattAuf();
+}
+
+async function teilenBlattAuf() {
+  const { text, dateien } = geteiltesGut;
+  const teile = [];
+  if (dateien.length === 1) teile.push(dateien[0].name);
+  else if (dateien.length) teile.push(`${dateien.length} Dateien`);
+  if (text) teile.push("Text");
+  $("teilen-was").textContent = `${teile.join(" und ")} — wohin damit?`;
+
+  // Eine Sitzung, die es noch nicht gibt, kann keinen Anhang annehmen: Beim
+  // Anlegen gibt es nur das Auftragsfeld. Also steht der Weg „neue Sitzung" nur
+  // offen, wenn reiner Text geteilt wurde — lieber ein Knopf weniger als einer,
+  // der die Datei stillschweigend verschluckt.
+  $("teilen-neu").hidden = dateien.length > 0;
+
+  const liste = $("teilen-liste");
+  liste.replaceChildren();
+  let sitzungen = [];
+  try {
+    sitzungen = await (await api("/sessions")).json();
+  } catch { /* nicht angemeldet — dann bleibt die Liste eben leer */ }
+
+  for (const s of sitzungen) {
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "blatt-zeile";
+    const text = document.createElement("span");
+    text.className = "blatt-zeile-text";
+    const titel = document.createElement("span");
+    titel.className = "blatt-zeile-titel";
+    titel.textContent = benannt(s);
+    text.append(titel);
+    knopf.append(text);
+    knopf.addEventListener("click", () => teilenIn(s));
+    liste.append(knopf);
+  }
+
+  if (!sitzungen.length && dateien.length) {
+    const leer = document.createElement("p");
+    leer.className = "hinweis";
+    leer.textContent = "Noch keine Sitzung da, an die sich etwas hängen ließe.";
+    liste.append(leer);
+  }
+  $("teilen-blatt").hidden = false;
+}
+
+function teilenBlattZu() {
+  $("teilen-blatt").hidden = true;
+  geteiltesGut = null;      // verworfen ist verworfen
+}
+
+async function teilenIn(sitzung) {
+  const gut = geteiltesGut;
+  geteiltesGut = null;
+  $("teilen-blatt").hidden = true;
+  if (!gut) return;
+
+  // Erst die Sitzung, dann der Anhang: oeffneSitzung räumt die Anhänge weg,
+  // weil sie zu der Sitzung gehören, aus der sie kamen.
+  oeffneSitzung(sitzung);
+  if (gut.text) {
+    $("eingabe").value = gut.text;
+    feldAnpassen();
+  }
+
+  // Fotos und Dokumente nimmt der Server an verschiedenen Stellen entgegen.
+  const bilder = gut.dateien.filter((d) => (d.type || "").startsWith("image/"));
+  const papiere = gut.dateien.filter((d) => !(d.type || "").startsWith("image/"));
+  if (bilder.length) await anhaengeHochladen(bilder, "bild", "bild", $("knopf-anhang"));
+  if (papiere.length) await anhaengeHochladen(papiere, "datei", "datei", $("knopf-anhang"));
+}
+
+$("teilen-schatten").addEventListener("click", teilenBlattZu);
+$("teilen-schliessen").addEventListener("click", teilenBlattZu);
+$("teilen-neu").addEventListener("click", () => {
+  const gut = geteiltesGut;
+  geteiltesGut = null;
+  $("teilen-blatt").hidden = true;
+  $("knopf-neu").click();
+  if (gut?.text) $("neu-auftrag").value = gut.text;
+});
 
 function nachAnmeldung() {
   starteListe();

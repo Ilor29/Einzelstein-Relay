@@ -731,6 +731,29 @@
 </div>
 
 <!-- Eigene Schnellbefehle anlegen und löschen — dasselbe Blatt von unten. -->
+<!-- Aus einer anderen App hereingeteilt: erst die Frage, wohin damit. -->
+<div id="teilen-blatt" class="blatt" hidden>
+  <div class="blatt-schatten" id="teilen-schatten"></div>
+  <div class="blatt-inhalt">
+    <div class="blatt-kopf">
+      <button type="button" id="teilen-schliessen" class="knopf-blank"
+              aria-label="Verwerfen">✕</button>
+      <h2>In welche Sitzung?</h2>
+    </div>
+    <p id="teilen-was" class="hinweis"></p>
+    <div class="blatt-liste">
+      <button type="button" id="teilen-neu" class="blatt-zeile">
+        <span class="kachel-kreis"><svg viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
+        <span class="blatt-zeile-text">
+          <span class="blatt-zeile-titel">Neue Sitzung</span>
+          <span class="blatt-zeile-art">Damit anfangen statt anhängen</span>
+        </span>
+      </button>
+    </div>
+    <div id="teilen-liste" class="blatt-liste"></div>
+  </div>
+</div>
+
 <div id="befehle-blatt" class="blatt" hidden>
   <div class="blatt-schatten" id="befehle-schatten"></div>
   <div class="blatt-inhalt">
