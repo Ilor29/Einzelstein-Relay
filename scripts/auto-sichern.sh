@@ -22,21 +22,33 @@ LAGER="${HOME}/git"
 # hier gar nichts gesichert, ohne dass es jemandem auffällt.
 ALS=(-c "user.name=Hetzner-App" -c "user.email=hetzner-app@localhost")
 
-for arbeit in "$ARBEIT"/*/; do
+# Ordner außerhalb von ~/projekte, die trotzdem mitgesichert werden.
+#
+# Sie liegen bewusst nicht bei den Projekten, weil dort Geheimnisse stehen, die
+# niemals zu GitHub dürfen. Das heißt aber nicht, dass ihr Code ungesichert sein
+# soll: Was mitgeht und was nicht, entscheidet die `.gitignore` im jeweiligen
+# Ordner — und die muss dort sitzen, bevor er hier hereinkommt.
+#
+# Jarvis stand bis zum 11.08.2026 ganz ohne Git da. Der Verweis
+# ~/projekte/Jarvis wird unten übersprungen, und die "eigene Sitzung", die sich
+# angeblich darum kümmert, hat nie gesichert — bei einem Serverausfall wäre
+# alles weg gewesen.
+EXTRA=("${HOME}/jarvis-voice")
+
+sichere() {
+  local arbeit="$1"
+  local projekt zweig hier drueben
+
+  arbeit="${arbeit%/}/"
   projekt="$(basename "$arbeit")"
 
-  # Verweise (Symlinks) überspringen. Sie zeigen auf Projekte, die anderswo
-  # "echt" liegen und dort eigenständig verwaltet werden (z.B. Jarvis, das eine
-  # eigene Sitzung betreut). Fassten wir sie hier auch an, käme es zu Doppelarbeit.
-  [ -L "${arbeit%/}" ] && continue
-
-  [ -d "${arbeit}.git" ] || continue
+  [ -d "${arbeit}.git" ] || return 0
 
   # Offene Änderungen festschreiben. Wer hat's geändert, steht in der Nachricht.
   if [ -n "$(git -C "$arbeit" status --porcelain)" ]; then
     git -C "$arbeit" add -A
     git -C "$arbeit" "${ALS[@]}" commit --quiet \
-      -m "Automatisch gesichert vom Server ($(date '+%d.%m.%Y %H:%M'))" || continue
+      -m "Automatisch gesichert vom Server ($(date '+%d.%m.%Y %H:%M'))" || return 0
   fi
 
   # Lager fehlt noch? Dann anlegen und verbinden.
@@ -70,4 +82,16 @@ for arbeit in "$ARBEIT"/*/; do
       fi
     fi
   fi
+}
+
+for arbeit in "$ARBEIT"/*/; do
+  # Verweise (Symlinks) überspringen. Sie zeigen auf Ordner, die anderswo "echt"
+  # liegen — die stehen bei Bedarf oben in EXTRA und werden dort einmal
+  # angefasst, nicht zweimal.
+  [ -L "${arbeit%/}" ] && continue
+  sichere "$arbeit"
+done
+
+for arbeit in "${EXTRA[@]}"; do
+  [ -d "$arbeit" ] && sichere "$arbeit"
 done
