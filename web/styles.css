@@ -31,6 +31,11 @@
   /* Sicherheitsabstand zu Notch und Gestenleiste. */
   --oben: env(safe-area-inset-top, 0px);
   --unten: env(safe-area-inset-bottom, 0px);
+
+  /* Wie breit die App am Rechner höchstens wird, und die Fläche, die daneben
+     liegen bleibt. Am Handy spielt beides keine Rolle (siehe ganz unten). */
+  --spalte: 1000px;
+  --neben: #171716;
 }
 
 /* Alle Icons sind gezeichnete Linien, keine Emoji: Sie nehmen die Farbe ihres
@@ -1638,4 +1643,65 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
+}
+
+/* --- Am großen Bildschirm ---------------------------------------------------
+ *
+ * Die App ist fürs Handy gebaut: eine schmale Spalte, ein Daumen, alles
+ * untereinander. Am Rechner zieht sich genau dieselbe Spalte über die volle
+ * Fensterbreite — Textzeilen werden so lang, dass das Auge beim Umbrechen den
+ * Anfang nicht wiederfindet, und die Knöpfe der Kopfzeile stehen einen halben
+ * Meter auseinander.
+ *
+ * Die Antwort ist keine zweite Oberfläche, sondern eine Grenze: Ab etwa
+ * Tablet-Breite bleibt der Inhalt in der Mitte stehen und wird nicht breiter
+ * als eine bequeme Lesespalte. Daneben liegt eine ruhige, etwas dunklere
+ * Fläche, damit man sieht, wo die App aufhört, statt im Nichts zu stehen.
+ *
+ * Es bleibt EIN Bausatz für Handy und Rechner. Alles, was hier steht, ist eine
+ * Begrenzung des Vorhandenen — keine eigene Fassung, die man doppelt pflegen
+ * müsste.
+ */
+@media (min-width: 900px) {
+  /* Auch das html-Element, nicht nur body: Wo der Körper nicht hinreicht — der
+     Streifen unter der Eingabezeile — schaut sonst der alte Grund durch und die
+     Seite bekommt eine helle Kante, die nirgendwo hingehört. */
+  html, body { background: var(--neben); }
+
+  /* Die Ansicht füllt weiter das Fenster; zentriert wird, was in ihr steht. */
+  .ansicht {
+    align-items: center;
+    background: var(--neben);
+  }
+  /* Ohne feste Breite schrumpfen die Kinder beim Zentrieren auf ihren Inhalt
+     zusammen — deshalb beides: volle Breite bis zur Grenze.
+     Die Blätter sind ausgenommen: Sie liegen zwar im selben Kasten, hängen aber
+     fest am Fenster und decken absichtlich alles zu (siehe weiter unten). */
+  .ansicht > *:not(.blatt) {
+    width: 100%;
+    max-width: var(--spalte);
+    background: var(--grund);
+  }
+
+    /* Eine Kante links und rechts, damit die Spalte als Fläche zusammenhält. */
+    border-left: 1px solid var(--linie);
+    border-right: 1px solid var(--linie);
+  }
+
+  /* Am Rechner tippt man mit zehn Fingern; das Feld darf mehr zeigen, bevor es
+     selbst zu rollen beginnt. */
+  .eingabezeile .eingabe { max-height: 260px; }
+
+  /* Die Blätter von unten fahren sonst über die ganze Fensterbreite herein —
+     ein zwei Meter breiter Streifen mit drei Knöpfen darin. Sie halten sich an
+     dieselbe Spalte wie der Rest und bekommen unten runde Ecken, weil sie am
+     Rechner nicht mehr am Bildschirmrand kleben. */
+  .blatt { align-items: center; }
+  .blatt-inhalt {
+    width: 100%;
+    max-width: var(--spalte);
+    border-radius: 20px 20px 0 0;
+    border-left: 1px solid var(--linie);
+    border-right: 1px solid var(--linie);
+  }
 }

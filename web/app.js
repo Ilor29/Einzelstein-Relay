@@ -1660,8 +1660,11 @@ const eingabeFeld = $("eingabe");
 function feldAnpassen() {
   eingabeFeld.style.height = "auto";
   // Bis zu einer Höhe, ab der es selbst scrollt — sonst frisst ein langer
-  // Monolog den halben Bildschirm.
-  eingabeFeld.style.height = Math.min(eingabeFeld.scrollHeight, 160) + "px";
+  // Monolog den halben Bildschirm. Wie hoch, steht im Stil und hängt vom Gerät
+  // ab (am Rechner mehr als am Handy); von dort geholt, statt die Zahl hier ein
+  // zweites Mal festzuschreiben und beim nächsten Mal zu vergessen.
+  const grenze = parseFloat(getComputedStyle(eingabeFeld).maxHeight) || 160;
+  eingabeFeld.style.height = Math.min(eingabeFeld.scrollHeight, grenze) + "px";
 }
 
 eingabeFeld.addEventListener("input", feldAnpassen);
