@@ -1649,6 +1649,26 @@ $("datei-waehler").addEventListener("change", (e) => {
   anhaengeHochladen(dateien, "datei", "datei", $("knopf-anhang"));
 });
 
+// Einfügen aus der Zwischenablage: Am Rechner kopiert man einen Screenshot
+// (Snipping Tool, Druck-Taste) und will ihn mit Strg+V direkt anhängen — ohne
+// den Umweg, erst eine Datei zu speichern und nachher wieder zu löschen.
+// Der Lauscher sitzt am ganzen Dokument, nicht am Eingabefeld: Es soll egal
+// sein, wo der Fokus gerade steht. Text-Einfügen bleibt unberührt — nur wenn
+// wirklich ein Bild in der Zwischenablage liegt, greifen wir ein.
+document.addEventListener("paste", (e) => {
+  const bilder = [...(e.clipboardData?.items || [])]
+    .filter((eintrag) => eintrag.kind === "file" && eintrag.type.startsWith("image/"))
+    .map((eintrag) => eintrag.getAsFile())
+    .filter(Boolean);
+  if (!bilder.length) return;
+  e.preventDefault();
+  if (!aktuelleSitzung) {
+    melde("Erst eine Sitzung öffnen — dann landet das Bild dort.");
+    return;
+  }
+  anhaengeHochladen(bilder, "bild", "bild", $("knopf-anhang"));
+});
+
 // --- Das Eingabefeld wächst mit ----------------------------------------------
 //
 // Beim Diktieren lief der Text nach rechts aus dem Feld — man sprach ins Leere
