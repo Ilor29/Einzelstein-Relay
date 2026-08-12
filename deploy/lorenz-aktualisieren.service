@@ -1,0 +1,13 @@
+# Eine Aktualisierung von Lorenz' App-Kopie — angestoßen vom Zeitgeber
+# (lorenz-aktualisieren.timer), nicht dauerhaft laufend.
+#
+# Nach /etc/systemd/system/ kopieren (Service + Timer), dann:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now lorenz-aktualisieren.timer
+
+[Unit]
+Description=Lorenz' Hetzner-App auf Rolis Stand bringen
+
+[Service]
+Type=oneshot
+ExecStart=/home/roli/projekte/Hetzner-App/deploy/lorenz-aktualisieren.sh

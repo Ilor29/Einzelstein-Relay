@@ -1,0 +1,12 @@
+# Alle 15 Minuten nachsehen, ob Rolis Repo einen neuen Stand hat.
+# Gibt es nichts Neues, kostet der Blick fast nichts (zwei git rev-parse).
+
+[Unit]
+Description=Zeitgeber: Lorenz' Hetzner-App aktuell halten
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
