@@ -9,3 +9,6 @@ uvicorn[standard]
 websockets
 cryptography
 pywebpush
+# Fürs Anhängen von Dateien (Formular-Uploads) — ohne das startet der
+# Dienst nicht einmal, FastAPI verlangt es beim Einlesen der Endpunkte.
+python-multipart
