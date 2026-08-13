@@ -500,6 +500,21 @@
     </div>
   </div>
 
+  <!-- Verbrauch: wie voll das Kontextfenster ist und wo die Plan-Limits
+       stehen — dieselben Zahlen, die Claude Code am Rechner unter /usage
+       zeigt. Öffnet sich mit einem Tipp auf die Info-Zeile der Sitzung. -->
+  <div id="verbrauch-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="verbrauch-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="verbrauch-schliessen" class="knopf-blank"
+                aria-label="Schließen">✕</button>
+        <h2>Verbrauch</h2>
+      </div>
+      <div id="verbrauch-liste" class="verbrauch-liste"></div>
+    </div>
+  </div>
+
   <!-- Die Modellauswahl, wie in der offiziellen App: ein Blatt von unten. -->
   <div id="modell-blatt" class="blatt" hidden>
     <div class="blatt-schatten" id="modell-schatten"></div>

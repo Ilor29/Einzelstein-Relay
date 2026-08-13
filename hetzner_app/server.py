@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import bibliothek, geraete, melden, mitschrift, speicher, state, tmux, tts, verlauf
+from . import bibliothek, geraete, melden, mitschrift, speicher, state, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -930,6 +930,26 @@ def session_frage(name: str) -> dict:
     if link:
         antwort["anmeldeLink"] = link
     return antwort
+
+
+@app.get("/api/sessions/{name}/verbrauch", dependencies=[Depends(require_auth)])
+def session_verbrauch(name: str) -> dict:
+    """Wie voll das Kontextfenster ist und wo die Plan-Limits stehen.
+
+    Beides zusammen in einem Aufruf, weil die App beides zusammen anzeigt:
+    oben der Füllstand der Unterhaltung, darunter die Limits des Abos mit
+    ihrer Zurücksetzungszeit. Fehlt eine Quelle, kommt dort schlicht null —
+    die App zeigt dann nur, was sie ehrlich weiß.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    ordner = next(
+        (s.cwd for s in tmux.list_sessions() if s.name == name), ""
+    )
+    return {
+        "kontext": verbrauch.kontext(ordner) if ordner else None,
+        "limits": verbrauch.limits(),
+    }
 
 
 @app.post("/api/sessions/{name}/antwort", dependencies=[Depends(require_auth)])

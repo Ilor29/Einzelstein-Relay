@@ -1705,3 +1705,44 @@ html, body {
     border-right: 1px solid var(--linie);
   }
 }
+
+/* --- Verbrauch: Balken für Kontextfenster und Plan-Limits -------------------- */
+
+/* Die Info-Zeile ist antippbar — sie öffnet das Verbrauchs-Blatt. */
+#sitzung-info-text { cursor: pointer; }
+
+.verbrauch-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: .25rem .25rem .75rem;
+  color: var(--schrift-leise);
+}
+
+.verbrauch-zeile { display: flex; flex-direction: column; gap: .45rem; }
+
+.verbrauch-kopf {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: .9rem;
+  color: var(--schrift);
+}
+
+.verbrauch-wert {
+  color: var(--schrift-leise);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.verbrauch-balken {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--erhoben-2);
+  overflow: hidden;
+}
+
+/* Grün, ab 70 % gelb, ab 90 % rot — die Farben, die die App ohnehin spricht. */
+.verbrauch-fuellung { height: 100%; border-radius: 3px; background: var(--laeuft); }
+.verbrauch-fuellung.gelb { background: var(--wartet); }
+.verbrauch-fuellung.rot { background: var(--verwerfen); }

@@ -2012,6 +2012,98 @@ $("knopf-modus").addEventListener("click", async () => {
   }
 });
 
+// --- Verbrauch: Kontextfenster und Plan-Limits --------------------------------
+//
+// Ein Tipp auf die Info-Zeile öffnet das Blatt: oben der Füllstand der
+// laufenden Unterhaltung, darunter die Plan-Limits des Abos mit ihrer
+// Zurücksetzungszeit — dieselben Zahlen, die Claude Code am Rechner unter
+// /usage zeigt. Kein Dauer-Gepolle: geholt wird nur beim Öffnen.
+
+function tokenKurz(n) {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return (m === Math.round(m) ? m : m.toFixed(1)) + "M";
+  }
+  return Math.round(n / 1000) + "k";
+}
+
+function resetText(iso) {
+  if (!iso) return "";
+  const wann = new Date(iso);
+  const rest = wann - new Date();
+  if (isNaN(rest) || rest <= 0) return "";
+  if (rest < 24 * 3600 * 1000) {
+    const std = Math.floor(rest / 3600000);
+    const min = Math.round((rest % 3600000) / 60000);
+    return std > 0
+      ? `Zurücksetzung in ${std} Std. ${min} Min.`
+      : `Zurücksetzung in ${min} Min.`;
+  }
+  const tag = wann.toLocaleDateString("de-DE", { weekday: "short" });
+  const zeit = wann.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  return `Zurücksetzung ${tag}., ${zeit}`;
+}
+
+function verbrauchZeile(titel, prozent, detail) {
+  const zeile = document.createElement("div");
+  zeile.className = "verbrauch-zeile";
+
+  const kopf = document.createElement("div");
+  kopf.className = "verbrauch-kopf";
+  const name = document.createElement("span");
+  name.textContent = titel;
+  const wert = document.createElement("span");
+  wert.className = "verbrauch-wert";
+  wert.textContent = detail ? `${detail} · ${prozent} %` : `${prozent} %`;
+  kopf.append(name, wert);
+
+  // Der Balken: grün, ab 70 % gelb, ab 90 % rot — man sieht auf einen Blick,
+  // wo es eng wird, ohne eine Zahl lesen zu müssen.
+  const balken = document.createElement("div");
+  balken.className = "verbrauch-balken";
+  const fuellung = document.createElement("div");
+  fuellung.className = "verbrauch-fuellung";
+  if (prozent >= 90) fuellung.classList.add("rot");
+  else if (prozent >= 70) fuellung.classList.add("gelb");
+  fuellung.style.width = `${Math.max(2, Math.min(100, prozent))}%`;
+  balken.appendChild(fuellung);
+
+  zeile.append(kopf, balken);
+  return zeile;
+}
+
+function verbrauchBlattZu() { $("verbrauch-blatt").hidden = true; }
+$("verbrauch-schatten").addEventListener("click", verbrauchBlattZu);
+$("verbrauch-schliessen").addEventListener("click", verbrauchBlattZu);
+
+$("sitzung-info-text").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  $("verbrauch-blatt").hidden = false;
+  const liste = $("verbrauch-liste");
+  liste.textContent = "Einen Moment …";
+  try {
+    const daten = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verbrauch`
+    )).json();
+    liste.textContent = "";
+    if (daten.kontext) {
+      liste.appendChild(verbrauchZeile(
+        "Kontextfenster",
+        daten.kontext.prozent,
+        `${tokenKurz(daten.kontext.benutzt)} / ${tokenKurz(daten.kontext.limit)}`
+      ));
+    }
+    for (const limit of daten.limits || []) {
+      liste.appendChild(verbrauchZeile(limit.name, limit.prozent, resetText(limit.reset)));
+    }
+    if (!liste.children.length) {
+      liste.textContent = "Dazu ist gerade nichts bekannt.";
+    }
+  } catch {
+    liste.textContent = "Das ließ sich gerade nicht abrufen.";
+  }
+});
+
 function blattZu() {
   $("modell-blatt").hidden = true;
 }
