@@ -2076,7 +2076,10 @@ function verbrauchBlattZu() { $("verbrauch-blatt").hidden = true; }
 $("verbrauch-schatten").addEventListener("click", verbrauchBlattZu);
 $("verbrauch-schliessen").addEventListener("click", verbrauchBlattZu);
 
-$("sitzung-info-text").addEventListener("click", async () => {
+// Die ganze Info-Zeile öffnet das Blatt — nicht nur der schmale Text. Nur die
+// Modus-Pille macht weiter ihr eigenes Ding (Berechtigungs-Modus umschalten).
+$("sitzung-info").addEventListener("click", async (e) => {
+  if (e.target.closest("#knopf-modus")) return;
   if (!aktuelleSitzung) return;
   $("verbrauch-blatt").hidden = false;
   const liste = $("verbrauch-liste");

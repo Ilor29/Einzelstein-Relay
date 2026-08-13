@@ -1746,3 +1746,8 @@ html, body {
 .verbrauch-fuellung { height: 100%; border-radius: 3px; background: var(--laeuft); }
 .verbrauch-fuellung.gelb { background: var(--wartet); }
 .verbrauch-fuellung.rot { background: var(--verwerfen); }
+
+/* Die ganze Info-Zeile ist antippbar; der Pfeil verrät, dass dahinter das
+   Verbrauchs-Blatt wartet. */
+.sitzung-info { cursor: pointer; }
+#sitzung-info-text::after { content: " ›"; color: var(--schrift-schwach); }
