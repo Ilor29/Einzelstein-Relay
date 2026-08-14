@@ -1090,10 +1090,15 @@ async function sendeInSitzung(text) {
     return;
   }
 
+  // Anmelde-Codes (nach /login) müssen UNVERÄNDERT ankommen — der Zeitstempel
+  // davor machte den Code ungültig und die Anmeldung schlug immer fehl. Ein
+  // Code ist leicht zu erkennen: ein langes Zeichenpaket ohne Leerzeichen,
+  // wie es kein Mensch als Nachricht diktiert.
+  const istCode = /^[A-Za-z0-9_#.-]{25,}$/.test(text);
   await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
     method: "POST",
     // Die Uhrzeit still vorangestellt, damit Claude immer weiß, wann jetzt ist.
-    body: JSON.stringify({ text: `[${jetztStempel()}] ${text}` }),
+    body: JSON.stringify({ text: istCode ? text : `[${jetztStempel()}] ${text}` }),
   });
   // Du hast gerade abgeschickt — jetzt willst du die Antwort sehen. Also wieder
   // ans Ende mitlaufen, egal wo du vorher standest.
