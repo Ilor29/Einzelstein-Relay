@@ -2632,6 +2632,10 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
   const meins = knopf;       // um zu merken, ob wir zwischendurch gestoppt wurden
   const lauf = ++sprechLauf; // diese Ausgabe; ein Stopp erhöht den Zähler
   let stuecke = haeppchen(text);   // wächst im Folge-Modus per Nachschub
+  // Von der ersten Sekunde an wissen, wo wir stehen — falls gleich das Telefon
+  // klingelt, bevor die Anzeige-Uhr das erste Mal getickt hat.
+  aktuellerIndex = 0;
+  restStuecke = stuecke.slice(0);
   const c = tonKontext();
   try { await c.resume(); } catch { /* Autoplay-Sperre — dann eben nicht */ }
   // Den Player anwerfen, BEVOR das erste Häppchen eingereiht wird — sonst hinge
@@ -2659,6 +2663,10 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     let naechstes = stuecke.length ? hole(stuecke[0]) : null;
     let startZeit = c.currentTime + 0.08;   // kleiner Vorlauf bis zum ersten Ton
     let i = 0;
+    // Wann Stück k auf der Ton-Uhr beginnt. Daraus liest die Anzeige ab, welches
+    // Stück GERADE HÖRBAR ist — denn eingereiht wird weit im Voraus (s. unten),
+    // die Schleifenvariable i ist also nicht mehr "das laufende Stück".
+    let startZeiten = [];
 
     // Ab wann der Ton wirklich läuft — erst beim ersten geplanten Stück bekannt
     // (das Holen dauert). `startZeit` ist dann das Ende des zuletzt Eingereihten,
@@ -2667,6 +2675,15 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     leisteAn();
     dauerTakt = setInterval(() => {
       if (sprechBeginn === null) return;
+      // Welches Stück ist GERADE ZU HÖREN? Aus den Startzeiten abgelesen —
+      // daran hängen Vor/Zurück und das Weiterlesen nach einer Unterbrechung.
+      // (Die Schleife unten reiht weit im Voraus ein, ihr i taugt dafür nicht.)
+      let hoerbar = aktuellerIndex;
+      for (let k = 0; k < startZeiten.length; k++) {
+        if (startZeiten[k] !== undefined && startZeiten[k] <= c.currentTime) hoerbar = k;
+      }
+      aktuellerIndex = hoerbar;
+      restStuecke = stuecke.slice(hoerbar);
       const gesamt = Math.max(0, startZeit - sprechBeginn);
       const jetzt = Math.min(Math.max(0, c.currentTime - sprechBeginn), gesamt);
       if (zeitEl) zeitEl.textContent = zeitFormat(jetzt);
@@ -2685,6 +2702,11 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
         aktiveQuellen = [];
         startZeit = c.currentTime + 0.08;
         naechstes = hole(stuecke[i]);
+        // Alte Startzeiten ab hier vergessen — die Stücke werden neu eingereiht,
+        // und veraltete Einträge würden die Hörbar-Anzeige in die Irre führen.
+        startZeiten = startZeiten.slice(0, i);
+        aktuellerIndex = i;
+        restStuecke = stuecke.slice(i);
       }
 
       // Bekannte Stücke aufgebraucht? Im Folge-Modus fragen wir nach, ob Claude
@@ -2699,10 +2721,6 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
         stuecke = stuecke.concat(neue);
         naechstes = hole(stuecke[i]);
       }
-
-      // Ab hier steht dieses Stück noch aus. Klingelt jetzt das Telefon, wird
-      // genau ab hier weitergelesen — beim angefangenen Satz, nicht mittendrin.
-      restStuecke = stuecke.slice(i);
 
       const puffer = await naechstes;
       if (abgebrochen()) return;
@@ -2719,17 +2737,22 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
       quelle.connect(tonAusgang || c.destination);
       const start = Math.max(startZeit, c.currentTime);
       quelle.start(start);
-      aktuellerIndex = i;
+      startZeiten[i] = start;
       if (sprechBeginn === null) sprechBeginn = start;   // ab hier läuft die Uhr
       startZeit = start + puffer.duration;   // das nächste schließt nahtlos an
       aktiveQuellen.push(quelle);
 
-      // Bis kurz vor das Ende warten — dann hängen wir das (bereits dekodierte)
-      // nächste Stück an, bevor überhaupt Stille entstehen kann. Gemessen an der
-      // Ton-Uhr, damit „Pause" hier sauber anhält (siehe warteBisTonzeit). Ein
-      // Sprung soll nicht erst das Stückende abwarten, darum bricht er die
-      // Wartezeit hier mit ab — den Kopf der Schleife holt er sich gleich selbst.
-      await warteBisTonzeit(startZeit - 0.25, () => abgebrochen() || sprungZiel !== null);
+      // So weit wie möglich VORAB einreihen, statt bis kurz vors Stückende zu
+      // warten: Die Ton-Uhr spielt Eingereihtes auf einem eigenen System-Faden
+      // ab, den Android auch bei dunklem Bildschirm weiterlaufen lässt — das
+      // Warten und Anhängen hier dagegen ist Browser-Arbeit, und die friert
+      // Android in der Hosentasche ein. Vorher brach der Vortrag deshalb nach
+      // dem gerade laufenden Stück (~20 Sekunden) einfach ab. Jetzt liegt der
+      // ganze Vortrag in aller Regel komplett auf der Ton-Uhr, bevor der
+      // Bildschirm ausgeht. Der Vorrat ist gedeckelt, damit ein sehr langer
+      // Vortrag nicht unbegrenzt Speicher frisst (~5 MB je Minute Ton).
+      const VORRAT = 900;    // Sekunden Vorsprung — 15 Minuten, reicht praktisch immer
+      await warteBisTonzeit(startZeit - VORRAT, () => abgebrochen() || sprungZiel !== null);
       if (abgebrochen()) return;
       i++;
     }
