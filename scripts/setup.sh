@@ -38,7 +38,11 @@ if command -v claude >/dev/null || [ -x "${HOME}/.local/bin/claude" ]; then
 else
   # Der offizielle Installer — ohne Node-Gefrickel. Er legt claude nach
   # ~/.local/bin und trägt den Pfad in die Shell-Profile ein.
-  curl -fsSL https://claude.ai/install.sh | bash
+  #
+  # </dev/null ist wichtig: Der Installer liest sonst die Standard-Eingabe
+  # leer, und die E-Mail-Frage weiter unten bekommt nichts mehr — das Skript
+  # brach dann mitten in der Einrichtung ab (gefunden beim Frischtest 14.08.).
+  curl -fsSL https://claude.ai/install.sh | bash </dev/null
   echo "   Claude Code installiert. Die Anmeldung kommt später: In der ersten"
   echo "   Sitzung 'claude login' — den angezeigten Link am Handy öffnen."
 fi
