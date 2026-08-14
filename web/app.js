@@ -2292,6 +2292,24 @@ function pauseSymbol(pausiert) {
 // ganz ohne aufs Handy zu schauen. Rein kosmetisch fürs System — geht sie
 // schief (ältere Browser, kein MediaMetadata), soll das nie das eigentliche
 // Vorlesen stören, darum alles in try/catch.
+// Das Ton-Tagebuch: Beim Jagen des Hosentaschen-Abbruchs raten wir nicht,
+// sondern lassen die App selbst Protokoll führen. Jedes wichtige Ereignis geht
+// per sendBeacon zum Server — das funkt auch dann noch zuverlässig, wenn die
+// Seite gerade eingefroren oder auf dem Weg in den Hintergrund ist.
+function tonEreignis(art) {
+  try {
+    navigator.sendBeacon("/api/ton-tagebuch", JSON.stringify({
+      t: Date.now(), art,
+      sichtbar: document.visibilityState,
+      kontext: hörCtx?.state || "-",
+    }));
+  } catch { /* Tagebuch ist Beiwerk, niemals Störer */ }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (spricht || restText) tonEreignis("sichtbarkeit");
+});
+
 function medienSitzungAn() {
   if (!("mediaSession" in navigator)) return;
   try {
@@ -2301,12 +2319,14 @@ function medienSitzungAn() {
     });
     navigator.mediaSession.playbackState = "playing";
     navigator.mediaSession.setActionHandler("pause", () => {
+      tonEreignis("system-pause");
       if (!manuellPausiert) pauseUmschalten();
     });
     navigator.mediaSession.setActionHandler("play", () => {
+      tonEreignis("system-weiter");
       if (manuellPausiert) pauseUmschalten();
     });
-    navigator.mediaSession.setActionHandler("stop", () => stille());
+    navigator.mediaSession.setActionHandler("stop", () => { tonEreignis("system-stopp"); stille(); });
     navigator.mediaSession.setActionHandler("previoustrack", () => springe(-1));
     navigator.mediaSession.setActionHandler("nexttrack", () => springe(1));
   } catch { /* dann eben ohne Sperrbildschirm-Anzeige */ }
@@ -2365,8 +2385,12 @@ async function tonAusgangAn(c) {
       const senke = c.createMediaStreamDestination();
       el.srcObject = senke.stream;
       tonAusgang = senke;
+      // Fürs Ton-Tagebuch: Hält jemand den PLAYER an (nicht den Kontext)?
+      el.addEventListener("pause", () => { if (spricht) tonEreignis("player-pause"); });
+      el.addEventListener("play", () => { if (spricht) tonEreignis("player-weiter"); });
     } catch {
       tonAusgang = c.destination;      // kein Strom-Ziel: direkter Weg
+      tonEreignis("player-fehlt");
     }
   }
   if (tonAusgang === c.destination) return tonAusgang;
@@ -2553,8 +2577,10 @@ function tonKontextUeberwachen(c) {
     // wird wirklich unterbrochen. Eine Hand-Pause (manuellPausiert) hält den
     // Ton bewusst an, die bleibt ohnehin unangetastet.
     if (spricht && !manuellPausiert && c.state !== "running") {
+      tonEreignis("kontext-angehalten");
       try { await c.resume(); } catch { /* dann ist es wohl ein Anruf */ }
-      if (c.state === "running") return;      // war nur der Bildschirm — weiter
+      if (c.state === "running") { tonEreignis("wecken-geklappt"); return; }
+      tonEreignis("wecken-gescheitert");
       if (spricht && !manuellPausiert) unterbrechen();
       return;
     }

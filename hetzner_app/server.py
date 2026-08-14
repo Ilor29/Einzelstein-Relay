@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 99
+VERSION = 100
 
 
 @app.get("/api/version")
@@ -930,6 +930,30 @@ def session_frage(name: str) -> dict:
     if link:
         antwort["anmeldeLink"] = link
     return antwort
+
+
+@app.post("/api/ton-tagebuch", dependencies=[Depends(require_auth)])
+async def ton_tagebuch(request: Request) -> dict:
+    """Das Ton-Tagebuch — Protokoll fürs Jagen der Hosentaschen-Abbrüche.
+
+    Die App funkt beim Vorlesen jedes wichtige Ereignis hierher (Ton
+    angehalten, Weckversuch, System-Pause …). Landet als eine Zeile je
+    Ereignis in ~/.hetzner-app/ton-tagebuch.log — zum Nachlesen, wer den
+    Vortrag wirklich beendet hat. Wird die Datei zu groß, beginnt sie neu.
+    """
+    datei = Path.home() / ".hetzner-app" / "ton-tagebuch.log"
+    try:
+        koerper = (await request.body())[:2000].decode("utf-8", "replace")
+    except Exception:
+        koerper = "?"
+    try:
+        if datei.exists() and datei.stat().st_size > 1_000_000:
+            datei.unlink()
+        with open(datei, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%d.%m. %H:%M:%S')} {koerper}\n")
+    except OSError:
+        pass                     # das Tagebuch darf nie zum Störfall werden
+    return {"ok": True}
 
 
 @app.get("/api/sessions/{name}/verbrauch", dependencies=[Depends(require_auth)])
