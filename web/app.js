@@ -2544,12 +2544,18 @@ function pruefeObTonZurueck() {
 }
 
 function tonKontextUeberwachen(c) {
-  c.addEventListener("statechange", () => {
-    // Ton weg, obwohl wir mitten im Satz sind: Da klingelt etwas. Eine
-    // Hand-Pause (manuellPausiert) hält den Ton bewusst an — die ist gemeint,
-    // nicht ein Anruf, also hier nicht abbrechen.
+  c.addEventListener("statechange", async () => {
+    // Ton weg, obwohl wir mitten im Satz sind. Das kann zweierlei heißen:
+    // ein Anruf — oder bloß der Ausknopf, mit dem das Handy in die Hosentasche
+    // wandert. Manche Androids legen dabei den Ton-Kontext schlafen, und die
+    // App brach den Vortrag dann SOFORT ab, obwohl niemand anrief. Darum: erst
+    // wecken, dann urteilen. Ein Anruf lässt sich nicht wecken — nur bei dem
+    // wird wirklich unterbrochen. Eine Hand-Pause (manuellPausiert) hält den
+    // Ton bewusst an, die bleibt ohnehin unangetastet.
     if (spricht && !manuellPausiert && c.state !== "running") {
-      unterbrechen();
+      try { await c.resume(); } catch { /* dann ist es wohl ein Anruf */ }
+      if (c.state === "running") return;      // war nur der Bildschirm — weiter
+      if (spricht && !manuellPausiert) unterbrechen();
       return;
     }
     // Der Ton ist zurück — das Gespräch ist vorbei. Weiterlesen, sofern der
