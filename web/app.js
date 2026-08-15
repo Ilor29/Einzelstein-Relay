@@ -511,12 +511,57 @@ function codeKasten(code) {
 }
 
 // Inline-Auszeichnung eines Textstücks: **fett**, *kursiv*, `befehl`.
+// Ein antippbarer Link im Verlauf. Nur http, https und mailto — was anderes
+// baut die Erkennung unten gar nicht erst zusammen, javascript:-Adressen und
+// Ähnliches können hier also nie entstehen.
+function verlaufLink(url, anzeige) {
+  const a = document.createElement("a");
+  a.className = "verlauf-link";
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.title = url.length > 80 ? url.slice(0, 80) + "…" : url;
+  a.textContent = anzeige;
+  return a;
+}
+
+// Eine lange Adresse lesbar machen. Claude baut gern kilometerlange Links —
+// E-Mail-Entwürfe mit kodiertem Text (%20%3A…), Suchanfragen und Ähnliches.
+// Als Rohtext sind die unlesbar; angezeigt wird darum nur das Wesentliche,
+// der volle Link steckt weiter im Knopf.
+function linkAnzeige(url) {
+  if (url.startsWith("mailto:")) {
+    const an = decodeURIComponent(url.slice(7).split("?")[0] || "");
+    return an ? `E-Mail an ${an}` : "E-Mail öffnen";
+  }
+  try {
+    const u = new URL(url);
+    const pfad = u.pathname !== "/" || u.search ? "/…" : "";
+    return u.host + pfad;
+  } catch {
+    return url.length > 60 ? url.slice(0, 57) + "…" : url;
+  }
+}
+
 function inlineSchreiben(ziel, text) {
-  const teile = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g);
+  const teile = text.split(
+    /(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]*\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*|(?:https?:\/\/|mailto:)[^\s<>"'`]+)/g
+  );
   for (const teil of teile) {
     if (!teil) continue;
     let el;
-    if (teil.startsWith("**") && teil.endsWith("**") && teil.length > 4) {
+    if (teil.startsWith("[")) {
+      // Markdown-Link: [Anzeigetext](Adresse) — der Text ist schon lesbar.
+      const m = teil.match(/^\[([^\]\n]+)\]\((.+)\)$/);
+      el = m ? verlaufLink(m[2], m[1]) : document.createTextNode(teil);
+    } else if (/^(https?:\/\/|mailto:)/.test(teil)) {
+      // Nackte Adresse. Satzzeichen am Ende gehören dem Satz, nicht dem Link.
+      const anhang = (teil.match(/[).,;:!?]+$/) || [""])[0];
+      const url = anhang ? teil.slice(0, -anhang.length) : teil;
+      el = document.createDocumentFragment();
+      el.append(verlaufLink(url, linkAnzeige(url)));
+      if (anhang) el.append(document.createTextNode(anhang));
+    } else if (teil.startsWith("**") && teil.endsWith("**") && teil.length > 4) {
       el = document.createElement("strong");
       el.textContent = teil.slice(2, -2);
     } else if (teil.startsWith("`") && teil.endsWith("`") && teil.length > 2) {

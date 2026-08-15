@@ -1751,3 +1751,12 @@ html, body {
    Verbrauchs-Blatt wartet. */
 .sitzung-info { cursor: pointer; }
 #sitzung-info-text::after { content: " ›"; color: var(--schrift-schwach); }
+
+/* Links im Verlauf: antippbar, in Akzentfarbe, brechen notfalls um statt die
+   Blase zu sprengen. Lange Adressen zeigt die App gekürzt (siehe app.js). */
+.verlauf-link {
+  color: var(--akzent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
