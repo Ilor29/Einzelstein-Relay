@@ -3848,6 +3848,12 @@ async function teilenBlattAuf() {
     sitzungen = await (await api("/sessions")).json();
   } catch { /* nicht angemeldet — dann bleibt die Liste eben leer */ }
 
+  // Schlafende Sitzungen können keinen Anhang annehmen — ihr Terminal ist ja
+  // beendet. Standen sie trotzdem im Blatt, endete die Wahl mit „Diese Sitzung
+  // gibt es nicht", und das geteilte Bild war verloren. Bei reinem Text ist
+  // das Wecken egal — der landet nur im Eingabefeld.
+  if (dateien.length) sitzungen = sitzungen.filter((s) => s.state !== "sleeping");
+
   for (const s of sitzungen) {
     const knopf = document.createElement("button");
     knopf.type = "button";

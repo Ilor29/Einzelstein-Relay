@@ -37,10 +37,16 @@
       const wachen = await navigator.serviceWorker.getRegistrations();
       const namen = window.caches ? await caches.keys() : [];
 
-      if (namen.length === 0) return;    // nichts Altes da, alles gut
+      // Das Teilen-Lager ist KEIN Altlast-Zwischenspeicher: Darüber reicht
+      // Android geteilte Dateien herein (siehe sw.js). Die Notbremse hat es
+      // anfangs mit weggeräumt — geteilte Bilder verschwanden dadurch samt
+      // Neustart der Seite genau in dem Moment, in dem man sie anhängen
+      // wollte. Also: nur echte Altlasten zählen und wegräumen.
+      const alte = namen.filter((n) => n !== "geteiltes");
+      if (alte.length === 0) return;     // nichts Altes da, alles gut
 
       await Promise.all(wachen.map((w) => w.unregister()));
-      await Promise.all(namen.map((n) => caches.delete(n)));
+      await Promise.all(alte.map((n) => caches.delete(n)));
       location.reload();
     })();
   </script>
