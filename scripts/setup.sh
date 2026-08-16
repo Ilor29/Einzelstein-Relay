@@ -14,8 +14,22 @@ set -euo pipefail
 
 DOMAIN="${1:-}"
 if [ -z "$DOMAIN" ]; then
-  echo "Bitte die Domain angeben:  ./scripts/setup.sh hetzner.deine-domain.de" >&2
-  exit 1
+  # Keine Domain? Braucht auch niemand: sslip.io macht aus jeder Server-IP
+  # eine echte Adresse (65.21.246.222 → 65-21-246-222.sslip.io), für die
+  # Caddy ein ordentliches HTTPS-Zertifikat bekommt. Das funktioniert bei
+  # jedem Anbieter — Hetzner, Hostinger, egal —, ganz ohne Domain-Kauf.
+  echo "→ Keine Domain angegeben — die Adresse kommt aus der Server-IP …"
+  IP="$(curl -4fsS --max-time 10 https://api.ipify.org || true)"
+  case "$IP" in
+    *[!0-9.]*|"")
+      echo "Die eigene IP ließ sich nicht ermitteln. Entweder kurz später" >&2
+      echo "nochmal versuchen oder die Adresse selbst angeben:" >&2
+      echo "  ./scripts/setup.sh meine-adresse.de" >&2
+      exit 1
+      ;;
+  esac
+  DOMAIN="$(printf '%s' "$IP" | tr . -).sslip.io"
+  echo "   Die App wird unter  https://${DOMAIN}  erreichbar sein."
 fi
 
 HIER="$(cd "$(dirname "$0")/.." && pwd)"
