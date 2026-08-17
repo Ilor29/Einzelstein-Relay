@@ -2865,6 +2865,10 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     // Folge-Modus: Ist Claude noch am Schreiben, sammelt die App die neu
     // eintrudelnden Sätze ein und liest weiter — du drückst nur EINMAL.
     // Aufgehört wird, wenn Claude fertig ist und nichts Neues mehr nachkommt.
+    // Die Sitzung wird JETZT festgehalten, nicht bei jedem Nachschub neu
+    // gelesen: Wer während des Vortrags in einen anderen Chat wechselt, soll
+    // weiter den alten hören — nicht plötzlich Sätze aus dem neuen.
+    const vortragsSitzung = aktuelleSitzung.name;
     let gelesen = text;
     const nachschub = async (abgebrochen) => {
       const beginn = Date.now();
@@ -2873,7 +2877,7 @@ $("knopf-vorlesen").addEventListener("click", async () => {
         let voll = "";
         try {
           voll = ((await (await api(
-            `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+            `/sessions/${encodeURIComponent(vortragsSitzung)}/text`
           )).json()).text) || "";
         } catch {
           return null;          // kein Text zu holen — dann eben Schluss
@@ -2997,8 +3001,10 @@ async function freisprechVorlesen() {
   }
 }
 
-// Zurück zur Liste heißt auch: Ruhe.
-$("knopf-zurueck").addEventListener("click", stille);
+// Zurück zur Liste heißt NICHT mehr: Ruhe. Roli hört sich eine Antwort an und
+// will währenddessen in die Liste oder einen anderen Chat schauen — der
+// Vortrag läuft dabei einfach weiter. Die schwebende Vorlese-Leiste bleibt
+// über jeder Ansicht sichtbar; Pause und Beenden sind also immer erreichbar.
 
 // --- Benachrichtigungen ------------------------------------------------------
 
@@ -3222,7 +3228,9 @@ $("knopf-abmelden").addEventListener("click", async () => {
 });
 
 $("knopf-einst-zurueck").addEventListener("click", () => {
-  stille();
+  // Nur eine laufende Stimmen-PROBE verstummen lassen — ein richtiger Vortrag
+  // aus einem Chat läuft beim Verlassen der Einstellungen einfach weiter.
+  if (spricht && $("ansicht-einstellungen").contains(sprecherKnopf)) stille();
   starteListe();
 });
 

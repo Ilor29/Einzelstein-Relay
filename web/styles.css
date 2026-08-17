@@ -648,16 +648,22 @@ html, body {
 .knopf-blank.spricht { color: var(--laeuft); }
 .knopf-blank.laeuft { color: var(--akzent); animation: pochen 1.2s ease-in-out infinite; }
 
-/* Die Vorlese-Leiste — eine schwebende Abspiel-Pille über der Eingabe, wie in
-   einer Musik-App. Sie erscheint nur während des Vorlesens (das `hidden`-Attribut
-   nimmt die JS weg). Mittig, mit etwas Luft nach unten, damit sie klar über den
-   Schnellbefehlen sitzt. */
+/* Die Vorlese-Leiste — eine schwebende Abspiel-Pille, wie in einer Musik-App.
+   Sie erscheint nur während des Vorlesens (das `hidden`-Attribut nimmt die JS
+   weg). Fest am unteren Rand verankert statt im Fluss der Sitzungs-Ansicht:
+   So bleibt sie auch sichtbar, wenn man während des Vortrags in die Liste
+   oder einen anderen Chat wechselt — der Ton läuft weiter, und Pause/Beenden
+   sind immer in Reichweite. Hoch genug, dass sie in der Sitzungs-Ansicht
+   über Schnellbefehlen und Eingabe schwebt. */
 .vorlese-leiste {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
   display: flex;
   align-items: center;
   gap: .3rem;
-  align-self: center;
-  margin: .2rem auto .5rem;
   padding: .3rem .5rem;
   background: var(--erhoben-2);
   border: 1px solid var(--linie);

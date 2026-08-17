@@ -386,19 +386,6 @@
   <!-- Ein-Tipp-Befehle fürs Immerwiederkehrende. Wischbar, damit viele
        hineinpassen, ohne die Eingabe zu verdrängen. Der data-text ist, was
        wirklich an Claude geht — die Aufschrift bleibt kurz. -->
-  <!-- Die Vorlese-Leiste, nach Vorbild einer Abspielleiste: erscheint nur,
-       während vorgelesen wird, und schwebt über der Eingabe. Pause/Weiter, die
-       verstrichene Zeit und ein Kreuz zum Beenden. Satz-vor/-zurück und Tempo
-       kommen als eigener Stein dazu. -->
-  <div id="vorlese-leiste" class="vorlese-leiste" hidden>
-    <button type="button" id="vl-pause" class="vl-knopf" aria-label="Pause">
-      <svg viewBox="0 0 24 24"><use href="#i-pause"/></svg>
-    </button>
-    <span id="vl-zeit" class="vl-zeit" aria-hidden="true">0:00</span>
-    <button type="button" id="vl-schliessen" class="vl-knopf" aria-label="Vorlesen beenden">
-      <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
-    </button>
-  </div>
   <div id="schnellbefehle" class="schnellbefehle">
     <!-- Die sichtbare Reihe ist komplett selbst bestimmt: Alle Befehle — auch
          die früher fest eingebauten „Los geht's/Weiter/Zusammenfassen" — kommen
@@ -534,6 +521,22 @@
     </div>
   </div>
 </section>
+
+<!-- Die Vorlese-Leiste, nach Vorbild einer Abspielleiste: erscheint nur,
+     während vorgelesen wird. Pause/Weiter, die verstrichene Zeit und ein
+     Kreuz zum Beenden. Sie steht bewusst AUSSERHALB der Sitzungs-Ansicht
+     und schwebt fest über allem: Der Vortrag läuft weiter, wenn man
+     zwischendurch in die Liste oder einen anderen Chat schaut — die Leiste
+     bleibt sichtbar und behält Pause und Beenden in Reichweite. -->
+<div id="vorlese-leiste" class="vorlese-leiste" hidden>
+  <button type="button" id="vl-pause" class="vl-knopf" aria-label="Pause">
+    <svg viewBox="0 0 24 24"><use href="#i-pause"/></svg>
+  </button>
+  <span id="vl-zeit" class="vl-zeit" aria-hidden="true">0:00</span>
+  <button type="button" id="vl-schliessen" class="vl-knopf" aria-label="Vorlesen beenden">
+    <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+  </button>
+</div>
 
 <!-- Neue Sitzung -->
 <section id="ansicht-neu" class="ansicht" hidden>
