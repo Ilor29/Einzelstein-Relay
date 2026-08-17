@@ -15,6 +15,12 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
 - Entscheidungsfragen in **normalen Sätzen** stellen, keine Auswahl-Kärtchen.
 - Ein Stein nach dem anderen: Aufgaben einzeln und mit Bedacht abarbeiten,
   nicht fünf Baustellen gleichzeitig aufreißen.
+- **Klarschrift:** In normalem, gesprochenem Deutsch schreiben — ganze Sätze,
+  wie man sie einem Kollegen sagen würde. Keine Gedankenstrich-Ketten, keine
+  Aufzählungs-Fragmente, keine typischen KI-Floskeln („Lassen Sie uns …",
+  „Es ist wichtig zu beachten", „robust", „nahtlos", „Zusammenfassend lässt
+  sich sagen"). Fachbegriffe erklären statt aneinanderreihen. Was vorgelesen
+  wird, muss beim bloßen Zuhören verständlich sein.
 
 ## Regeln für alle Projekte
 
