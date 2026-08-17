@@ -234,6 +234,41 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
     return False
 
 
+def dialog_zustand(name: str) -> str:
+    """Liegt gerade ein Auswahl-Dialog über der Eingabe?
+
+    Claude Code legt gelegentlich einen Dialog über das Eingabefeld — die
+    Einrichtungsfrage zum Auto-Modus etwa, oder die Vertrauensfrage beim
+    ersten Öffnen eines Ordners. Solange so ein Dialog offen ist, landet
+    alles, was die App tippt, im Dialog statt im Gespräch: Der Text
+    versickert, das Enter klickt womöglich etwas an. Genau so hat der
+    Brain-Chat am 17.08. Nachrichten verschluckt, ohne dass es wer merkte.
+
+    Drei Antworten:
+      "frei"       — die normale Eingabezeile, senden ist sicher.
+      "abbrechbar" — ein Dialog, der laut eigener Fußzeile gefahrlos mit
+                     Escape zu schließen ist ("Esc to cancel").
+      "blockiert"  — ein Dialog, bei dem Escape schaden könnte (die
+                     Vertrauensfrage etwa beendet bei Escape gleich ganz
+                     Claude). Den muss ein Mensch beantworten.
+    """
+    try:
+        schirm = capture(name, lines=None)
+    except TmuxError:
+        return "frei"
+    # Nur der untere Rand zählt: Dort schreiben Dialoge ihre Tastenhilfe
+    # hin. Weiter oben steht Gesprächstext, und der darf diese Worte
+    # zitieren, ohne dass wir einen Dialog wittern.
+    fuss = "\n".join(schirm.rstrip().splitlines()[-12:]).lower()
+    if "shift+tab to cycle" in fuss:
+        return "frei"  # die normale Statuszeile — kein Dialog liegt davor
+    if "esc to cancel" in fuss:
+        return "abbrechbar"
+    if "enter to continue" in fuss or "enter to confirm" in fuss:
+        return "blockiert"
+    return "frei"
+
+
 # Ein einzelnes send-keys-Argument kappt der Kernel bei rund 128 KB
 # (MAX_ARG_STRLEN). Ein langer Text — etwa ein eingefügter Artikel — scheiterte
 # dann mit "Argument list too long", und der Aufrufer bekam einen 500er. Darum

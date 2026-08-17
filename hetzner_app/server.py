@@ -334,6 +334,12 @@ async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
     bereit = await asyncio.to_thread(tmux.warte_bis_bereit, name, 40)
     if not bereit:
         return
+    # Auch beim allerersten Auftrag kann schon ein Dialog über der Eingabe
+    # liegen (Einrichtungsfragen beim Start). Wegdrücken, wenn er es selbst
+    # anbietet — sonst tippt der Auftrag ins Leere.
+    if await asyncio.to_thread(tmux.dialog_zustand, name) == "abbrechbar":
+        tmux.send_key(name, "Escape")
+        await asyncio.sleep(0.8)
     tmux.send_text(name, prompt)
     # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt Claude
     # Code gelegentlich.
@@ -1177,6 +1183,25 @@ async def session_senden(name: str, body: Nachricht) -> dict:
     # ist ein Versehen (oder Missbrauch) und würde die kleine Maschine würgen.
     if len(body.text) > 2_000_000:
         raise HTTPException(413, "Die Nachricht ist zu groß (mehr als 2 Millionen Zeichen).")
+
+    # Bevor wir tippen: Liegt ein Auswahl-Dialog über der Eingabe? Dann würde
+    # der Text im Dialog versickern statt bei Claude anzukommen — so hat der
+    # Brain-Chat am 17.08. Nachrichten verschluckt. Bietet der Dialog selbst
+    # Escape als Ausweg an, drücken wir ihn weg; wenn nicht, lieber ein
+    # ehrlicher Fehler als eine stumm verlorene Nachricht.
+    zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "abbrechbar":
+        tmux.send_key(name, "Escape")
+        await asyncio.sleep(0.8)
+        zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand != "frei":
+        raise HTTPException(
+            409,
+            "Claude zeigt in dieser Sitzung gerade eine Frage an, die sich "
+            "nicht von selbst schließen lässt. Bitte einmal das Terminal "
+            "öffnen und sie beantworten — sonst würde die Nachricht "
+            "verschluckt.",
+        )
 
     tmux.send_text(name, body.text)
     # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt Claude
