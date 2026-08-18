@@ -10,6 +10,13 @@
 # /etc/caddy/Caddyfile.
 
 hetzner.deine-domain.de {
+	# Deckel auf die Anfragengröße — greift auch bei "chunked", wo der
+	# Content-Length-Header fehlt und der App-eigene Deckel nicht zieht.
+	# 35 MB lassen Luft für den größten legitimen Upload (Dokument 30 MB).
+	request_body {
+		max_size 35MB
+	}
+
 	# Die App lauscht nur auf 127.0.0.1 — von außen kommt niemand direkt dran.
 	reverse_proxy 127.0.0.1:8787
 

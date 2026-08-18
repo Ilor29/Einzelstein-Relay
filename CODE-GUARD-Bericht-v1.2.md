@@ -278,13 +278,18 @@ Verschenk-Runde tragfähig.
   getestet), und der Verlauf rendert jeden Block einzeln in try/catch — ein
   kaputter Block wird zur schlichten Text-Blase statt zum toten Bildschirm.
   Auf allen drei Instanzen ausgerollt.
+- ✅ **🟠 Chunked-Bypass geschlossen:** In Caddy je App-Block
+  `request_body { max_size 35MB }` — greift auch ohne Content-Length. Live
+  getestet: 40-MB-Chunked-Anfrage → 413, kleine Anfrage kommt normal durch.
+  Repo-Vorlage `deploy/Caddyfile` nachgezogen; Sicherung der alten
+  Live-Konfiguration unter `/etc/caddy/Caddyfile.bak-vor-maxsize-20260818`.
 
 ## Nächste Schritte (priorisiert)
 
 1. ✅ ~~🟠 Aktualisierungs-Skripte nach root-Eigentum verschieben~~ **erledigt
    18.08.** (siehe Nachtrag).
-2. 🟠 **`request_body max_size` in Caddy** je App-Block — stopft den
-   Chunked-Bypass an der robustesten Stelle.
+2. ✅ ~~🟠 `request_body max_size` in Caddy je App-Block~~ **erledigt 18.08.**
+   (live per 413-Test bestätigt).
 3. 🟠 **yt-Block absichern** (echte Anmeldung, Kopfzeilen, Token wechseln).
 4. ✅ ~~🟠 `decodeURIComponent` absichern + Block-weises Fangnetz im Verlauf~~
    **erledigt 18.08., Version 109** (siehe Nachtrag).
