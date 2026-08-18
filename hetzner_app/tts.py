@@ -412,8 +412,20 @@ def _starten(warte: float = 20.0) -> None:
     with _sperre:
         if _laeuft() and _gesund():
             return
-        if _prozess is not None and not _laeuft():
-            _prozess = None       # toter Rest vom letzten Mal
+        # Einen alten Prozess erst sauber abräumen, egal ob er schon tot ist
+        # oder noch läuft, aber nicht gesund antwortet. Sonst überschreibt der
+        # Popen weiter unten die Variable _prozess, und niemand ruft je wait()
+        # auf den alten auf — dann bleibt er als Zombie in der Prozessliste
+        # liegen. Genau das war der Fehler, der die Fernbedienung zumüllte.
+        if _prozess is not None:
+            if _laeuft():
+                _prozess.terminate()
+            try:
+                _prozess.wait(3)
+            except subprocess.TimeoutExpired:
+                _prozess.kill()
+                _prozess.wait()
+            _prozess = None
 
         # Mit der gewählten Stimme starten, nicht mit der Standard-Stimme:
         # So ist genau das Modell sofort warm, das gleich sprechen soll. Alle
