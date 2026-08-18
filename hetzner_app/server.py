@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 104
+VERSION = 105
 
 
 @app.get("/api/version")
@@ -236,6 +236,9 @@ class Patch(BaseModel):
     # wie er ist — sonst verlöre alles andere seinen Bezug. Wir merken uns nur,
     # wie sie im Handy heißen soll.
     anzeige: str | None = None
+    # Ins Archiv stellen oder herausholen — nur für Karten ohne Terminal
+    # (schlafend/abgestürzt) gedacht; Aufwecken löst es von selbst.
+    archiviert: bool | None = None
 
 
 @app.get("/api/sessions", dependencies=[Depends(require_auth)])
@@ -364,6 +367,8 @@ def patch_session(name: str, body: Patch) -> dict:
     if body.anzeige is not None:
         # Ein leerer Name heißt: zurück zum technischen Namen.
         changes["anzeige"] = body.anzeige.strip()[:60]
+    if body.archiviert is not None:
+        changes["archiviert"] = body.archiviert
 
     meta = state.update(name, **changes)
     return {
@@ -371,6 +376,7 @@ def patch_session(name: str, body: Patch) -> dict:
         "pinned": meta.pinned,
         "notifyWhenDone": meta.notify_when_done,
         "anzeige": meta.anzeige,
+        "archiviert": meta.archiviert,
     }
 
 
@@ -440,8 +446,8 @@ def session_wecken(name: str) -> dict:
     """
     meta = state.get(name)
     if tmux.exists(name):
-        # Schon wach — etwa von Hand neu gestartet. Dann nur den Merker lösen.
-        state.update(name, schlaeft=False)
+        # Schon wach — etwa von Hand neu gestartet. Dann nur die Merker lösen.
+        state.update(name, schlaeft=False, archiviert=False)
         return {"ok": True}
     if not meta.cwd:
         raise HTTPException(404, "Für diese Sitzung ist kein Ordner gemerkt.")
@@ -453,7 +459,8 @@ def session_wecken(name: str) -> dict:
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
-    state.update(name, schlaeft=False)
+    # Wer aufwacht, gehört wieder in die Liste — auch wenn er im Archiv lag.
+    state.update(name, schlaeft=False, archiviert=False)
     return {"ok": True}
 
 

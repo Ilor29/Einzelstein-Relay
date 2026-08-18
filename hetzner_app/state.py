@@ -62,6 +62,10 @@ class Meta:
     ohne_rueckfragen: bool = False
     schlaf_zeit: int = 0
     letzte_vorschau: str = ""
+    # Ins Archiv gestellt: Die Karte verschwindet aus der Hauptliste in eine
+    # eingeklappte Gruppe ganz unten. Für alte Sitzungen, die man weder täglich
+    # sehen noch endgültig löschen will. Aufwecken holt sie zurück.
+    archiviert: bool = False
 
 
 def _load() -> dict[str, Meta]:
@@ -424,6 +428,9 @@ def overview() -> list[dict]:
             "anzeige": meta.anzeige or Path(cwd).name,
             # Wie viele Terminals hinter dem einen Schild stecken.
             "terminals": len(sitzungen),
+            # Lebendige Sitzungen stehen nie im Archiv — wer aufwacht, ist
+            # zurück in der Liste (siehe session_wecken).
+            "archiviert": False,
         })
 
     # Die schlafen gelegten Sitzungen dazu — als eigene Karten, damit sie nicht
@@ -450,6 +457,7 @@ def overview() -> list[dict]:
             "modus": None,
             "anzeige": meta.anzeige or Path(meta.cwd).name,
             "terminals": 0,
+            "archiviert": meta.archiviert,
         })
 
     # Sitzungen, die niemand schlafen gelegt hat und die trotzdem kein
@@ -482,6 +490,7 @@ def overview() -> list[dict]:
             "modus": None,
             "anzeige": meta.anzeige or Path(meta.cwd).name,
             "terminals": 0,
+            "archiviert": meta.archiviert,
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.

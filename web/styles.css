@@ -822,6 +822,23 @@ html, body {
 }
 .karte .mond svg { width: 16px; height: 16px; }
 
+/* Archiv-Kiste und Mülleimer — gleiche stille Reihe wie Nadel und Mond.
+   Der Mülleimer erscheint nur im Archiv (siehe app.js) und färbt sich beim
+   Zeigen warnend, damit klar ist: Das hier ist endgültig. */
+.karte .archiv,
+.karte .muell {
+  flex: none;
+  background: none;
+  border: 0;
+  padding: .2rem;
+  color: var(--schrift-schwach);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.karte .archiv svg,
+.karte .muell svg { width: 16px; height: 16px; }
+.karte .muell:hover { color: var(--warn, #d66); }
+
 .karte .vorschau {
   font-size: .78rem;
   color: var(--schrift-leise);

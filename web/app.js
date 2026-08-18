@@ -190,6 +190,12 @@ function karte(sitzung) {
       <button class="mond" aria-label="Sitzung schlafen legen — Speicher freigeben">
         <svg viewBox="0 0 24 24"><use href="#i-mond"/></svg>
       </button>
+      <button class="archiv" aria-label="Ins Archiv stellen">
+        <svg viewBox="0 0 24 24"><use href="#i-archiv"/></svg>
+      </button>
+      <button class="muell" aria-label="Sitzung endgültig löschen">
+        <svg viewBox="0 0 24 24"><use href="#i-muell"/></svg>
+      </button>
     </div>
     <div class="vorschau"></div>
     <div class="angaben">
@@ -273,6 +279,46 @@ function karte(sitzung) {
     }
   });
 
+  // Die Kiste stellt alte Karten ins Archiv (und holt sie wieder heraus) —
+  // nur für Karten ohne Terminal. Eine wache Sitzung archiviert man nicht,
+  // die legt man erst schlafen; das hält das Archiv frei von Lebendigem.
+  const archiv = el.querySelector(".archiv");
+  archiv.hidden = !weckbar;
+  if (sitzung.archiviert) {
+    archiv.setAttribute("aria-label", "Aus dem Archiv zurückholen");
+  }
+  archiv.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    try {
+      await api(`/sessions/${encodeURIComponent(sitzung.name)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ archiviert: !sitzung.archiviert }),
+      });
+      melde(sitzung.archiviert ? "Zurück in der Liste." : "Ins Archiv gestellt — ganz unten zu finden.");
+      ladeListe();
+    } catch (err) {
+      melde(err.message || "Das Archivieren ging gerade nicht.");
+    }
+  });
+
+  // Endgültig löschen — bewusst NUR im Archiv angeboten: Erst stellt man die
+  // Karte weg, dann wirft man sie fort. So löscht kein Daumen aus Versehen.
+  // Weg ist danach nur die Karte samt Gemerktem; die Gespräche auf der Platte
+  // (die Claude-Mitschrift im Projektordner) bleiben unberührt.
+  const muell = el.querySelector(".muell");
+  muell.hidden = !(weckbar && sitzung.archiviert);
+  muell.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!confirm(`Die Karte „${benannt(sitzung)}" endgültig löschen?`)) return;
+    try {
+      await api(`/sessions/${encodeURIComponent(sitzung.name)}`, { method: "DELETE" });
+      melde("Gelöscht.");
+      ladeListe();
+    } catch (err) {
+      melde(err.message || "Das Löschen ging gerade nicht.");
+    }
+  });
+
   return el;
 }
 
@@ -300,10 +346,15 @@ async function ladeListe() {
     return;
   }
 
+  // Das Archiv zuerst aussortieren: Alte, weggestellte Karten sollen in
+  // keiner der normalen Gruppen mehr auftauchen — nur ganz unten, zugeklappt.
+  const archivierte = sitzungen.filter((s) => s.archiviert);
+  const aktive = sitzungen.filter((s) => !s.archiviert);
+
   // Wer auf dich wartet, kommt nach oben — egal ob angeheftet oder nicht.
   // Das ist die eine Sache, die du sofort sehen musst.
-  const wartend = sitzungen.filter((s) => s.state === "waiting");
-  const rest = sitzungen.filter((s) => s.state !== "waiting");
+  const wartend = aktive.filter((s) => s.state === "waiting");
+  const rest = aktive.filter((s) => s.state !== "waiting");
 
   const angeheftet = rest.filter((s) => s.pinned);
   const eigene = rest.filter((s) => !s.pinned && s.eigen);
@@ -353,6 +404,10 @@ async function ladeListe() {
   // Sitzungen, die nicht von dieser App stammen — allen voran die, in der
   // Claude Code gerade selbst läuft. Eingeklappt, weil es viele sind.
   gruppe("Läuft auch auf dem Server", fremde, { zu: true });
+  // Der Dachboden: alte Sitzungen, weggestellt statt gelöscht. Zugeklappt,
+  // damit die Liste kurz bleibt. Antippen weckt wie gewohnt (und holt die
+  // Karte aus dem Archiv zurück); löschen geht nur hier, mit Rückfrage.
+  gruppe("Archiv", archivierte, { zu: true });
 }
 
 // Die Speicher-Ampel des Wächters (siehe hetzner_app/speicher.py): grün /
