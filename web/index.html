@@ -368,6 +368,15 @@
             aria-label="Berechtigungs-Modus umschalten">Modus</button>
     <span id="sitzung-info-text"></span>
   </div>
+  <!-- Der Kontext-Balken: immer sichtbar, sobald bekannt ist, wie voll die
+       Unterhaltung ist. Grün, solange viel Platz bleibt; färbt sich, wenn es
+       eng wird und Claude bald anfängt, das Gespräch zusammenzustauchen.
+       Antippen öffnet das volle Verbrauchs-Blatt mit Zahlen und Plan-Limits. -->
+  <button type="button" id="kontext-balken" class="kontext-balken" hidden
+          aria-label="Kontext-Füllstand — antippen für Details">
+    <span class="kontext-schiene"><span id="kontext-fuellung" class="kontext-fuellung"></span></span>
+    <span id="kontext-text" class="kontext-text"></span>
+  </button>
   <div id="verlauf" class="verlauf"></div>
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>

@@ -440,6 +440,8 @@ let speicherTakt = null;
 
 function starteListe() {
   zeige("liste");
+  // Der Kontext-Balken gehört zur offenen Sitzung — zurück in der Liste ist er weg.
+  $("kontext-balken").hidden = true;
   ladeListe();
   ladeSpeicher();
   clearInterval(listenTakt);
@@ -1145,12 +1147,17 @@ function oeffneSitzung(sitzung) {
   sendeSperren(false);
   ladeVerlauf();
   pruefeFrage();
+  aktualisiereKontextBalken();
+  // Der Füllstand ändert sich langsamer als der Verlauf und liest jedes Mal die
+  // Mitschrift — darum nur jeden vierten Takt (~12 s), nicht alle 3 s.
+  let kontextTick = 0;
   clearInterval(verlaufTakt);
   verlaufTakt = setInterval(() => {
     ladeVerlauf();
     pruefeObClaudeArbeitet();
     pruefeFrage();
     pruefeObTonZurueck();
+    if (++kontextTick % 4 === 0) aktualisiereKontextBalken();
   }, 3000);
 }
 
@@ -2206,10 +2213,7 @@ function verbrauchBlattZu() { $("verbrauch-blatt").hidden = true; }
 $("verbrauch-schatten").addEventListener("click", verbrauchBlattZu);
 $("verbrauch-schliessen").addEventListener("click", verbrauchBlattZu);
 
-// Die ganze Info-Zeile öffnet das Blatt — nicht nur der schmale Text. Nur die
-// Modus-Pille macht weiter ihr eigenes Ding (Berechtigungs-Modus umschalten).
-$("sitzung-info").addEventListener("click", async (e) => {
-  if (e.target.closest("#knopf-modus")) return;
+async function oeffneVerbrauchsBlatt() {
   if (!aktuelleSitzung) return;
   $("verbrauch-blatt").hidden = false;
   const liste = $("verbrauch-liste");
@@ -2235,7 +2239,42 @@ $("sitzung-info").addEventListener("click", async (e) => {
   } catch {
     liste.textContent = "Das ließ sich gerade nicht abrufen.";
   }
+}
+
+// Die ganze Info-Zeile öffnet das Blatt — nicht nur der schmale Text. Nur die
+// Modus-Pille macht weiter ihr eigenes Ding (Berechtigungs-Modus umschalten).
+$("sitzung-info").addEventListener("click", (e) => {
+  if (e.target.closest("#knopf-modus")) return;
+  oeffneVerbrauchsBlatt();
 });
+// Der Kontext-Balken führt ins selbe Blatt — dort stehen die Zahlen dahinter.
+$("kontext-balken").addEventListener("click", oeffneVerbrauchsBlatt);
+
+// Die Daueranzeige im Kopf: wie voll die Unterhaltung ist. Quelle ist der
+// schlanke /kontext-Endpunkt (nur der Füllstand, ohne den Abo-Abruf), damit
+// der Balken auch bei einer Anthropic-Störung weiterläuft.
+async function aktualisiereKontextBalken() {
+  const balken = $("kontext-balken");
+  if (!aktuelleSitzung) { balken.hidden = true; return; }
+  let k;
+  try {
+    k = (await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/kontext`
+    )).json()).kontext;
+  } catch {
+    return;   // Netzhänger oder Sitzung weg: die alte Anzeige stehen lassen
+  }
+  if (!k || typeof k.prozent !== "number") { balken.hidden = true; return; }
+  const voll = Math.max(0, Math.min(100, k.prozent));   // Prozent BENUTZT
+  const frei = 100 - voll;
+  const fuellung = $("kontext-fuellung");
+  fuellung.style.width = voll + "%";
+  // Ab 70% wird's eng, ab 90% staucht Claude bald zusammen — das zeigt die Farbe.
+  fuellung.classList.toggle("knapp", voll >= 70 && voll < 90);
+  fuellung.classList.toggle("voll", voll >= 90);
+  $("kontext-text").textContent = `Kontext ${frei}% frei`;
+  balken.hidden = false;
+}
 
 function blattZu() {
   $("modell-blatt").hidden = true;

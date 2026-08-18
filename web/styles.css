@@ -142,6 +142,49 @@ html, body {
 .modus-pille.gesetzt { color: var(--schrift); border-color: var(--akzent); }
 .modus-pille:active { filter: brightness(1.25); }
 
+/* Der Kontext-Balken unter der Info-Zeile: eine breite, ruhige Schiene mit
+   Füllung und einem Wort daneben. Immer sichtbar, sobald der Füllstand
+   bekannt ist — anders als die kleine Prozentzahl, die man leicht übersieht. */
+.kontext-balken {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  padding: .3rem .8rem .4rem;
+  background: var(--erhoben);
+  border: 0;
+  border-bottom: 1px solid var(--linie);
+  font-family: var(--sans);
+  cursor: pointer;
+  flex: none;
+}
+.kontext-balken:active { filter: brightness(1.2); }
+.kontext-schiene {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--erhoben-2);
+  overflow: hidden;
+}
+.kontext-fuellung {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--laeuft);
+  transition: width .4s ease, background-color .4s ease;
+}
+/* Es wird eng: die Füllung wechselt die Farbe, damit man ohne Zahlen sieht,
+   dass Claude das Gespräch bald zusammenstauchen muss. */
+.kontext-fuellung.knapp { background: var(--wartet); }
+.kontext-fuellung.voll { background: var(--verwerfen); }
+.kontext-text {
+  flex: none;
+  font-size: .72rem;
+  color: var(--schrift-leise);
+  white-space: nowrap;
+}
+
 /* Während geglättet wird, funkelt der Knopf im Akzent und lässt sich nicht
    nochmal drücken. */
 .knopf-diktat.laedt {

@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 110
+VERSION = 111
 
 
 @app.get("/api/version")
@@ -1002,6 +1002,22 @@ def session_verbrauch(name: str) -> dict:
         "kontext": verbrauch.kontext(ordner) if ordner else None,
         "limits": verbrauch.limits(),
     }
+
+
+@app.get("/api/sessions/{name}/kontext", dependencies=[Depends(require_auth)])
+def session_kontext(name: str) -> dict:
+    """Nur der Kontext-Füllstand — schlank, für die Daueranzeige im Kopf.
+
+    Bewusst OHNE die Plan-Limits: Die Daueranzeige fragt oft, und die Limits
+    hängen am Abo-Endpunkt (Netz, kann bei einer Störung ausfallen — genau
+    dann, wenn man den Füllstand am dringendsten sehen will). Der Füllstand
+    dagegen kommt aus der Mitschrift auf der Platte und ist immer da. Für die
+    Details tippt man die Anzeige an und öffnet das volle Verbrauchs-Blatt.
+    """
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    ordner = next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
+    return {"kontext": verbrauch.kontext(ordner) if ordner else None}
 
 
 @app.post("/api/sessions/{name}/antwort", dependencies=[Depends(require_auth)])
