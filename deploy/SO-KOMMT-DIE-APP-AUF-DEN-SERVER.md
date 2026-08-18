@@ -1,0 +1,69 @@
+# So kommt die App auf einen leeren Server
+
+**Stand:** 18.08.2026. Diese Datei beantwortet Rolis Frage: „Wie bringe ich dich
+auf einen frischen Server, was braucht der Server, und wie startet man dich?"
+Und sie löst das Henne-Ei auf: **Man braucht mich (Claude) nicht, um mich
+aufzubauen.**
+
+## Das Henne-Ei — aufgelöst
+
+Der Aufbau läuft über ein reines Bash-Skript, `scripts/setup.sh`. Das ist ein
+gewöhnliches Installations-Skript, das ohne jede laufende Claude-Sitzung von
+selbst durchläuft. Es installiert alles Nötige und startet den Dienst. Erst
+**danach** öffnet man die App und spricht zum ersten Mal mit Claude. Es gibt
+also keinen Zirkel: erst das Skript, dann ich.
+
+## Was der Server braucht
+
+- Einen **kleinen Linux-Server** mit Debian oder Ubuntu (das Skript nutzt
+  `apt`). Anbieter egal — Hetzner, Hostinger, was auch immer.
+- **Empfohlen ~4 GB RAM** aufwärts. Piper (die Sprachausgabe) ist gezähmt auf
+  ~160 MB, aber jede Claude-Sitzung hält 200–500 MB; mit 2 GB wird es schnell
+  eng, sobald mehrere Chats offen sind.
+- **Keine eigene Domain nötig.** Das Skript baut aus der Server-IP eine echte
+  Adresse über sslip.io (aus `65.21.246.222` wird `65-21-246-222.sslip.io`),
+  für die es ein gültiges HTTPS-Zertifikat bekommt.
+- Ein **eigenes Claude-Abo** pro Person (für die Anmeldung von Claude Code).
+
+## Der Aufbau heute (Schritt für Schritt)
+
+1. **Code auf den Server holen:** das Repo klonen (heute: `git clone` aus dem
+   privaten GitHub-Repo — braucht also einmal Zugang).
+2. **Einrichten:** im Projektordner `./scripts/setup.sh` ausführen. Das Skript
+   installiert Pakete, Python-Umgebung, Claude Code, Piper samt Stimme, legt die
+   serverweiten Arbeitsregeln ab, installiert Caddy (besorgt das HTTPS-
+   Zertifikat), richtet den systemd-Dienst ein und startet ihn. Es darf mehrfach
+   laufen — was schon da ist, bleibt.
+3. **Handy freischalten:** die App am Handy im Chrome öffnen (`https://<adresse>`),
+   sie zeigt den öffentlichen Schlüssel des Handys an; auf dem Server dann
+   `./scripts/geraet-erlauben.sh handy <schlüssel>`.
+4. **Bei Claude anmelden:** in der ersten Sitzung `claude login`, den Link am
+   Handy öffnen, Code zurückgeben (die App macht daraus einen Knopf).
+5. **Als App ablegen:** im Chrome-Menü „Zum Startbildschirm hinzufügen".
+
+Danach läuft alles und startet nach einem Neustart von selbst wieder.
+
+## Was für einen Nicht-Techniker noch fehlt
+
+Die Schritte oben funktionieren, verlangen aber an drei Stellen die
+Kommandozeile. Für die Community müssen diese drei Stellen weg:
+
+1. **Code automatisch auf den Server bringen + `setup.sh` von selbst starten**
+   — über **Cloud-Init**: Man gibt beim Erstellen des Servers einen kurzen Text
+   mit, der genau das erledigt. Dann muss niemand klonen oder ein Skript
+   aufrufen. *(Offener Stein 3.)*
+2. **Handy-Freischaltung ohne Terminal** — statt `geraet-erlauben.sh` ein
+   **Kopplungscode** oder QR-Code, den die App selbst anzeigt und annimmt.
+   *(Offener Stein 2, der wichtigste — ohne ihn kommt der Neuling nicht rein.)*
+3. **GitHub-Anbindung für Laien** — die Off-Site-Sicherung per geführtem
+   Schritt (GitHub-Gerätecode auf github.com eingeben, kein Token-Kopieren).
+   Bis dahin sichert der Server lokal weiter, es geht nichts verloren.
+
+## Der ehrliche Test, der noch aussteht
+
+Bevor das an die Community geht, sollte das Ganze **einmal auf einem frischen
+Server oder in einem leeren Behälter** komplett durchgespielt werden: von der
+leeren Maschine bis „Handy verbunden, Chat läuft". Ein erster Frischtest lief
+am 14.08. (Pakete, Python, Claude Code, Piper, App-Start — ein Abbruch-Fehler
+gefunden und behoben). Der vollständige Durchlauf inklusive Freischaltung und
+Anmeldung steht noch aus.
