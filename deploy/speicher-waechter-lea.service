@@ -1,0 +1,13 @@
+[Unit]
+Description=Speicher-Wächter der Hetzner-App (Lea) — eine Messung
+# Gleiche Messung wie bei Roli, aber unter Leas Konto: Die Ampel liest
+# ~/.hetzner-app/speicher.json des JEWEILIGEN Benutzers — ohne eigenen
+# Wächter bliebe Leas Anzeige leer.
+
+[Service]
+Type=oneshot
+User=lea
+WorkingDirectory=/home/lea/Hetzner-App
+ExecStart=/home/lea/Hetzner-App/.venv/bin/python -m hetzner_app.speicher
+EnvironmentFile=-/home/lea/.hetzner-app/umgebung
+Environment=HOME=/home/lea

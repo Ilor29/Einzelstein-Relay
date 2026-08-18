@@ -1,0 +1,35 @@
+# Die Hetzner-App als DRITTE Instanz für das Konto »lea«.
+#
+# Gleiche App, eigener Benutzer, eigener Port (8789) und eigener Piper-Port
+# (5007) — damit sich die Instanzen nicht in die Quere kommen. Erreichbar
+# über lea.65-21-246-222.sslip.io (siehe Caddyfile).
+#
+# Nach /etc/systemd/system/ kopieren, dann:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now hetzner-app-lea
+
+[Unit]
+Description=Hetzner-App für Lea — eigene Instanz, eigener Bereich
+After=network.target
+
+[Service]
+Type=simple
+User=lea
+WorkingDirectory=/home/lea/Hetzner-App
+ExecStart=/home/lea/Hetzner-App/.venv/bin/python -m hetzner_app.server
+Restart=always
+RestartSec=3
+EnvironmentFile=/home/lea/.hetzner-app/umgebung
+
+# Beim Beenden NUR den Dienst selbst abräumen, nicht seine Kinder — sonst
+# nimmt ein Neustart des Dienstes Leas laufende Claude-Sitzungen mit.
+KillMode=process
+
+Environment=PATH=/home/lea/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/lea
+Environment=HETZNER_APP_HOST=127.0.0.1
+Environment=HETZNER_APP_PORT=8789
+Environment=HETZNER_TTS_PORT=5007
+Environment=MALLOC_ARENA_MAX=2
+
+[Install]
+WantedBy=multi-user.target

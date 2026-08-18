@@ -1,0 +1,13 @@
+# Eine Aktualisierung von Leas App-Kopie — angestoßen vom Zeitgeber
+# (lea-aktualisieren.timer), nicht dauerhaft laufend.
+#
+# Nach /etc/systemd/system/ kopieren (Service + Timer), dann:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now lea-aktualisieren.timer
+
+[Unit]
+Description=Leas Hetzner-App auf Rolis Stand bringen
+
+[Service]
+Type=oneshot
+ExecStart=/home/roli/projekte/Hetzner-App/deploy/lea-aktualisieren.sh

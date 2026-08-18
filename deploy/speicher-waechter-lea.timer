@@ -1,0 +1,9 @@
+[Unit]
+Description=Speicher-Wächter der Hetzner-App (Lea) — alle 3 Minuten messen
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=3min
+
+[Install]
+WantedBy=timers.target
