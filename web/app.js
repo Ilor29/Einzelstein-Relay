@@ -1136,6 +1136,8 @@ function oeffneSitzung(sitzung) {
   $("verlauf").replaceChildren();
   $("frage").hidden = true;
   zeigeAnmeldeLink(null);
+  feldAnpassen();          // beim Chat-Wechsel die Feldhöhe zurücksetzen — sonst
+                           // stünde es riesig da, wenn vorher viel drin war
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
   folgeUnten = true;       // beim Öffnen ans Ende, zum Neuesten
@@ -1280,12 +1282,14 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   const gesamt = [...pfade, text].filter(Boolean).join(" ");
   const gemerkt = anhaenge;
   feld.value = "";
+  feldAnpassen();           // sonst bleibt das Feld auf voller Höhe stehen
   anhaengeLeeren();
 
   try {
     await sendeInSitzung(gesamt);
   } catch (err) {
     feld.value = text;      // nichts verloren
+    feldAnpassen();
     anhaenge = gemerkt;     // auch die Anhänge zurück
     anhangStreifenZeichnen();
     beschaeftigt = false;   // ging nicht raus — nicht fälschlich sperren

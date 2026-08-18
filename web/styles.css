@@ -1756,8 +1756,6 @@ html, body {
     width: 100%;
     max-width: var(--spalte);
     background: var(--grund);
-  }
-
     /* Eine Kante links und rechts, damit die Spalte als Fläche zusammenhält. */
     border-left: 1px solid var(--linie);
     border-right: 1px solid var(--linie);
