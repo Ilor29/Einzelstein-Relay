@@ -294,7 +294,13 @@ def kontext(name: str) -> int | None:
 # einen Knopf daraus. Absichtlich NUR Anthropic-Anmeldeadressen, keine
 # beliebigen Links — sonst poppte der Knopf bei jeder Adresse im Gespräch auf.
 _ANMELDE_LINK = re.compile(
-    r"https://(?:claude\.ai|console\.anthropic\.com)/oauth[^\s\"'│┃]*"
+    # Claude Code 2.1.234 schickt zur Anmeldung neuerdings nach
+    # claude.com/cai/oauth — die alten Adressen bleiben als Rückfall, denn
+    # ältere Installationen (und die Console) nutzen sie weiterhin. Genau
+    # daran scheiterte Leas erste Anmeldung am 18.08.: kein Knopf, der Link
+    # wurde von Hand aus zerbrochenen Verlaufszeilen kopiert und war halb.
+    r"https://(?:(?:claude\.ai|console\.anthropic\.com)/oauth"
+    r"|claude\.com/[a-z]+/oauth)[^\s\"'│┃]*"
 )
 
 
