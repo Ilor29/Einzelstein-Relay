@@ -140,7 +140,12 @@ def forget(name: str) -> None:
 # Solange Claude arbeitet, bietet die Fußzeile den Abbruch mit Escape an.
 # Ist Claude fertig, verschwindet der Hinweis. Ein verlässlicheres Signal
 # gibt es nicht — und es steht nur im sichtbaren Bereich, nie im Verlauf.
-_ARBEITET = re.compile(r"esc to interrupt", re.IGNORECASE)
+#
+# Absichtlich nur "esc to in": In schmalen Terminals kürzt Claude Code die
+# Fußzeile mit … — aus "esc to interrupt" wird "esc to in…", und der volle
+# Wortlaut stand nie auf dem Schirm. Genau daran blieb am 18.08. der
+# Denk-Balken aus, während Claude längst arbeitete.
+_ARBEITET = re.compile(r"esc to in", re.IGNORECASE)
 
 # Rückfragen von Claude — Berechtigungen, Ja/Nein, Auswahllisten.
 _FRAGT = re.compile(
