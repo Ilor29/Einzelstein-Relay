@@ -1,7 +1,16 @@
 # Eine Aktualisierung von Leas App-Kopie — angestoßen vom Zeitgeber
 # (lea-aktualisieren.timer), nicht dauerhaft laufend.
 #
-# Nach /etc/systemd/system/ kopieren (Service + Timer), dann:
+# WICHTIG (Sicherheit): Dieser Dienst läuft als root. Das ausgeführte Skript
+# darf darum NICHT unter /home/roli liegen — dort könnte das roli-Konto es
+# umschreiben und sich über den root-Lauf zum Administrator machen. Das Skript
+# wird deshalb nach /usr/local/sbin/ installiert (Eigentümer root:root, 755).
+#
+# Installation:
+#   sudo install -o root -g root -m 755 deploy/lea-aktualisieren.sh \
+#        /usr/local/sbin/hz-lea-aktualisieren.sh
+#   sudo cp deploy/lea-aktualisieren.service deploy/lea-aktualisieren.timer \
+#        /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now lea-aktualisieren.timer
 
@@ -10,4 +19,4 @@ Description=Leas Hetzner-App auf Rolis Stand bringen
 
 [Service]
 Type=oneshot
-ExecStart=/home/roli/projekte/Hetzner-App/deploy/lea-aktualisieren.sh
+ExecStart=/usr/local/sbin/hz-lea-aktualisieren.sh

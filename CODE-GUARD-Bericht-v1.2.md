@@ -266,10 +266,18 @@ Verschenk-Runde tragfähig.
 | E5 Tests | n. a. (keine automatischen Tests — offener Punkt im Fahrplan) |
 | Recht 0–4.5 | geprüft (Rolle geklärt; Verkaufspunkte geparkt) |
 
+## Nachtrag — Fixes umgesetzt (18.08.2026)
+
+- ✅ **🟠 Rechte-Eskalation geschlossen:** Beide Aktualisierungs-Skripte liegen
+  jetzt als `root:root` (755) unter `/usr/local/sbin/hz-*-aktualisieren.sh`, die
+  Dienste zeigen dorthin. Das roli-Konto kann den von root ausgeführten Inhalt
+  nicht mehr verändern. Testläufe beider Dienste erfolgreich, beide Instanzen
+  erreichbar. Repo-Vorlagen mit Installationshinweis versehen.
+
 ## Nächste Schritte (priorisiert)
 
-1. 🟠 **Aktualisierungs-Skripte nach root-Eigentum verschieben** — schließt die
-   Rechte-Eskalation, ~10 Minuten.
+1. ✅ ~~🟠 Aktualisierungs-Skripte nach root-Eigentum verschieben~~ **erledigt
+   18.08.** (siehe Nachtrag).
 2. 🟠 **`request_body max_size` in Caddy** je App-Block — stopft den
    Chunked-Bypass an der robustesten Stelle.
 3. 🟠 **yt-Block absichern** (echte Anmeldung, Kopfzeilen, Token wechseln).
