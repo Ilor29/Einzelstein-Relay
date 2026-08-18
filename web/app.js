@@ -586,8 +586,16 @@ function verlaufLink(url, anzeige) {
 // der volle Link steckt weiter im Knopf.
 function linkAnzeige(url) {
   if (url.startsWith("mailto:")) {
-    const an = decodeURIComponent(url.slice(7).split("?")[0] || "");
-    return an ? `E-Mail an ${an}` : "E-Mail öffnen";
+    // decodeURIComponent wirft bei kaputter Prozent-Kodierung (ein abgeschnittenes
+    // "%2", ein "%zz"). Solche Links baut Claude selbst in E-Mail-Entwürfen oder
+    // zitiert sie von fremden Seiten — ungefangen riss der Fehler die ganze
+    // Lese-Ansicht ab. Also lieber eine schlichte Aufschrift als ein toter Verlauf.
+    try {
+      const an = decodeURIComponent(url.slice(7).split("?")[0] || "");
+      return an ? `E-Mail an ${an}` : "E-Mail öffnen";
+    } catch {
+      return "E-Mail öffnen";
+    }
   }
   try {
     const u = new URL(url);
@@ -858,7 +866,24 @@ async function ladeVerlauf() {
   // Die Werkzeug-Kästen ("Bash(…)", "Read(…)") gehören ins Terminal, nicht ins
   // Gespräch. Die Lese-Ansicht zeigt, was Claude *sagt* — wer sehen will, was es
   // *tut*, schaltet oben aufs Terminal.
-  behaelter.replaceChildren(...zusammenfassen(bloecke).map(verlaufBlock));
+  //
+  // Jeder Block einzeln im Fangnetz: Wirft das Rendern eines Blocks einen
+  // Fehler (ein kaputt kodierter Link hat genau so die ganze Ansicht
+  // eingefroren — zuletztGesehen war da schon gesetzt, es blieb leer), fällt
+  // NUR dieser Block auf schlichten Text zurück, der Rest lebt weiter.
+  behaelter.replaceChildren(...zusammenfassen(bloecke).map((block) => {
+    try {
+      return verlaufBlock(block);
+    } catch {
+      const notnagel = document.createElement("div");
+      notnagel.className = "antwort";
+      const blase = document.createElement("div");
+      blase.className = "blase claude";
+      blase.textContent = block?.text || "";
+      notnagel.append(blase);
+      return notnagel;
+    }
+  }));
 
   // Ans Ende ziehen, wenn wir mitlaufen sollen — aber erst in der nächsten
   // Bildwiederholung, wenn der neue Inhalt wirklich vermessen ist. Sofort wäre
