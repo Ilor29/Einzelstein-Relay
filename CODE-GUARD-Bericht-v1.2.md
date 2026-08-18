@@ -273,6 +273,11 @@ Verschenk-Runde tragfähig.
   Dienste zeigen dorthin. Das roli-Konto kann den von root ausgeführten Inhalt
   nicht mehr verändern. Testläufe beider Dienste erfolgreich, beide Instanzen
   erreichbar. Repo-Vorlagen mit Installationshinweis versehen.
+- ✅ **🟠 Einfrierender Link behoben (Version 109):** `decodeURIComponent` in
+  `linkAnzeige()` im Fangnetz (Rückfall „E-Mail öffnen", mit kaputtem Link
+  getestet), und der Verlauf rendert jeden Block einzeln in try/catch — ein
+  kaputter Block wird zur schlichten Text-Blase statt zum toten Bildschirm.
+  Auf allen drei Instanzen ausgerollt.
 
 ## Nächste Schritte (priorisiert)
 
@@ -281,7 +286,8 @@ Verschenk-Runde tragfähig.
 2. 🟠 **`request_body max_size` in Caddy** je App-Block — stopft den
    Chunked-Bypass an der robustesten Stelle.
 3. 🟠 **yt-Block absichern** (echte Anmeldung, Kopfzeilen, Token wechseln).
-4. 🟠 **`decodeURIComponent` absichern** + Block-weises Fangnetz im Verlauf.
+4. ✅ ~~🟠 `decodeURIComponent` absichern + Block-weises Fangnetz im Verlauf~~
+   **erledigt 18.08., Version 109** (siehe Nachtrag).
 5. 🟡 **Schnelle Wins in einem Rutsch:** Push-Timeout, Aufgaben-Sperre,
    Sitzungsdeckel, Zip-Größenprüfung, GitHub-Fehlschlag-Warnung.
 6. 🟡 CSP setzen und mit dem Browser-Prüfer testen; xterm.js heben.
