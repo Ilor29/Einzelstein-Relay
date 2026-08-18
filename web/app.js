@@ -2248,26 +2248,40 @@ $("knopf-modell").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
 
   const liste = await modelleHolen();
-  $("modell-liste").replaceChildren(
-    ...liste.map((m) => {
-      const zeile = document.createElement("button");
-      zeile.type = "button";
-      zeile.className = "modell-zeile";
-      // Das laufende Modell trägt den Haken — so wie in der offiziellen App.
-      const gewaehlt = m.name === aktuelleSitzung.modell;
-      zeile.classList.toggle("gewaehlt", gewaehlt);
-      // Gerüst ohne Daten; Titel und Art über textContent, damit auch aus der
-      // Modell-Liste nie HTML in die Seite gelangt.
-      zeile.innerHTML = `
-        <span class="modell-titel"></span>
-        <span class="modell-art"></span>
-        ${gewaehlt ? '<span class="modell-haken">✓</span>' : ""}`;
-      zeile.querySelector(".modell-titel").textContent = m.anzeige;
-      zeile.querySelector(".modell-art").textContent = m.art;
-      zeile.addEventListener("click", () => waehleModell(m));
-      return zeile;
-    })
-  );
+  const kinder = [];
+  let letzteGruppe = null;
+  for (const m of liste) {
+    // Vor der ersten Zeile einer neuen Gruppe eine Überschrift einziehen —
+    // aber nur für "weitere", damit über den geläufigen Modellen oben kein
+    // überflüssiges Etikett steht. So sieht es aus wie „Weitere Modelle" in
+    // der offiziellen App: die älteren Versionen zum Ausweichen bei Störung.
+    if (m.gruppe !== letzteGruppe) {
+      letzteGruppe = m.gruppe;
+      if (m.gruppe === "weitere") {
+        const kopf = document.createElement("div");
+        kopf.className = "modell-gruppe";
+        kopf.textContent = "Weitere Modelle";
+        kinder.push(kopf);
+      }
+    }
+    const zeile = document.createElement("button");
+    zeile.type = "button";
+    zeile.className = "modell-zeile";
+    // Das laufende Modell trägt den Haken — so wie in der offiziellen App.
+    const gewaehlt = m.name === aktuelleSitzung.modell;
+    zeile.classList.toggle("gewaehlt", gewaehlt);
+    // Gerüst ohne Daten; Titel und Art über textContent, damit auch aus der
+    // Modell-Liste nie HTML in die Seite gelangt.
+    zeile.innerHTML = `
+      <span class="modell-titel"></span>
+      <span class="modell-art"></span>
+      ${gewaehlt ? '<span class="modell-haken">✓</span>' : ""}`;
+    zeile.querySelector(".modell-titel").textContent = m.anzeige;
+    zeile.querySelector(".modell-art").textContent = m.art;
+    zeile.addEventListener("click", () => waehleModell(m));
+    kinder.push(zeile);
+  }
+  $("modell-liste").replaceChildren(...kinder);
   $("modell-blatt").hidden = false;
 });
 

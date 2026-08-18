@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 109
+VERSION = 110
 
 
 @app.get("/api/version")
@@ -806,11 +806,26 @@ class Modell(BaseModel):
 # (Stand 2.1.220). Stünde hier "Opus 4.8" fest im Text, veraltete das Etikett
 # bei jedem neuen Claude-Modell, obwohl die Auswahl technisch längst die
 # neueste Version trifft — genau das hat Roli am 02.08. verwirrt.
+# Jeder Eintrag: Kurzname/voller Name → (Anzeige, Beschreibung, Gruppe).
+# Gruppe "aktuell" sind die Alias-Kurznamen (immer die neueste Version ihrer
+# Familie). Gruppe "weitere" sind ältere, fest gepinnte Versionen zum
+# Ausweichen, falls die ganze neueste Generation gerade gestört ist — genau
+# das ist am 18.08.2026 passiert (Anthropic-Ausfall, alle 5er-Modelle weg,
+# und in der App gab es keinen Weg auf ein älteres). Hier stehen die VOLLEN
+# Namen, weil die Kurznamen sonst wieder auf die (ausgefallene) neueste
+# Version zeigten. Die Namen sind aus Claude Codes eigener History verifiziert.
+# Ein unbekannter Name lässt /model das laufende Modell behalten und meldet
+# nur einen Fehler — eine hier veraltete Zeile ist also ungefährlich, nicht
+# kaputt. Prüfen, wenn eine neue Modellgeneration erscheint.
 MODELLE = {
-    "fable": ("Fable", "das neueste"),
-    "opus": ("Opus", "am stärksten, verbraucht die Limits schneller"),
-    "sonnet": ("Sonnet", "am effizientesten für Alltagsaufgaben"),
-    "haiku": ("Haiku", "am schnellsten für kurze Antworten"),
+    "fable": ("Fable", "das neueste", "aktuell"),
+    "opus": ("Opus", "am stärksten, verbraucht die Limits schneller", "aktuell"),
+    "sonnet": ("Sonnet", "am effizientesten für Alltagsaufgaben", "aktuell"),
+    "haiku": ("Haiku", "am schnellsten für kurze Antworten", "aktuell"),
+    "claude-opus-4-8": ("Opus 4.8", "ältere Version — Ausweichen bei Störung", "weitere"),
+    "claude-opus-4-7": ("Opus 4.7", "ältere Version", "weitere"),
+    "claude-opus-4-6": ("Opus 4.6", "ältere Version", "weitere"),
+    "claude-sonnet-4-6": ("Sonnet 4.6", "ältere Version — schlanker", "weitere"),
 }
 
 
@@ -830,8 +845,8 @@ def speicher_stand() -> dict:
 @app.get("/api/modelle", dependencies=[Depends(require_auth)])
 def modelle() -> list[dict]:
     return [
-        {"name": name, "anzeige": anzeige, "art": art}
-        for name, (anzeige, art) in MODELLE.items()
+        {"name": name, "anzeige": anzeige, "art": art, "gruppe": gruppe}
+        for name, (anzeige, art, gruppe) in MODELLE.items()
     ]
 
 
