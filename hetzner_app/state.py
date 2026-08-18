@@ -304,16 +304,45 @@ _ANMELDE_LINK = re.compile(
 )
 
 
+# Woraus eine Fortsetzungszeile der Anmelde-Adresse bestehen darf: nur aus
+# Adress-Zeichen, ohne Leerzeichen. Normaler Text („Paste code here …") fällt
+# damit sofort durch.
+_ANMELDE_STUECK = re.compile(r"^[A-Za-z0-9./?=&%_+:~#-]+$")
+
+
 def anmelde_link(name: str) -> str | None:
-    """Die Anmelde-Adresse, falls gerade eine auf dem Bildschirm steht."""
+    """Die Anmelde-Adresse, falls gerade eine auf dem Bildschirm steht.
+
+    Die Adresse ist länger als eine Terminalzeile, und Claude Code bricht sie
+    HART um — das sind echte Zeilenumbrüche, die auch tmux' Zusammenfügen (-J)
+    nicht rückgängig macht. Nur die erste Zeile zu nehmen hieße: halber Link,
+    und Anthropic weist ihn ab („Fehlender redirect_uri Parameter" — genau so
+    scheiterte Leas Anmeldung am 18.08.). Also setzen wir selbst zusammen:
+    ab dem Link-Anfang jede Folgezeile anhängen, solange sie nur aus
+    Adress-Zeichen besteht.
+    """
     try:
-        # verbunden=True: die Adresse ist länger als eine Terminalzeile und
-        # wäre sonst in Hälften zerbrochen, die kein Muster findet.
         screen = tmux.capture(name, lines=None, verbunden=True)
     except tmux.TmuxError:
         return None
-    treffer = _ANMELDE_LINK.findall(screen)
-    return treffer[-1] if treffer else None
+
+    zeilen = screen.splitlines()
+    treffer = None
+    for i, zeile in enumerate(zeilen):
+        anfang = _ANMELDE_LINK.search(zeile)
+        if not anfang:
+            continue
+        adresse = anfang.group(0)
+        # Nur wenn der Link am Zeilenende steht, kann er umgebrochen sein —
+        # steht nach ihm noch Text, ist er komplett.
+        if zeile.rstrip().endswith(adresse):
+            for folge in zeilen[i + 1:]:
+                folge = folge.strip()
+                if not folge or not _ANMELDE_STUECK.match(folge):
+                    break
+                adresse += folge
+        treffer = adresse   # der letzte Fund gewinnt, wie bisher
+    return treffer
 
 
 # Claude Codes eigene Bestätigung nach einem Modellwechsel — "Set model to
