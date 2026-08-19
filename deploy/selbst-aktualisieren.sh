@@ -48,6 +48,12 @@ if ! git -C "$ZIEL" diff --quiet "$alt" "$neu" -- requirements.txt; then
   runuser -u "$BESITZER" -- "${ZIEL}/.venv/bin/pip" install --quiet -r "${ZIEL}/requirements.txt" || true
 fi
 
+# Mitgelieferte Skills mitziehen — als Besitzer, nicht als root (sie landen in
+# dessen ~/.claude/skills). So kommen verbesserte Skills automatisch an.
+if ! git -C "$ZIEL" diff --quiet "$alt" "$neu" -- deploy/skills; then
+  runuser -u "$BESITZER" -- bash "${ZIEL}/scripts/skills-installieren.sh" || true
+fi
+
 # Den Dienst nur anfassen, wenn sich der Server-Code geändert hat. Die
 # Oberfläche (web/) liest der Dienst bei jedem Aufruf frisch — dafür reicht
 # Neuladen im Browser. Die Claude-Sitzungen leben in tmux, unabhängig vom

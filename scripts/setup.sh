@@ -83,6 +83,9 @@ done
 [ -d "${BRAIN}/.git" ] || git init --quiet "$BRAIN"
 echo "   Brain liegt unter ${BRAIN}. In der App öffnet ihn der Brain-Knopf oben."
 
+echo "→ Mitgelieferte Skills einrichten (CODE//GUARD u.a.) …"
+"${HIER}/scripts/skills-installieren.sh"
+
 # Kontaktadresse für die Push-Benachrichtigungen. Der Push-Dienst (Google,
 # Mozilla) will wissen, wen er bei Missbrauch anschreibt — das muss der
 # Betreiber DIESER Instanz sein, nicht der Entwickler.
