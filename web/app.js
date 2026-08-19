@@ -141,6 +141,36 @@ $("knopf-kopieren").addEventListener("click", async () => {
 
 $("knopf-nochmal").addEventListener("click", start);
 
+// Freischalten per Kopplungscode: den öffentlichen Schlüssel dieses Geräts
+// zusammen mit dem eingetippten Code an den Server geben. Stimmt der Code,
+// trägt der Server das Gerät ein UND meldet es gleich an (Cookie) — danach
+// geht es direkt in die Liste, ganz ohne Server-Kommandozeile.
+$("koppel-formular").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fehler = $("koppel-fehler");
+  fehler.hidden = true;
+  const code = $("koppel-code").value.trim();
+  if (!code) return;
+  try {
+    const schluessel = await oeffentlicherSchluessel(await schluesselHolen());
+    const antwort = await fetch("/api/koppeln", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ schluessel, code }),
+    });
+    if (!antwort.ok) {
+      const koerper = await antwort.json().catch(() => ({}));
+      throw new Error(fehlerText(koerper) || "Der Code stimmt nicht oder ist abgelaufen.");
+    }
+    nachAnmeldung();
+  } catch (err) {
+    fehler.hidden = false;
+    fehler.textContent = istNetzfehler(err)
+      ? "Keine Verbindung zum Server."
+      : (err.message || "Das Freischalten hat nicht geklappt.");
+  }
+});
+
 // --- Sitzungsübersicht -------------------------------------------------------
 
 const ETIKETT = {
@@ -3362,6 +3392,23 @@ $("knopf-abmelden").addEventListener("click", async () => {
     // Cookie ist so oder so weg — der Neuaufbau unten fängt alles auf.
   }
   location.reload();
+});
+
+// Ein weiteres Gerät hinzufügen: Dieses (angemeldete) Gerät erzeugt einen
+// Kopplungscode, den man am neuen Gerät eintippt. So kommt ein Tablet oder
+// Laptop dazu, ganz ohne Server-Kommandozeile.
+$("knopf-geraet-koppeln").addEventListener("click", async () => {
+  const knopf = $("knopf-geraet-koppeln");
+  knopf.disabled = true;
+  try {
+    const { code } = await (await api("/kopplung/neu", { method: "POST" })).json();
+    $("koppel-code-gross").textContent = code;
+    $("koppel-anzeige").hidden = false;
+  } catch (err) {
+    melde(err.message || "Der Code ließ sich gerade nicht erzeugen.");
+  } finally {
+    knopf.disabled = false;
+  }
 });
 
 $("knopf-einst-zurueck").addEventListener("click", () => {

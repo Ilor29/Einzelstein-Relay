@@ -1537,6 +1537,41 @@ html, body {
   overflow-y: auto;
 }
 
+/* Kopplungscode-Eingabe auf der Freischalt-Ansicht. */
+.koppel-formular { display: flex; flex-direction: column; gap: .5rem; }
+.koppel-code {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+/* Der Notweg über den Schlüssel — zusammengeklappt, damit er den Hauptweg
+   (Code eintippen) nicht überlagert. */
+.notweg { margin-top: 1.2rem; text-align: left; }
+.notweg summary {
+  cursor: pointer;
+  color: var(--schrift-leise);
+  font-size: .85rem;
+  padding: .3rem 0;
+}
+.notweg p { margin: .5rem 0; }
+
+/* Der erzeugte Code für ein weiteres Gerät (in den Einstellungen). */
+.koppel-anzeige { margin-top: .4rem; }
+.koppel-code-gross {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  letter-spacing: .1em;
+  text-align: center;
+  color: var(--schrift);
+  background: var(--erhoben-2);
+  border: 1px solid var(--akzent);
+  border-radius: 10px;
+  padding: .7rem;
+  user-select: all;
+}
+
 .knopf-rand {
   width: 100%;
   background: none;

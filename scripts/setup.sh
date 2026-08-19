@@ -115,11 +115,24 @@ sudo sed "s|%i|${USER}|g; s|/home/${USER}/Hetzner-App|${HIER}|g" \
 sudo systemctl daemon-reload
 sudo systemctl enable --now hetzner-app
 
+# Einen Kopplungscode erzeugen, damit das erste Handy sich SELBST freischalten
+# kann — ohne den öffentlichen Schlüssel in die Kommandozeile zu tragen. Der
+# Code ist 15 Minuten gültig und einmalig. (cd nach $HIER, damit das Modul
+# hetzner_app gefunden wird.)
+KOPPELCODE="$(cd "$HIER" && ./.venv/bin/python -c 'from hetzner_app import geraete; print(geraete.kopplung_neu())' 2>/dev/null || true)"
+
 echo
 echo "✓ Fertig."
 echo
 echo "  1. Öffne am Handy im Chrome:  https://${DOMAIN}"
-echo "     Die App zeigt dir den öffentlichen Schlüssel deines Handys an."
-echo "  2. Schalte das Handy hier auf dem Server frei:"
-echo "       ./scripts/geraet-erlauben.sh handy <schlüssel-vom-handy>"
+if [ -n "$KOPPELCODE" ]; then
+  echo "  2. Tippe in der App diesen Kopplungscode ein (15 Minuten gültig):"
+  echo
+  echo "         ${KOPPELCODE}"
+  echo
+  echo "     (Neuer Code, falls er abläuft:  ./scripts/kopplungscode.sh)"
+else
+  echo "  2. Schalte das Handy hier auf dem Server frei:"
+  echo "       ./scripts/geraet-erlauben.sh handy <schlüssel-vom-handy>"
+fi
 echo "  3. Dann im Chrome-Menü: »Zum Startbildschirm hinzufügen«."
