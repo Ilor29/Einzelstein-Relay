@@ -9,7 +9,10 @@ Er tut drei Dinge:
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -32,17 +35,55 @@ WEB_DIR = Path(__file__).parent.parent / "web"
 
 COOKIE = "hetzner_app_anmeldung"
 
+
+def _csp_bauen() -> str | None:
+    """Die Content-Security-Policy — zweites Netz gegen XSS.
+
+    Der Kniff: Die App hat genau EIN Inline-Skript (die Notbremse in
+    index.html). Dessen Hash berechnen wir hier beim Start AUS DER DATEI, statt
+    ihn von Hand einzutragen — so bricht die CSP nie, auch wenn die Notbremse
+    mal geändert wird. Alles andere lädt die App von der eigenen Herkunft; die
+    großzügigen Stellen (img/media data:/blob:) sind ungefährlich (kein fremder
+    Host). Klappt das Berechnen nicht, setzen wir LIEBER GAR KEINE CSP als eine,
+    die die App lahmlegt — das war schon immer die Sorge an dieser Stelle.
+    """
+    try:
+        html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+        treffer = re.search(r"<script>(.*?)</script>", html, re.S)
+        roh = hashlib.sha256(treffer.group(1).encode("utf-8")).digest()
+        hash_ = base64.b64encode(roh).decode()
+    except Exception:
+        return None
+    return "; ".join([
+        "default-src 'self'",
+        f"script-src 'self' 'sha256-{hash_}'",
+        "style-src 'self'",
+        "img-src 'self' data: blob:",
+        "media-src 'self' blob:",
+        "font-src 'self'",
+        "connect-src 'self'",          # deckt auch same-origin WebSocket (wss)
+        "worker-src 'self'",
+        "manifest-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+    ])
+
+
+CSP = _csp_bauen()
+
 app = FastAPI(title="Hetzner-App")
 
 
 @app.middleware("http")
 async def sicherheits_header(request: Request, call_next):
-    """Ein paar schützende Kopfzeilen auf jede Antwort.
+    """Ein paar schützende Kopfzeilen auf jede Antwort — inklusive der CSP.
 
-    Bewusst OHNE Content-Security-Policy: Eine falsch gesetzte CSP legt die App
-    lahm (Inline-Skript/-Stil, WebSocket, Audio-Blobs) und gehört erst nach
-    einem echten Test im Browser gesetzt — dann am besten in Caddy. Diese drei
-    Header dagegen brechen nichts und kosten nichts.
+    Die Content-Security-Policy ist das zweite Netz gegen XSS (das erste ist die
+    textContent-Disziplin). Sie wird beim Start aus der Datei gebaut (der Hash
+    des einen Inline-Skripts inklusive, siehe _csp_bauen) und im Browser-Prüfer
+    getestet. Schlägt das Bauen fehl, bleibt sie weg — lieber keine CSP als eine,
+    die die App lahmlegt.
     """
     # Deckel auf die Anfragengröße, BEVOR der Körper in den Speicher gelesen
     # wird. Die größte legitime Anfrage ist ein Dokument-Upload (30 MB) —
@@ -57,6 +98,8 @@ async def sicherheits_header(request: Request, call_next):
     antwort.headers.setdefault("X-Content-Type-Options", "nosniff")
     antwort.headers.setdefault("Referrer-Policy", "same-origin")
     antwort.headers.setdefault("X-Frame-Options", "DENY")
+    if CSP:
+        antwort.headers.setdefault("Content-Security-Policy", CSP)
     return antwort
 
 
@@ -163,7 +206,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 116
+VERSION = 117
 
 
 @app.get("/api/version")

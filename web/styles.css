@@ -1900,3 +1900,8 @@ html, body {
   text-underline-offset: 2px;
   word-break: break-all;
 }
+
+/* Ersetzt zwei frühere Inline-Stile — nötig für eine strenge CSP
+   (style-src ohne unsafe-inline). */
+.icon-defs { position: absolute; }
+.zentriert { text-align: center; }
