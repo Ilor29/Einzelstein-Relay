@@ -283,6 +283,11 @@ Verschenk-Runde tragfähig.
   getestet: 40-MB-Chunked-Anfrage → 413, kleine Anfrage kommt normal durch.
   Repo-Vorlage `deploy/Caddyfile` nachgezogen; Sicherung der alten
   Live-Konfiguration unter `/etc/caddy/Caddyfile.bak-vor-maxsize-20260818`.
+- ✅ **🟡 Fünf Mittel-Punkte abgehärtet (19.08.):** Sitzungs-Obergrenze
+  (`MAX_SITZUNGEN`=10, gegen OOM), Anmelde-Aufgaben unter eigener Sperre +
+  Obergrenze (gegen 500er-Race und Flutung), Zip-Bomben-Schutz beim
+  Skill-Upload (entpackte Größe/Anzahl vor `extractall`), Timeouts für
+  `webpush` (10 s) und den git-Push in der Sicherung (120 s). Getestet.
 
 ## Nächste Schritte (priorisiert)
 
@@ -293,8 +298,9 @@ Verschenk-Runde tragfähig.
 3. 🟠 **yt-Block absichern** (echte Anmeldung, Kopfzeilen, Token wechseln).
 4. ✅ ~~🟠 `decodeURIComponent` absichern + Block-weises Fangnetz im Verlauf~~
    **erledigt 18.08., Version 109** (siehe Nachtrag).
-5. 🟡 **Schnelle Wins in einem Rutsch:** Push-Timeout, Aufgaben-Sperre,
-   Sitzungsdeckel, Zip-Größenprüfung, GitHub-Fehlschlag-Warnung.
+5. ✅ ~~🟡 Schnelle Wins: Push-Timeout, Aufgaben-Sperre, Sitzungsdeckel,
+   Zip-Größenprüfung~~ **erledigt 19.08.** (siehe Nachtrag). Offen davon nur
+   noch die GitHub-Fehlschlag-Warnung fürs Handy.
 6. 🟡 CSP setzen und mit dem Browser-Prüfer testen; xterm.js heben.
 7. 🔵 Vor breiter Weitergabe: Ton-Tagebuch ausbauen oder deklarieren;
    Caddy-Vorlage im Repo nachziehen.
