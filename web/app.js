@@ -2513,7 +2513,13 @@ function pauseSymbol(pausiert) {
 // sondern lassen die App selbst Protokoll führen. Jedes wichtige Ereignis geht
 // per sendBeacon zum Server — das funkt auch dann noch zuverlässig, wenn die
 // Seite gerade eingefroren oder auf dem Weg in den Hintergrund ist.
+// Standardmäßig AUS: In einer weitergegebenen Fassung wäre das ungefragte
+// Nutzungs-Telemetrie. Zum Debuggen des Vorlesens auf true setzen (und
+// serverseitig HETZNER_APP_TON_TAGEBUCH=1). Der Server verwirft es ohnehin,
+// solange er nicht ebenfalls eingeschaltet ist.
+const TON_TAGEBUCH_AN = false;
 function tonEreignis(art) {
+  if (!TON_TAGEBUCH_AN) return;
   try {
     navigator.sendBeacon("/api/ton-tagebuch", JSON.stringify({
       t: Date.now(), art,

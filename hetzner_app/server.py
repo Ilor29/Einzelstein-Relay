@@ -119,6 +119,12 @@ ANHANG_HALTBAR_TAGE = 3
 # größeren Server per Umgebungsvariable anhebbar.
 MAX_SITZUNGEN = int(os.environ.get("HETZNER_APP_MAX_SITZUNGEN", "10"))
 
+# Das Ton-Tagebuch war ein Fehlersuch-Werkzeug fürs Vorlesen (Hosentaschen-
+# Abbruch, V100). In einer weitergegebenen Fassung wäre es ungefragte
+# Nutzungs-Telemetrie — darum standardmäßig AUS. Zum Debuggen einschalten mit
+# HETZNER_APP_TON_TAGEBUCH=1 in der Umgebung (und dem Schalter in app.js).
+TON_TAGEBUCH_AN = os.environ.get("HETZNER_APP_TON_TAGEBUCH") == "1"
+
 
 def _anhang_ordner() -> set[Path]:
     """Alle Durchgangs-Ordner, die es aufzuräumen gilt.
@@ -206,7 +212,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 117
+VERSION = 118
 
 
 @app.get("/api/version")
@@ -1143,7 +1149,12 @@ async def ton_tagebuch(request: Request) -> dict:
     angehalten, Weckversuch, System-Pause …). Landet als eine Zeile je
     Ereignis in ~/.hetzner-app/ton-tagebuch.log — zum Nachlesen, wer den
     Vortrag wirklich beendet hat. Wird die Datei zu groß, beginnt sie neu.
+
+    Standardmäßig AUS (Telemetrie-Sorge bei Weitergabe) — dann nichts
+    geschrieben, nichts gespeichert. Einschalten über die Umgebung.
     """
+    if not TON_TAGEBUCH_AN:
+        return {"ok": True}          # aus: nichts protokollieren
     datei = Path.home() / ".hetzner-app" / "ton-tagebuch.log"
     try:
         koerper = (await request.body())[:2000].decode("utf-8", "replace")
