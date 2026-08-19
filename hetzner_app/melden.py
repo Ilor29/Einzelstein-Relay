@@ -154,6 +154,10 @@ def schicken(titel: str, text: str, sitzung: str = "") -> int:
                 # Der Push-Dienst will wissen, wen er bei Ärger anschreiben kann.
                 vapid_claims={"sub": _kontakt()},
                 ttl=600,
+                # Ohne Timeout wartet der Aufruf notfalls ewig. Hängt ein
+                # Push-Dienst, blockierte das sonst den Wächter-Thread und ALLE
+                # weiteren Meldungen blieben stumm aus.
+                timeout=10,
             )
             zugestellt += 1
         except WebPushException as fehler:

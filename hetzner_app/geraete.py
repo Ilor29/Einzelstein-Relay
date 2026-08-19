@@ -60,6 +60,18 @@ class Geraet:
 # Dienstes muss man sich eben neu anmelden, das kostet einen Wimpernschlag.
 _aufgaben: dict[str, float] = {}
 
+# Eigene Sperre für die Aufgaben-Liste: Sie wird auch vom unangemeldeten
+# /api/aufgabe angefasst, und FastAPI führt synchrone Endpunkte im Threadpool
+# aus — ohne Sperre konnten zwei gleichzeitige Anmeldungen die Aufräum-Schleife
+# und ein Einfügen verzahnen ("dictionary changed size during iteration" → 500).
+_aufgaben_sperre = threading.Lock()
+
+# Obergrenze gegen Flutung: /api/aufgabe ist der einzige unangemeldete
+# Wachstumsweg. Ohne Deckel könnte ein Angreifer die Liste im 120-Sekunden-
+# Fenster mit Millionen Einträgen füllen. Bei Überschreitung fliegen die
+# ältesten heraus — ein ehrlicher Nutzer merkt davon nichts.
+_AUFGABEN_MAX = 10_000
+
 
 # --- Geräte verwalten --------------------------------------------------------
 
@@ -259,18 +271,24 @@ def kopplung_pruefen_und_verbrauchen(eingabe: str) -> bool:
 def aufgabe_stellen() -> str:
     """Eine Zufallsaufgabe, die das Gerät unterschreiben muss."""
     jetzt = time.time()
-    # Abgelaufene wegräumen, damit sich hier nichts ansammelt.
-    for alt in [a for a, frist in _aufgaben.items() if frist < jetzt]:
-        _aufgaben.pop(alt, None)
-
     aufgabe = secrets.token_urlsafe(32)
-    _aufgaben[aufgabe] = jetzt + AUFGABE_GILT
+    with _aufgaben_sperre:
+        # Abgelaufene wegräumen, damit sich hier nichts ansammelt.
+        for alt in [a for a, frist in _aufgaben.items() if frist < jetzt]:
+            _aufgaben.pop(alt, None)
+        # Notbremse gegen Flutung: bleibt es trotzdem zu voll, die ältesten raus.
+        if len(_aufgaben) >= _AUFGABEN_MAX:
+            zu_alt = sorted(_aufgaben, key=_aufgaben.get)[: len(_aufgaben) - _AUFGABEN_MAX + 1]
+            for a in zu_alt:
+                _aufgaben.pop(a, None)
+        _aufgaben[aufgabe] = jetzt + AUFGABE_GILT
     return aufgabe
 
 
 def unterschrift_pruefen(aufgabe: str, unterschrift: str) -> Geraet | None:
     """Wer hat unterschrieben? Gibt das Gerät zurück — oder None."""
-    frist = _aufgaben.pop(aufgabe, None)   # jede Aufgabe gilt nur ein einziges Mal
+    with _aufgaben_sperre:
+        frist = _aufgaben.pop(aufgabe, None)   # jede Aufgabe gilt nur ein einziges Mal
     if frist is None or frist < time.time():
         return None
 

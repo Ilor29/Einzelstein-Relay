@@ -229,6 +229,15 @@ def neu_aus_datei(dateiname: str, inhalt: bytes, name: str = "") -> str:
         try:
             with zipfile.ZipFile(io.BytesIO(inhalt)) as archiv:
                 grenze = ordner.resolve()
+                # Zip-Bombe abwehren: 5 MB hochkomprimierte Nullen entpacken zu
+                # Gigabytes. Vor dem Auspacken die ENTPACKTE Gesamtgröße und die
+                # Zahl der Einträge deckeln — ein Skill ist ein paar Textdateien,
+                # nicht 50 MB und nicht 2000 Dateien.
+                infos = archiv.infolist()
+                if len(infos) > 2000:
+                    raise ValueError("Das Archiv enthält zu viele Dateien.")
+                if sum(i.file_size for i in infos) > 50 * 1024 * 1024:
+                    raise ValueError("Das entpackte Archiv wäre zu groß.")
                 # Vor dem Auspacken jeden Pfad prüfen: Ein Eintrag wie
                 # „../../etc/böse" würde sonst aus dem Ordner ausbrechen.
                 for eintrag in archiv.namelist():

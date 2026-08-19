@@ -69,6 +69,13 @@ ANHANG_ORDNER = (".hetzner-bilder", ".hetzner-dateien")
 # Screenshot von gestern noch nachreichen oder ansehen kann — aber nicht ewig.
 ANHANG_HALTBAR_TAGE = 3
 
+# Backstop gegen den Speichertod: höchstens so viele gleichzeitig LEBENDE
+# eigene Sitzungen. Jede Claude-Sitzung hält 200–500 MB; ohne Deckel könnte ein
+# Gerät mit ein paar Fingertipps den kleinen Server in den OOM-Kill treiben
+# (siehe 17.07.). Schlafende zählen nicht — sie haben kein Terminal. Auf einem
+# größeren Server per Umgebungsvariable anhebbar.
+MAX_SITZUNGEN = int(os.environ.get("HETZNER_APP_MAX_SITZUNGEN", "10"))
+
 
 def _anhang_ordner() -> set[Path]:
     """Alle Durchgangs-Ordner, die es aufzuräumen gilt.
@@ -347,6 +354,16 @@ async def create_session(body: NewSession) -> dict:
     name = _sicherer_sitzungsname(body.name)
     if not name:
         raise HTTPException(400, "Bitte einen Namen für die Sitzung angeben.")
+
+    # Backstop gegen den Speichertod: nicht mehr als MAX_SITZUNGEN lebende
+    # eigene Sitzungen gleichzeitig. Schlafende zählen nicht.
+    eigene = sum(1 for s in tmux.list_sessions() if s.eigen)
+    if eigene >= MAX_SITZUNGEN:
+        raise HTTPException(
+            429,
+            f"Es laufen schon {eigene} Sitzungen. Leg erst eine schlafen "
+            "(Mond-Knopf auf der Karte), bevor du eine neue startest.",
+        )
 
     try:
         tmux.create(name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
@@ -1187,12 +1204,18 @@ def session_sichern(name: str) -> dict:
         raise HTTPException(400, "Dieses Projekt hat kein Lager.")
 
     def git(*args: str) -> subprocess.CompletedProcess:
-        return subprocess.run(
-            ["git", "-C", str(ordner),
-             "-c", "user.name=Hetzner-App",
-             "-c", "user.email=hetzner-app@localhost", *args],
-            capture_output=True, text=True,
-        )
+        try:
+            return subprocess.run(
+                ["git", "-C", str(ordner),
+                 "-c", "user.name=Hetzner-App",
+                 "-c", "user.email=hetzner-app@localhost", *args],
+                capture_output=True, text=True, timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            # Hängt ein Push (Netz/DNS), nicht ewig warten und einen Thread
+            # blockieren — als Fehlschlag behandeln. Der lokale Commit steht
+            # ohnehin schon; die Sicherung außer Haus holt der nächste Lauf nach.
+            return subprocess.CompletedProcess(args, returncode=1, stdout="", stderr="Zeitüberschreitung")
 
     if not git("status", "--porcelain").stdout.strip():
         return {"ok": True, "geaendert": False, "text": "Nichts zu sichern — alles ist schon gesichert."}
