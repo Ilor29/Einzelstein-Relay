@@ -393,6 +393,15 @@ _LOG = Path.home() / ".hetzner-app" / "piper.log"
 _prozess: subprocess.Popen | None = None
 _sperre = threading.Lock()
 
+# Schutzautomatik gegen aufgeblähten Piper. Piper lädt für jede angehörte
+# Stimme ein eigenes Modell und behält es — wer viele durchprobiert, bei dem
+# wächst der Speicher (bei Lorenz am 19.08. auf 1,66 GB). Wird Piper größer als
+# diese Grenze und ist er gerade im Leerlauf, starten wir ihn einmal frisch; der
+# nächste Satz lädt dann nur die aktuelle Stimme neu. Gerade auf kleinen
+# Community-Servern (2–4 GB) wichtig. Grenze bei Bedarf per Umgebung anhebbar.
+_PIPER_MAX_MB = int(os.environ.get("HETZNER_PIPER_MAX_MB", "600"))
+_letzte_nutzung = 0.0     # wann zuletzt gesprochen — nie mitten im Satz neu starten
+
 
 def _laeuft() -> bool:
     return _prozess is not None and _prozess.poll() is None
@@ -486,6 +495,44 @@ def _beenden() -> None:
 atexit.register(_beenden)
 
 
+def _rss_mb(pid: int) -> int:
+    """Wie viel Arbeitsspeicher der Prozess hält, in MB — ohne Fremd-Werkzeug."""
+    try:
+        seiten = int(Path(f"/proc/{pid}/statm").read_text().split()[1])
+        return seiten * os.sysconf("SC_PAGE_SIZE") // (1024 * 1024)
+    except (OSError, ValueError, IndexError):
+        return 0
+
+
+def speicher_pruefen() -> None:
+    """Ist Piper zu groß geworden, im Leerlauf einmal frisch starten.
+
+    Piper behält jede angehörte Stimme im Speicher; über die Zeit bläht das auf.
+    Übersteigt er _PIPER_MAX_MB und wird gerade NICHT gesprochen, beenden wir
+    ihn — der nächste Satz startet ihn frisch (nur die aktuelle Stimme). Trifft
+    es doch einmal einen laufenden Satz, heilt der Wiederhol-Weg in _sprechen
+    das von selbst. Läuft aus einem Hintergrund-Takt (server.py).
+    """
+    with _sperre:
+        p = _prozess
+        if p is None or p.poll() is not None:
+            return                                  # läuft gerade keiner
+        if time.time() - _letzte_nutzung < 15:
+            return                                  # eben benutzt — in Ruhe lassen
+        if _rss_mb(p.pid) < _PIPER_MAX_MB:
+            return                                  # noch schlank genug
+        try:
+            p.terminate()
+            p.wait(3)
+        except Exception:
+            try:
+                p.kill()
+            except Exception:
+                pass
+        # _prozess zeigt jetzt auf einen toten Popen; _starten() räumt ihn beim
+        # nächsten Sprechen auf und startet frisch.
+
+
 def _sprechen(text: str, name: str) -> bytes:
     """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
     weiter antwortet, während gesprochen wird."""
@@ -495,6 +542,9 @@ def _sprechen(text: str, name: str) -> bytes:
     if name.startswith(_GC_PRAEFIX):
         return _google_sprechen(text, name[len(_GC_PRAEFIX):])
 
+    global _letzte_nutzung
+    _letzte_nutzung = time.time()      # markiert Aktivität — der Wächter fasst
+                                       # Piper dann nicht an (siehe speicher_pruefen)
     stem, sprecher = _zerlegen_stimme(name)
 
     anfrage: dict = {"text": text, "voice": stem}

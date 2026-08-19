@@ -178,6 +178,19 @@ async def anhaenge_aufraeumen() -> None:
         await asyncio.sleep(6 * 3600)
 
 
+async def piper_waechter() -> None:
+    """Hält Pipers Speicher im Zaum: alle paar Minuten nachsehen und, wenn er
+    zu groß geworden ist (viele geladene Stimmen), im Leerlauf frisch starten.
+    Gerade auf kleinen Community-Servern wichtig (siehe tts.speicher_pruefen).
+    """
+    while True:
+        await asyncio.sleep(300)          # alle 5 Minuten
+        try:
+            await asyncio.to_thread(tts.speicher_pruefen)
+        except Exception:
+            pass
+
+
 @app.on_event("startup")
 async def waechter_starten() -> None:
     """Der Wächter behält die Sitzungen im Auge und meldet sich, wenn eine
@@ -191,6 +204,9 @@ async def waechter_starten() -> None:
 
     # Alte Anhänge (Fotos, Dokumente) von selbst wegräumen.
     asyncio.create_task(anhaenge_aufraeumen())
+
+    # Piper im Zaum halten, damit er den kleinen Server nicht vollsaugt.
+    asyncio.create_task(piper_waechter())
 
 
 # --- Zugangsschutz -----------------------------------------------------------
