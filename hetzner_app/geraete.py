@@ -152,6 +152,108 @@ def _pruefe_schluessel(schluessel: str) -> ec.EllipticCurvePublicKey:
     return key
 
 
+def schluessel_ok(schluessel: str) -> bool:
+    """Ist das ein brauchbarer öffentlicher Schlüssel? (ohne Ausnahme)"""
+    try:
+        _pruefe_schluessel(schluessel.strip())
+        return True
+    except Exception:
+        return False
+
+
+# --- Kopplung: Selbstbedienungs-Freischaltung per Code -----------------------
+#
+# Der bisherige Weg — erlauben() nur vom Server aus — bleibt. Für einen
+# Nicht-Techniker ist er aber eine Wand: Er müsste den öffentlichen Schlüssel
+# vom Handy in eine Server-Kommandozeile tragen. Der Kopplungscode dreht das
+# um: Der Server (setup.sh druckt ihn) ODER ein schon freigeschaltetes Gerät
+# erzeugt einen kurzen Code, den man am Handy eintippt. Kein Schlüssel zum
+# Kopieren, keine Kommandozeile.
+#
+# Sicher bleibt es, weil der Code ein Geheimnis ist, das nur sieht, wer den
+# Server aufgesetzt hat oder schon ein Gerät drin hat — und weil er
+#   * kurzlebig ist (15 Min),
+#   * einmalig (nach erfolgreicher Kopplung verbraucht),
+#   * gedrosselt (nach zu vielen Fehlversuchen kurze Sperre gegen Erraten).
+# Ohne gültigen Code trägt sich niemand ein; die alte Zusicherung „nur wer
+# schon Zugang hat, öffnet die Tür" bleibt gewahrt.
+
+KOPPLUNG = ORDNER / "kopplung.json"
+KOPPLUNG_GILT = 900          # Sekunden — 15 Minuten
+# Ohne 0/O/1/I/L: am Handy und beim Vorlesen nicht zu verwechseln.
+_KOPPEL_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+_KOPPEL_LAENGE = 8           # 32^8 ≈ 10^12 — mit Drossel praktisch nicht zu erraten
+
+# Drossel gegen Erraten: höchstens so viele Fehlversuche im Fenster. Nur im
+# Arbeitsspeicher — ein Dienst-Neustart hebt die Sperre auf, das ist in Ordnung.
+_koppel_fehlversuche: list[float] = []
+_KOPPEL_MAX = 20
+_KOPPEL_FENSTER = 300        # 5 Minuten
+
+
+def _kopplung_speichern(stand: dict | None) -> None:
+    if stand is None:
+        try:
+            KOPPLUNG.unlink()
+        except FileNotFoundError:
+            pass
+        return
+    _atomar_schreiben(KOPPLUNG, json.dumps(stand))
+
+
+def _kopplung_laden() -> dict | None:
+    try:
+        stand = json.loads(KOPPLUNG.read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+    return stand if isinstance(stand, dict) else None
+
+
+def _kopplung_formatieren(code: str) -> str:
+    # In der Mitte geteilt, leichter abzulesen und vorzulesen: ABCD-EFGH.
+    h = len(code) // 2
+    return f"{code[:h]}-{code[h:]}"
+
+
+def kopplung_neu(gueltig: int = KOPPLUNG_GILT) -> str:
+    """Einen frischen Kopplungscode erzeugen, ablegen, formatiert zurückgeben.
+
+    Ersetzt einen etwaigen alten — es gibt immer nur einen gültigen Code.
+    """
+    code = "".join(secrets.choice(_KOPPEL_ALPHABET) for _ in range(_KOPPEL_LAENGE))
+    with _sperre:
+        _kopplung_speichern({"code": code, "frist": time.time() + gueltig})
+    return _kopplung_formatieren(code)
+
+
+def _kopplung_saeubern(eingabe: str) -> str:
+    """Tippfehler-tolerant: Groß, ohne Bindestrich/Leerzeichen, nur gültige Zeichen."""
+    return "".join(c for c in eingabe.upper() if c in _KOPPEL_ALPHABET)
+
+
+def kopplung_pruefen_und_verbrauchen(eingabe: str) -> bool:
+    """Stimmt der eingetippte Code? Bei Erfolg wird er verbraucht (einmalig)."""
+    sauber = _kopplung_saeubern(eingabe or "")
+    jetzt = time.time()
+    with _sperre:
+        _koppel_fehlversuche[:] = [t for t in _koppel_fehlversuche if t > jetzt - _KOPPEL_FENSTER]
+        if len(_koppel_fehlversuche) >= _KOPPEL_MAX:
+            return False                        # zu viele Fehlversuche — kurz gesperrt
+        stand = _kopplung_laden()
+        gueltig = (
+            stand is not None
+            and len(sauber) == _KOPPEL_LAENGE
+            and float(stand.get("frist", 0)) > jetzt
+            and secrets.compare_digest(sauber, str(stand.get("code", "")))
+        )
+        if gueltig:
+            _kopplung_speichern(None)           # verbraucht
+            _koppel_fehlversuche.clear()
+            return True
+        _koppel_fehlversuche.append(jetzt)
+        return False
+
+
 # --- Anmelden ----------------------------------------------------------------
 
 def aufgabe_stellen() -> str:

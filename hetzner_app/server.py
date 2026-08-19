@@ -203,6 +203,49 @@ def abmelden(request: Request) -> Response:
     return antwort
 
 
+class Koppeln(BaseModel):
+    schluessel: str
+    code: str
+    name: str = "Handy"
+
+
+@app.post("/api/koppeln")
+def koppeln(body: Koppeln) -> Response:
+    """Ein neues Gerät per Kopplungscode selbst freischalten — ohne Kommandozeile.
+
+    Der Code ist ein Geheimnis: setup.sh druckt ihn beim Einrichten, oder ein
+    schon freigeschaltetes Gerät erzeugt ihn (siehe /api/kopplung/neu). Stimmt
+    er, wird dieses Gerät eingetragen und gleich angemeldet. Ohne gültigen Code
+    passiert nichts — die Tür öffnet weiterhin nur, wer das Geheimnis kennt.
+    """
+    # Erst den Schlüssel prüfen, DANN den Code verbrauchen: Sonst wäre der Code
+    # bei einem unbrauchbaren Schlüssel schon aufgebraucht, obwohl gar nichts
+    # eingetragen wurde.
+    if not geraete.schluessel_ok(body.schluessel):
+        raise HTTPException(400, "Der Geräteschlüssel ist unbrauchbar.")
+    if not geraete.kopplung_pruefen_und_verbrauchen(body.code):
+        raise HTTPException(403, "Der Kopplungscode stimmt nicht oder ist abgelaufen.")
+
+    geraet = geraete.erlauben(body.name.strip()[:40] or "Handy", body.schluessel)
+    antwort = JSONResponse({"ok": True, "geraet": geraet.name})
+    antwort.set_cookie(
+        COOKIE, geraete.anmeldung_ausstellen(geraet.name),
+        httponly=True, samesite="strict", secure=True,
+        max_age=60 * 60 * 24 * 365,
+    )
+    return antwort
+
+
+@app.post("/api/kopplung/neu", dependencies=[Depends(require_auth)])
+def kopplung_neu() -> dict:
+    """Einen frischen Kopplungscode erzeugen — für ein WEITERES Gerät.
+
+    Nur ein schon angemeldetes Gerät darf das. So fügt man vom Handy aus ein
+    zweites Gerät (Tablet, Laptop) hinzu, ganz ohne Server-Terminal.
+    """
+    return {"code": geraete.kopplung_neu()}
+
+
 @app.get("/api/geraete", dependencies=[Depends(require_auth)])
 def geraete_liste() -> list[dict]:
     return [{"name": g.name, "hinzugefuegt": g.hinzugefuegt} for g in geraete.liste()]
