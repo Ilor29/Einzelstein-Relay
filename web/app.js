@@ -4222,4 +4222,83 @@ async function start() {
   }
 }
 
+// --- Wisch-Aktualisieren ------------------------------------------------------
+//
+// Von oben nach unten ziehen lädt die Seite neu — statt die App zu schließen
+// und neu zu öffnen, wenn mal etwas klemmt. Greift nur, wenn über dem Finger
+// nichts heruntergescrollt ist und kein Blatt offen liegt; sonst käme das
+// normale Hochscrollen im Verlauf in die Quere. Ausgenommen sind das rohe
+// Terminal (dort scrollt xterm selbst, außerhalb unserer Sicht) und die
+// Eingabezeile (ein versehentliches Neuladen würde getippten Text wegwerfen).
+(() => {
+  const hinweis = $("zieh-hinweis");
+  const ANLAUF = 12;    // so viel Fingerweg zählt noch als Wackeln, nicht als Ziehen
+  const SCHWELLE = 70;  // so weit muss der Kreis herunter, dann gilt "bereit"
+  const MAX = 90;       // weiter fährt er nicht mit
+  let startY = 0, startX = 0, zieht = false, geeignet = false;
+
+  // Ist zwischen dem Finger und der Seite irgendetwas heruntergescrollt?
+  // Dann gehört das Ziehen dem Scrollen, nicht dem Neuladen.
+  function obenAngekommen(el) {
+    for (; el && el !== document.body; el = el.parentElement) {
+      if (el.scrollTop > 0) return false;
+    }
+    return true;
+  }
+
+  function aufraeumen() {
+    hinweis.hidden = true;
+    hinweis.style.transform = "";
+    hinweis.classList.remove("bereit");
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    geeignet = false;
+    if (e.touches.length !== 1) return;
+    const ziel = e.target;
+    if (!(ziel instanceof Element)) return;
+    if (ziel.closest("#terminal, #eingabe-formular, textarea, input")) return;
+    if (document.querySelector(".blatt:not([hidden])")) return;
+    if (!obenAngekommen(ziel)) return;
+    geeignet = true;
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    zieht = false;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!geeignet) return;
+    const dy = e.touches[0].clientY - startY;
+    const dx = e.touches[0].clientX - startX;
+    if (!zieht) {
+      if (dy < ANLAUF) {
+        // Wer erst hochwischt oder klar zur Seite zieht, will nicht neu laden.
+        if (dy < -ANLAUF || Math.abs(dx) > 2 * ANLAUF) geeignet = false;
+        return;
+      }
+      if (Math.abs(dx) > dy) { geeignet = false; return; }
+      zieht = true;
+      hinweis.hidden = false;
+    }
+    // Gebremst wie ein Gummiband: der Kreis läuft langsamer als der Finger.
+    const weg = Math.max(0, Math.min(MAX, (dy - ANLAUF) / 2.2));
+    hinweis.style.transform = `translate(-50%, ${weg - 60}px)`;
+    hinweis.classList.toggle("bereit", weg >= SCHWELLE);
+  }, { passive: true });
+
+  function ziehenEnde() {
+    if (!zieht) { geeignet = false; return; }
+    zieht = false;
+    geeignet = false;
+    if (hinweis.classList.contains("bereit")) {
+      hinweis.classList.add("laedt");
+      location.reload();
+    } else {
+      aufraeumen();
+    }
+  }
+  document.addEventListener("touchend", ziehenEnde, { passive: true });
+  document.addEventListener("touchcancel", ziehenEnde, { passive: true });
+})();
+
 start();

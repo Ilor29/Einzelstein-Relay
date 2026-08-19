@@ -1905,3 +1905,31 @@ html, body {
    (style-src ohne unsafe-inline). */
 .icon-defs { position: absolute; }
 .zentriert { text-align: center; }
+
+/* --- Wisch-Aktualisieren -----------------------------------------------------
+   Von oben nach unten ziehen lädt die Seite neu — man muss die App nicht mehr
+   schließen und neu öffnen. Der Kreis hängt unsichtbar über dem oberen Rand
+   und wandert mit dem Finger herunter; sobald genug gezogen ist, färbt er
+   sich in den Akzent ("bereit"). Geschoben wird er von app.js per transform,
+   hier steht nur, wie er aussieht. */
+.zieh-hinweis {
+  position: fixed;
+  top: calc(var(--oben) + 6px);
+  left: 50%;
+  z-index: 60;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  color: var(--schrift-leise);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .4);
+  transform: translate(-50%, -60px);   /* Ruhelage: komplett hinter dem Rand */
+  will-change: transform;
+}
+.zieh-hinweis.bereit { color: var(--akzent); }
+.zieh-hinweis.laedt svg { animation: zieh-drehen .8s linear infinite; }
+@keyframes zieh-drehen { to { transform: rotate(360deg); } }
