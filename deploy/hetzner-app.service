@@ -16,6 +16,11 @@ ExecStart=/home/%i/Hetzner-App/.venv/bin/python -m hetzner_app.server
 Restart=always
 RestartSec=3
 
+# Beim Beenden nur den Dienst selbst abräumen, nicht etwaige Kinder — ein
+# Neustart (etwa durch die Auto-Aktualisierung) soll nichts mitreißen. Die
+# Claude-Sitzungen leben ohnehin unabhängig in tmux.
+KillMode=process
+
 # Das Zugangswort steht in einer Datei, nicht hier — sonst könnte es jeder
 # lesen, der "systemctl cat" tippen darf.
 EnvironmentFile=/home/%i/.hetzner-app/umgebung

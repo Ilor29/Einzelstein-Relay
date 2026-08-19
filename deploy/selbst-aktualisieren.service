@@ -1,0 +1,15 @@
+# Eine Aktualisierung dieser App-Installation aus dem gemeinsamen Lager —
+# angestoßen vom Zeitgeber (selbst-aktualisieren.timer), nicht dauerhaft laufend.
+#
+# Läuft als root (der Dienst muss neu gestartet werden) und führt das
+# root-eigene Skript unter /usr/local/sbin aus. Einrichtung, inkl. Ersetzen von
+# __APPDIR__, erledigt scripts/auto-update-einschalten.sh — NUR auf
+# Community-Servern, nie auf dem Entwickler-Server.
+
+[Unit]
+Description=Hetzner-App: neueste Fassung aus dem gemeinsamen Lager holen
+
+[Service]
+Type=oneshot
+Environment=HETZNER_APP_DIR=__APPDIR__
+ExecStart=/usr/local/sbin/hz-selbst-aktualisieren.sh

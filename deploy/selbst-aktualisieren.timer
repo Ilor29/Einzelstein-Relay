@@ -1,0 +1,12 @@
+# Alle 15 Minuten nachsehen, ob das gemeinsame Lager eine neue Fassung hat.
+# Gibt es nichts Neues, kostet der Blick fast nichts (ein git fetch).
+
+[Unit]
+Description=Zeitgeber: Hetzner-App aktuell halten
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target

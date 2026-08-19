@@ -146,3 +146,7 @@ else
   echo "       ./scripts/geraet-erlauben.sh handy <schlüssel-vom-handy>"
 fi
 echo "  3. Dann im Chrome-Menü: »Zum Startbildschirm hinzufügen«."
+echo
+echo "  Automatische Updates einschalten (holt Verbesserungen von selbst):"
+echo "       ./scripts/auto-update-einschalten.sh"
+echo "  (Nur auf einem eigenen/Community-Server — NICHT auf dem Entwickler-Server.)"
