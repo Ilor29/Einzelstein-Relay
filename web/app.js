@@ -2722,6 +2722,13 @@ function tonKontext() {
 // nicht — dort ist es einfach ein Nichts.
 function tonEntsperren() {
   try {
+    // iPhone: den Ton als „Medienwiedergabe" anmelden. Sonst behandelt iOS Web
+    // Audio als bloßes Nebengeräusch, und der Stumm-Schalter am Gehäuse schluckt
+    // es — dann kommt der Ton nur über Kopfhörer, nicht über den Lautsprecher
+    // (genau Lorenz' Fall). Mit „playback" läuft er über den Lautsprecher, auch
+    // wenn das iPhone auf lautlos steht. Gibt es die Einstellung nicht (Android,
+    // ältere iOS), wird die Zeile einfach übersprungen.
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
     const c = tonKontext();
     if (c.state !== "running") c.resume();       // synchron, im Gesten-Fenster
     const q = c.createBufferSource();
