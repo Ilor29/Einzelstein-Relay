@@ -2711,6 +2711,26 @@ function tonKontext() {
   return hörCtx;
 }
 
+// Den Ton-Motor SOFORT im Fingertipp entsperren — der Schlüssel für iPhones.
+//
+// iOS lässt Ton nur zu, wenn der Ton-Motor GENAU im Moment des Tippens
+// geweckt wird — nicht danach. Bisher holte die App nach dem Tipp erst den
+// Text vom Server (ein await), und erst DANN wurde der Motor geweckt: für iOS
+// zu spät, es blieb stumm. Darum hier, ganz am Anfang jedes Ton-Knopfes und
+// VOR jeder Netz-Anfrage: Motor wecken (synchron, nicht erst später) und einen
+// unhörbaren Ton anstoßen, der iOS die Tür öffnet. Auf Android schadet das
+// nicht — dort ist es einfach ein Nichts.
+function tonEntsperren() {
+  try {
+    const c = tonKontext();
+    if (c.state !== "running") c.resume();       // synchron, im Gesten-Fenster
+    const q = c.createBufferSource();
+    q.buffer = c.createBuffer(1, 1, 22050);
+    q.connect(c.destination);
+    q.start(0);
+  } catch { /* wenn nicht, dann eben nicht — nie den Knopf stören */ }
+}
+
 // decodeAudioData gibt es als Promise (moderne Browser) und als Rückruf (ältere).
 function dekodiere(bytes) {
   return new Promise((fertig, fehler) => {
@@ -3041,6 +3061,7 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 // Der Lautsprecher oben liest die letzte Antwort — der schnelle Griff.
 $("knopf-vorlesen").addEventListener("click", async () => {
   const knopf = $("knopf-vorlesen");
+  tonEntsperren();          // JETZT, im Fingertipp — sonst schweigt das iPhone
 
   if (spricht && sprecherKnopf === knopf) {
     stille();
@@ -3154,6 +3175,7 @@ async function mikrofonAufmachen() {
 }
 
 $("knopf-freisprech").addEventListener("click", () => {
+  tonEntsperren();          // den Ton-Motor gleich beim Einschalten entsperren
   freisprech = !freisprech;
   // Im strengen Privatmodus mancher Browser wirft setItem — dann schaltet der
   // Modus trotzdem für diese Sitzung, er wird nur nicht dauerhaft gemerkt.
@@ -3336,6 +3358,7 @@ $("knopf-einstellungen").addEventListener("click", async () => {
     // Anhören, ohne zu wählen.
     el.querySelector("button").addEventListener("click", async (e) => {
       e.stopPropagation();
+      tonEntsperren();      // im Fingertipp entsperren (iPhone)
       const knopf = e.currentTarget;
       if (spricht && sprecherKnopf === knopf) {
         stille();
