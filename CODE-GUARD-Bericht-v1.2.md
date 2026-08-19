@@ -283,6 +283,12 @@ Verschenk-Runde tragfähig.
   getestet: 40-MB-Chunked-Anfrage → 413, kleine Anfrage kommt normal durch.
   Repo-Vorlage `deploy/Caddyfile` nachgezogen; Sicherung der alten
   Live-Konfiguration unter `/etc/caddy/Caddyfile.bak-vor-maxsize-20260818`.
+- ✅ **🟡 CSP eingeführt (19.08., V117):** Content-Security-Policy im
+  Server-Header, streng (`default-src 'self'`), der Hash des einen
+  Inline-Skripts wird beim Start aus der Datei berechnet (veraltet nie);
+  zwei Inline-Stile in Klassen umgezogen. Live im Browser-Prüfer: Seite
+  rendert, 0 CSP-Verletzungen; xterm ohne eval/Worker. Offen bleibt nur
+  xterm.js-Version heben.
 - ✅ **🟡 Fünf Mittel-Punkte abgehärtet (19.08.):** Sitzungs-Obergrenze
   (`MAX_SITZUNGEN`=10, gegen OOM), Anmelde-Aufgaben unter eigener Sperre +
   Obergrenze (gegen 500er-Race und Flutung), Zip-Bomben-Schutz beim
@@ -301,6 +307,7 @@ Verschenk-Runde tragfähig.
 5. ✅ ~~🟡 Schnelle Wins: Push-Timeout, Aufgaben-Sperre, Sitzungsdeckel,
    Zip-Größenprüfung~~ **erledigt 19.08.** (siehe Nachtrag). Offen davon nur
    noch die GitHub-Fehlschlag-Warnung fürs Handy.
-6. 🟡 CSP setzen und mit dem Browser-Prüfer testen; xterm.js heben.
+6. ✅ ~~🟡 CSP setzen und mit dem Browser-Prüfer testen~~ **erledigt 19.08.,
+   Version 117.** Offen davon nur noch: xterm.js auf `@xterm/xterm` heben.
 7. 🔵 Vor breiter Weitergabe: Ton-Tagebuch ausbauen oder deklarieren;
    Caddy-Vorlage im Repo nachziehen.
