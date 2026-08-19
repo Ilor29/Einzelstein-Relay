@@ -156,7 +156,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 114
+VERSION = 115
 
 
 @app.get("/api/version")
@@ -391,6 +391,78 @@ async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
     # Code gelegentlich.
     await asyncio.sleep(0.5)
     tmux.send_key(name, "Enter")
+
+
+# --- Der Brain: fester Ansprechpartner ---------------------------------------
+
+# Die Starter-Ausstattung für einen frischen Brain (Landkarte + Rollen-Anweisung).
+BRAIN_STARTER = Path(__file__).resolve().parent.parent / "deploy" / "brain-starter"
+
+BRAIN_BEGRUESSUNG = (
+    "Begrüße mich kurz und herzlich als mein Brain — mein fester Überblick und "
+    "Ansprechpartner hier. Erkläre in wenigen, einfachen Sätzen ohne Fachbegriffe: "
+    "Ich kann auf diesem Server so lange arbeiten, wie ich will; alles, was wir "
+    "tun, hältst du in deiner Landkarte fest; und ich starte ein neues Vorhaben, "
+    "indem ich dir einfach sage, was ich vorhabe. Halte es kurz."
+)
+
+
+def _brain_ordner() -> Path:
+    """~/projekte/Brain sicherstellen — mit Starter-Vorlage, wenn frisch.
+
+    Bestehendes wird NIE überschrieben: Auf einem gewachsenen Server hat der
+    Brain längst seine eigene Landkarte; die bleibt unangetastet.
+    """
+    ordner = Path.home() / "projekte" / "Brain"
+    frisch = not ordner.exists()
+    ordner.mkdir(parents=True, exist_ok=True)
+    if BRAIN_STARTER.is_dir():
+        for quelle in BRAIN_STARTER.iterdir():
+            ziel = ordner / quelle.name
+            if not ziel.exists():
+                shutil.copy(quelle, ziel)
+    if frisch:
+        subprocess.run(["git", "init", "--quiet", str(ordner)], capture_output=True)
+    return ordner
+
+
+@app.post("/api/brain", dependencies=[Depends(require_auth)])
+async def brain_oeffnen() -> dict:
+    """Den Brain öffnen — den festen Ansprechpartner.
+
+    Ein Knopf für alle Fälle: Läuft der Brain, wird er genommen; schläft oder
+    stürzte er ab, wird er geweckt; gibt es ihn noch gar nicht (frischer
+    Server), wird er angelegt — angeheftet und mit einer Begrüßung. So kann der
+    Brain nie verloren gehen.
+    """
+    ordner = await asyncio.to_thread(_brain_ordner)
+    ordner_str = str(ordner)
+
+    vorhanden = next(
+        (e for e in state.overview() if e["cwd"] == ordner_str and e["eigen"]),
+        None,
+    )
+    if vorhanden:
+        name = vorhanden["name"]
+        if vorhanden["state"] in (state.SLEEPING, state.CRASHED):
+            meta = state.get(name)
+            try:
+                tmux.create(name, ordner_str, ohne_rueckfragen=meta.ohne_rueckfragen, fortsetzen=True)
+            except tmux.TmuxError as error:
+                raise HTTPException(409, str(error))
+        state.update(name, pinned=True, schlaeft=False, archiviert=False)
+        return {"name": name, "neu": False}
+
+    # Kein Brain da — einen frischen anlegen, angeheftet und mit Begrüßung.
+    name = "Brain"
+    try:
+        tmux.create(name, ordner_str)
+    except tmux.TmuxError as error:
+        raise HTTPException(409, str(error))
+    state.update(name, pinned=True, created_prompt=BRAIN_BEGRUESSUNG,
+                 cwd=ordner_str, schlaeft=False)
+    asyncio.create_task(_ersten_auftrag_schicken(name, BRAIN_BEGRUESSUNG))
+    return {"name": name, "neu": True}
 
 
 @app.patch("/api/sessions/{name}", dependencies=[Depends(require_auth)])

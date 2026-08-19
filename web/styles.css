@@ -727,6 +727,10 @@ html, body {
 .knopf-blank.an { color: var(--akzent); }
 .knopf-blank.spricht { color: var(--laeuft); }
 .knopf-blank.laeuft { color: var(--akzent); animation: pochen 1.2s ease-in-out infinite; }
+/* Der Brain-Knopf im Akzent — er soll auffallen, er ist der Einstieg. */
+.knopf-brain { color: var(--akzent); }
+/* Der große Brain-Knopf im leeren Zustand — mittig, mit Luft nach oben. */
+.knopf-brain-gross { margin: 1rem auto 0; max-width: 16rem; }
 
 /* Die Vorlese-Leiste — eine schwebende Abspiel-Pille, wie in einer Musik-App.
    Sie erscheint nur während des Vorlesens (das `hidden`-Attribut nimmt die JS

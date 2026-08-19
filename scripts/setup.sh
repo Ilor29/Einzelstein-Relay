@@ -73,6 +73,16 @@ else
   echo "   Arbeitsregeln nach ~/.claude/CLAUDE.md gelegt (gelten für alle Sitzungen)."
 fi
 
+echo "→ Brain anlegen (dein Überblick und erster Ansprechpartner) …"
+BRAIN="${HOME}/projekte/Brain"
+mkdir -p "$BRAIN"
+for f in CLAUDE.md REGISTER.md; do
+  # Bestehendes nie überschreiben — ein gewachsener Brain behält seine Landkarte.
+  [ -f "${BRAIN}/${f}" ] || cp "${HIER}/deploy/brain-starter/${f}" "${BRAIN}/${f}"
+done
+[ -d "${BRAIN}/.git" ] || git init --quiet "$BRAIN"
+echo "   Brain liegt unter ${BRAIN}. In der App öffnet ihn der Brain-Knopf oben."
+
 # Kontaktadresse für die Push-Benachrichtigungen. Der Push-Dienst (Google,
 # Mozilla) will wissen, wen er bei Missbrauch anschreibt — das muss der
 # Betreiber DIESER Instanz sein, nicht der Entwickler.

@@ -371,8 +371,13 @@ async function ladeListe() {
   if (sitzungen.length === 0) {
     const leer = document.createElement("p");
     leer.className = "leer";
-    leer.textContent = "Noch keine Sitzung. Starte unten deine erste.";
-    liste.append(leer);
+    leer.textContent = "Noch nichts los. Sprich am besten zuerst mit deinem Brain — "
+      + "er ist dein Überblick und Ansprechpartner.";
+    const knopf = document.createElement("button");
+    knopf.className = "knopf-voll knopf-brain-gross";
+    knopf.textContent = "Brain öffnen";
+    knopf.addEventListener("click", oeffneBrain);
+    liste.append(leer, knopf);
     return;
   }
 
@@ -3593,6 +3598,27 @@ async function oeffneBibliothek(ziel) {
 }
 
 $("knopf-bibliothek").addEventListener("click", () => oeffneBibliothek(null));
+
+// Der Brain-Knopf: ein Tipp holt den festen Ansprechpartner — egal ob er läuft,
+// schläft, abgestürzt oder (auf einem frischen Server) noch gar nicht da ist.
+// Der Server nimmt/weckt/erzeugt ihn; hier öffnen wir ihn dann.
+async function oeffneBrain() {
+  const knopf = $("knopf-brain");
+  knopf.disabled = true;
+  try {
+    melde("Ich öffne deinen Brain …");
+    const { name, neu } = await (await api("/brain", { method: "POST" })).json();
+    const sitzungen = await (await api("/sessions")).json();
+    const brain = sitzungen.find((s) => s.name === name);
+    if (brain) oeffneSitzung(brain);
+    if (neu) melde("Dein Brain ist da — er begrüßt dich gleich.");
+  } catch (err) {
+    melde(err.message || "Der Brain ließ sich gerade nicht öffnen.");
+  } finally {
+    knopf.disabled = false;
+  }
+}
+$("knopf-brain").addEventListener("click", oeffneBrain);
 $("kachel-skill").addEventListener("click", () => {
   anhangBlattZu();
   oeffneBibliothek(aktuelleSitzung);
