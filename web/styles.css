@@ -385,6 +385,34 @@ html, body {
   color: var(--schrift);
 }
 .symbol-zeile span { font-size: .88rem; line-height: 1.35; }
+/* Mini-Darstellungen für Elemente, die kein Icon sind: die Modus-Pille und
+   der Kontext-Balken. So erklärt die Legende auch sie, statt sie auszulassen. */
+.symbol-pille {
+  flex: none;
+  min-width: 22px;
+  padding: .12rem .45rem;
+  border: 1px solid var(--akzent);
+  border-radius: 999px;
+  font-size: .68rem;
+  color: var(--schrift);
+  text-align: center;
+  white-space: nowrap;
+}
+.symbol-balken {
+  flex: none;
+  width: 40px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--erhoben-2);
+  overflow: hidden;
+}
+.symbol-balken > i {
+  display: block;
+  width: 60%;
+  height: 100%;
+  background: var(--laeuft);
+  border-radius: 999px;
+}
 
 /* Ein mehrzeiliger Code-Kasten in Claudes Antwort — mit Kopierknopf oben rechts. */
 .codekasten {
