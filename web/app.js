@@ -2601,8 +2601,23 @@ function dauerAus() {
 let tonAusgang = null;
 let playerLief = false;       // hat das <audio> schon einmal wirklich gespielt?
 
+// iPhone/iPad erkennen. iPadOS gibt sich seit einiger Zeit als „Mac" aus —
+// darum zusätzlich an den Touch-Punkten festmachen.
+const IST_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 async function tonAusgangAn(c) {
   const el = $("stimme");
+  // iPhone/iPad spielt einen Web-Audio-Strom über ein <audio>-Element NICHT ab
+  // — es kommt kein Fehler, nur Stille. Genau daran blieb bei Lorenz das
+  // Vorlesen stumm. Auf iOS gehen wir darum direkt in den Lautsprecher
+  // (c.destination); das funktioniert im Vordergrund zuverlässig. Den
+  // Hosentaschen-Kniff mit dem <audio>-Element (nur für Android sinnvoll)
+  // lassen wir dort aus — er brächte iOS ohnehin nur Stille.
+  if (IST_IOS) {
+    tonAusgang = c.destination;
+    return tonAusgang;
+  }
   if (!tonAusgang) {
     try {
       const senke = c.createMediaStreamDestination();
