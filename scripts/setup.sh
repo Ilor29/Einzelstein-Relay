@@ -53,12 +53,30 @@ else
   # Der offizielle Installer — ohne Node-Gefrickel. Er legt claude nach
   # ~/.local/bin und trägt den Pfad in die Shell-Profile ein.
   #
+  # Erst als Datei speichern, dann ausführen — NICHT curl direkt in bash
+  # leiten: Der Installer beendet sich, bevor curl alles gesendet hat, curl
+  # meldet dann Fehler 23 und pipefail reißt die ganze Einrichtung ab
+  # (gefunden beim Frischtest 20.08. im leeren Behälter).
+  #
   # </dev/null ist wichtig: Der Installer liest sonst die Standard-Eingabe
   # leer, und die E-Mail-Frage weiter unten bekommt nichts mehr — das Skript
   # brach dann mitten in der Einrichtung ab (gefunden beim Frischtest 14.08.).
-  curl -fsSL https://claude.ai/install.sh | bash </dev/null
+  INSTALLER="$(mktemp)"
+  curl -fsSL https://claude.ai/install.sh -o "$INSTALLER"
+  bash "$INSTALLER" </dev/null
+  rm -f "$INSTALLER"
   echo "   Claude Code installiert. Die Anmeldung kommt später: In der ersten"
   echo "   Sitzung 'claude login' — den angezeigten Link am Handy öffnen."
+fi
+
+# Den Befehl für alle sichtbar machen: Der Installer legt claude nur nach
+# ~/.local/bin, und das liegt z.B. bei root auf frischem Debian NICHT im
+# Pfad — die erste Sitzung der App fände den Befehl nicht (Frischtest
+# 20.08.). Eine Verknüpfung nach /usr/local/bin sieht jede Shell; sie folgt
+# auch nach Selbst-Updates von Claude Code weiter dem aktuellen Stand.
+if ! command -v claude >/dev/null && [ -x "${HOME}/.local/bin/claude" ]; then
+  sudo ln -sf "${HOME}/.local/bin/claude" /usr/local/bin/claude
+  echo "   Verknüpfung angelegt: /usr/local/bin/claude"
 fi
 
 echo "→ Sprachausgabe einrichten …"
@@ -122,7 +140,13 @@ sudo sed "s/hetzner\.deine-domain\.de/${DOMAIN}/" "${HIER}/deploy/Caddyfile" \
 sudo systemctl reload caddy || sudo systemctl restart caddy
 
 echo "→ Dienst einrichten …"
-sudo sed "s|%i|${USER}|g; s|/home/${USER}/Hetzner-App|${HIER}|g" \
+# $USER ist nicht überall gesetzt — unter Cloud-Init oder in einer nackten
+# root-Shell fehlt die Variable, und set -u riss die Einrichtung hier ab
+# (gefunden beim Frischtest 20.08.). id -un weiß es immer. Und root wohnt
+# unter /root, nicht /home/root — darum Projekt- und Konfig-Pfad direkt
+# einsetzen statt auf /home/<name> zu vertrauen.
+NUTZER="$(id -un)"
+sudo sed "s|%i|${NUTZER}|g; s|/home/${NUTZER}/Hetzner-App|${HIER}|g; s|/home/${NUTZER}/.hetzner-app|${KONFIG}|g" \
   "${HIER}/deploy/hetzner-app.service" \
   | sudo tee /etc/systemd/system/hetzner-app.service >/dev/null
 sudo systemctl daemon-reload

@@ -59,11 +59,27 @@ Kommandozeile. Für die Community müssen diese drei Stellen weg:
    Schritt (GitHub-Gerätecode auf github.com eingeben, kein Token-Kopieren).
    Bis dahin sichert der Server lokal weiter, es geht nichts verloren.
 
-## Der ehrliche Test, der noch aussteht
+## Der ehrliche Test — bestanden (20.08.2026)
 
-Bevor das an die Community geht, sollte das Ganze **einmal auf einem frischen
-Server oder in einem leeren Behälter** komplett durchgespielt werden: von der
-leeren Maschine bis „Handy verbunden, Chat läuft". Ein erster Frischtest lief
-am 14.08. (Pakete, Python, Claude Code, Piper, App-Start — ein Abbruch-Fehler
-gefunden und behoben). Der vollständige Durchlauf inklusive Freischaltung und
-Anmeldung steht noch aus.
+Der vollständige Durchlauf lief am 20.08. in einem leeren Debian-12-Behälter
+(Docker mit systemd, als root — wie ein frischer Hetzner-Server): setup.sh von
+null bis zum Kopplungscode, Dienst und Caddy aktiv, App antwortet, Jonas-Stimme
+liegt da, Claude Code startet in tmux, und die Handy-Kopplung wurde über die
+Schnittstelle mit einem echten Schlüsselpaar durchgespielt — Gerät eingetragen.
+
+Dabei gefunden und behoben:
+
+1. **Installer-Abbruch:** `curl | bash` für den Claude-Installer riss die
+   Einrichtung mit Fehler 23 ab (der Installer beendet sich, bevor curl fertig
+   sendet). Jetzt: erst als Datei speichern, dann ausführen.
+2. **USER nicht gesetzt:** Unter Cloud-Init oder in einer nackten root-Shell
+   gibt es die Variable `$USER` nicht — die Dienst-Einrichtung starb daran.
+   Jetzt: `id -un`, und die Pfade für root (/root statt /home/root) stimmen.
+3. **claude nicht im Pfad:** Der Installer legt claude nur nach `~/.local/bin`;
+   bei root liegt das nicht im Pfad, die erste Sitzung hätte den Befehl nicht
+   gefunden. Jetzt: Verknüpfung nach `/usr/local/bin/claude`.
+
+Was im Behälter prinzipbedingt NICHT prüfbar ist: das echte HTTPS-Zertifikat
+(braucht eine öffentliche IP mit offenem Port 80/443) und `claude login`
+(braucht ein echtes Konto). Beides bleibt für den ersten Lauf auf einem echten
+frischen Server.
