@@ -414,15 +414,38 @@ def overview() -> list[dict]:
     metas = _load()
     now = int(time.time())
 
-    projekte: dict[str, list] = {}
-    for session in tmux.list_sessions():
-        projekte.setdefault(session.cwd, []).append(session)
+    # Jedes EIGENE Gespräch bekommt seine eigene Karte. Früher fielen alle
+    # Sitzungen desselben Projektordners auf ein Schild zusammen — zwei
+    # bewusst getrennte Chats im selben Projekt (Rolis Fall 20.08.:
+    # „Skillsradar" und „Skillkontor Marketing") wurden dadurch übereinander-
+    # gelegt, und der neue Chat war aus der Liste gar nicht erreichbar.
+    # FREMDE Terminals (Rechner-tmux, Claude-Fernbedienung) hängen sich
+    # weiter an die zuletzt aktive eigene Karte ihres Ordners — dafür war
+    # die Bündelung gedacht, und dafür bleibt sie richtig.
+    alle = tmux.list_sessions()
+    lebende_namen = {s.name for s in alle}
+
+    fremde_je_ordner: dict[str, list] = {}
+    eigene = []
+    for session in alle:
+        if session.eigen:
+            eigene.append(session)
+        else:
+            fremde_je_ordner.setdefault(session.cwd, []).append(session)
+
+    gruppen: list[list] = []
+    for session in sorted(eigene, key=lambda s: -s.last_activity):
+        gruppen.append([session, *fremde_je_ordner.pop(session.cwd, [])])
+    for uebrig in fremde_je_ordner.values():
+        uebrig.sort(key=lambda s: -s.last_activity)
+        gruppen.append(uebrig)
 
     result = []
-    for cwd, sitzungen in projekte.items():
-        # Wer das Wort führt: unsere eigene Sitzung, sonst die zuletzt benutzte.
-        sitzungen.sort(key=lambda s: (not s.eigen, -s.last_activity))
+    for sitzungen in gruppen:
+        # Wer das Wort führt: die eigene Sitzung der Gruppe, sonst die
+        # zuletzt benutzte fremde (so sind die Gruppen oben gebaut).
         fuehrend = sitzungen[0]
+        cwd = fuehrend.cwd
         eigene_metas = [metas.get(s.name, Meta()) for s in sitzungen]
         meta = eigene_metas[0]
 
@@ -463,9 +486,13 @@ def overview() -> list[dict]:
             "kontext": kontext(fuehrend.name),
             # Der Berechtigungs-Modus (fragt / Änderungen ok / Plan / Auto).
             "modus": modus(fuehrend.name),
-            # Ohne eigenen Namen heißt der Kanal wie das Projekt, an dem er
-            # arbeitet — nicht wie das Terminal, in dem er zufällig läuft.
-            "anzeige": meta.anzeige or Path(cwd).name,
+            # Ohne vergebenen Namen heißt die Karte wie das Gespräch selbst
+            # (der Name, den man beim Anlegen getippt hat) — erst bei fremden
+            # Terminals wie der Projektordner. Vorher hieß alles wie der
+            # Ordner, und zwei Gespräche im selben Projekt waren nicht zu
+            # unterscheiden (20.08.).
+            "anzeige": meta.anzeige or (fuehrend.name if fuehrend.eigen
+                                        else Path(cwd).name),
             # Wie viele Terminals hinter dem einen Schild stecken.
             "terminals": len(sitzungen),
             # Lebendige Sitzungen stehen nie im Archiv — wer aufwacht, ist
@@ -474,12 +501,17 @@ def overview() -> list[dict]:
         })
 
     # Die schlafen gelegten Sitzungen dazu — als eigene Karten, damit sie nicht
-    # aus der Liste verschwinden, nur weil ihr Terminal beendet ist. Läuft im
-    # selben Ordner inzwischen wieder etwas Lebendiges, führt dessen Karte das
-    # Wort; die schlafende hält sich solange zurück.
+    # aus der Liste verschwinden, nur weil ihr Terminal beendet ist. Sie
+    # verstecken sich NICHT mehr, wenn im selben Ordner etwas anderes läuft:
+    # Ein geparktes Gespräch ist ein eigenes Gespräch, und genau dieses
+    # Verstecken hat Rolis vollgelaufenen Chat verschwinden lassen, sobald er
+    # im selben Projekt einen frischen aufmachte (20.08.). Nur wenn die
+    # Sitzung SELBST wieder lebt (geweckt), schweigt die Karte.
     for name, meta in metas.items():
-        if not meta.schlaeft or not meta.cwd or meta.cwd in projekte:
+        if not meta.schlaeft or not meta.cwd or name in lebende_namen:
             continue
+        if ":" in name:
+            continue               # fremdes Terminal — nie als eigene Karte
         result.append({
             "name": name,
             "cwd": meta.cwd,
@@ -495,7 +527,7 @@ def overview() -> list[dict]:
             "modellAufgeloest": meta.modell_aufgeloest,
             "kontext": None,
             "modus": None,
-            "anzeige": meta.anzeige or Path(meta.cwd).name,
+            "anzeige": meta.anzeige or name,
             "terminals": 0,
             "archiviert": meta.archiviert,
         })
@@ -508,8 +540,10 @@ def overview() -> list[dict]:
     # erschreckt. Wecken funktioniert genauso wie bei einer schlafenden
     # Sitzung, die Karte sagt nur ehrlich, dass es kein sanftes Einschlafen war.
     for name, meta in metas.items():
-        if meta.schlaeft or not meta.cwd or meta.cwd in projekte:
+        if meta.schlaeft or not meta.cwd or name in lebende_namen:
             continue
+        if ":" in name:
+            continue               # fremdes Terminal — nie als eigene Karte
         result.append({
             "name": name,
             "cwd": meta.cwd,
@@ -528,7 +562,7 @@ def overview() -> list[dict]:
             "modellAufgeloest": meta.modell_aufgeloest,
             "kontext": None,
             "modus": None,
-            "anzeige": meta.anzeige or Path(meta.cwd).name,
+            "anzeige": meta.anzeige or name,
             "terminals": 0,
             "archiviert": meta.archiviert,
         })
