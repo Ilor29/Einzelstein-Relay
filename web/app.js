@@ -2563,7 +2563,7 @@ function pauseSymbol(pausiert) {
 // Nutzungs-Telemetrie. Zum Debuggen des Vorlesens auf true setzen (und
 // serverseitig HETZNER_APP_TON_TAGEBUCH=1). Der Server verwirft es ohnehin,
 // solange er nicht ebenfalls eingeschaltet ist.
-const TON_TAGEBUCH_AN = false;
+const TON_TAGEBUCH_AN = true;   // 20.08. AN: Jagd auf den Ausknopf-Abbruch bei Roli
 function tonEreignis(art) {
   if (!TON_TAGEBUCH_AN) return;
   try {
