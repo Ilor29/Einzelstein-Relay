@@ -77,7 +77,7 @@ Verschenk-Runde tragfähig.
   ohne `Content-Length` ablehnen (die eigene App schickt immer eine).
 
 ### 🟠 HOCH — yt-Auswertung: Schreib-Endpunkte nur mit Pfad-Token, Dateien ohne Anmeldung
-- **Fundstelle:** `/etc/caddy/Caddyfile`, Block `yt.65-21-246-222.sslip.io`
+- **Fundstelle:** `/etc/caddy/Caddyfile`, Block `yt.203-0-113-20.sslip.io`
   (eigenes Projekt yt-auswertung, aber auf demselben Server).
 - **Problem:** `…/senden`, `…/hochladen`, `…/entfernen` sind aus dem offenen
   Internet erreichbar; einzige Hürde ist das Geheim-Token im Pfad. Solche URLs
