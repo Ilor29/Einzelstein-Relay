@@ -1,111 +1,111 @@
-# Hetzner-App
+# Einzelstein Relay
 
-Deine Claude-Code-Sitzungen vom Handy aus — mit der Übersicht, die in der
-offiziellen App fehlt: Sitzungen anheften, auf einen Blick sehen, welche
-laufen und welche auf dich warten, neue starten, und dir lange Antworten
-vorlesen lassen.
+Dein eigener KI-Arbeitsplatz auf deinem eigenen Server — bedient vom Handy,
+per Sprache. Du diktierst, die Antwort wird dir vorgelesen. Die Gespräche
+laufen als Claude-Code-Sitzungen in tmux auf deinem Server: Sie arbeiten
+weiter, wenn du das Handy weglegst, und du machst am Rechner genau dort
+weiter, wo du unterwegs aufgehört hast.
 
-Die Sitzungen leben in **tmux auf dem Server**. Deshalb läuft eine Sitzung
-weiter, wenn du das Handy weglegst oder die Verbindung abbricht — und deshalb
-kannst du morgens am Rechner anfangen und mittags unterwegs genau dort
-weitermachen.
+Einzelstein Relay ist ein unabhängiges Projekt von Einzelstein Software. Es
+arbeitet mit Claude Code (Anthropic) zusammen, ist aber kein Produkt von
+Anthropic; du meldest dich mit deinem eigenen Claude-Konto an.
 
-## Was drin ist
+## Was du bekommst
 
-| Teil | Datei | Wozu |
-|---|---|---|
-| tmux-Anbindung | `hetzner_app/tmux.py` | Sitzungen anlegen, auflisten, Tasten schicken |
-| Anheften & Zustand | `hetzner_app/state.py` | merkt sich Angeheftetes, erkennt läuft/wartet/ruht |
-| Vorlesen | `hetzner_app/tts.py` | bereitet Terminaltext fürs Ohr auf, spricht ihn mit Piper |
-| Der Dienst | `hetzner_app/server.py` | Schnittstelle und Terminal-Durchreiche |
-| Die Oberfläche | `web/` | die PWA fürs Handy |
+- **Sitzungs-Übersicht:** alle Gespräche als Karten — anheften, schlafen
+  legen, archivieren; auf einen Blick sehen, was läuft und was auf dich wartet.
+- **Diktat und Vorlesen:** Mikrofon antippen und sprechen; Antworten liest
+  die lokale Stimme „Jonas" (Piper) vor — auf Wunsch stattdessen
+  Wolken-Stimmen mit eigenem Schlüssel.
+- **Brain:** ein fest eingebauter Überblicks-Chat, der deine Vorhaben kennt
+  und den Einstieg erklärt.
+- **Geführte Einführung:** eine Tour zeigt Neulingen beim ersten Start, wo
+  alles ist.
+- **Mitgelieferte Skills** (u. a. CODE//GUARD zur Code- und Rechtsprüfung),
+  die sich mit der App aktuell halten.
+- **Benachrichtigungen:** die App meldet sich, wenn eine Sitzung fertig ist
+  oder eine Rückfrage hat (Web-Push).
 
-## Auf dem Hetzner einrichten
+## Was du brauchst
 
-Voraussetzung: Eine Domain zeigt auf den Server (ein A-Eintrag genügt), und
-Claude Code ist dort schon installiert und angemeldet.
+- Einen kleinen **Linux-Server** (Debian oder Ubuntu, empfohlen ab 4 GB RAM,
+  ~5–10 € im Monat bei Anbietern wie Hetzner oder Hostinger). Keine Domain
+  nötig — die Adresse entsteht aus der Server-IP (sslip.io).
+- Ein eigenes **Claude-Abo** (Anthropic) für die Anmeldung von Claude Code.
+- Ein Handy mit **Chrome** (am besten Android; auf dem iPhone läuft das
+  Vorlesen in Chrome, das Diktat ist dort durch Apple-Grenzen eingeschränkt).
+
+## So kommt es auf deinen Server
+
+**Der bequeme Weg (empfohlen):** Beim Anlegen des Servers den Inhalt von
+[`deploy/cloud-init.yaml`](deploy/cloud-init.yaml) in das Feld „Cloud config"
+einfügen. Der Server richtet sich beim ersten Start selbst ein; danach am
+Handy die Server-Adresse öffnen und auf **Diesen Server jetzt verbinden**
+tippen — das erste Gerät braucht keinen Code (24 Stunden lang, solange noch
+kein Gerät eingetragen ist). Dann im Chrome-Menü **„Zum Startbildschirm
+hinzufügen"**.
+
+**Der Hand-Weg:** Repo auf den Server klonen und einrichten:
 
 ```bash
-git clone <dein-repo> ~/Hetzner-App
+git clone <repo-adresse> ~/Hetzner-App
 cd ~/Hetzner-App
-./scripts/setup.sh hetzner.deine-domain.de
+./scripts/setup.sh
 ```
 
-Das Skript legt alles an, besorgt ein HTTPS-Zertifikat, richtet die
-Sprachausgabe ein und zeigt dir **einmalig dein Zugangswort** — das notieren.
+Das Skript installiert alles (Pakete, Python-Umgebung, Claude Code, Piper
+samt Stimme, Caddy mit HTTPS, den Dienst) und zeigt am Ende Adresse und
+einen Kopplungscode. Es darf mehrfach laufen; Bestehendes bleibt. Details:
+[`deploy/SO-KOMMT-DIE-APP-AUF-DEN-SERVER.md`](deploy/SO-KOMMT-DIE-APP-AUF-DEN-SERVER.md).
 
-Danach am Handy im Chrome die Adresse öffnen, anmelden, und im Chrome-Menü
-**»Zum Startbildschirm hinzufügen«** wählen. Ab dann hast du ein Icon auf dem
-Homescreen und die App startet im Vollbild.
+Weitere Geräte kommen per Kopplungscode dazu: ein verbundenes Gerät erzeugt
+ihn in den Einstellungen, das neue tippt ihn ein.
 
 ## Zur Sicherheit
 
-Diese App gibt dir eine Shell auf deinem Server. Wer das Zugangswort hat, hat
-deinen Server. Deshalb:
+Diese App gibt Zugriff auf deinen Server — entsprechend ernst nimmt sie die
+Tür:
 
-- Der Dienst lauscht **nur auf 127.0.0.1**. Nach außen geht ausschließlich
-  Caddy, und der spricht nur HTTPS.
-- Ohne `HETZNER_APP_TOKEN` **startet der Dienst nicht**. Kein Ausprobieren
-  ohne Passwort, auch nicht "nur kurz".
-- Das Zugangswort wird zeitkonstant verglichen, damit es sich nicht Zeichen
-  für Zeichen erraten lässt.
+- **Kein Passwort, sondern Geräteschlüssel:** Jedes Handy erzeugt sich ein
+  eigenes Schlüsselpaar; der geheime Teil verlässt das Gerät nie. Angemeldet
+  wird per Unterschrift, es gibt nichts abzufangen und nichts zu erraten.
+- **Nur eingetragene Geräte kommen herein.** Verlorene Geräte sperrst du in
+  den Einstellungen aus — sofort, samt laufender Anmeldung.
+- Der Dienst lauscht **nur auf 127.0.0.1**; nach außen spricht ausschließlich
+  Caddy, und der nur HTTPS.
+- Die Erst-Besucher-Kopplung (erstes Gerät ohne Code) ist bewusst doppelt
+  begrenzt und vorab geprüft — Abwägung und Restrisiko stehen offen in
+  [`CODE-GUARD-Bericht-Erstkopplung.md`](CODE-GUARD-Bericht-Erstkopplung.md).
 
-Wenn du zusätzlich Tailscale oder Wireguard benutzt, binde den Dienst
-stattdessen an die VPN-Adresse — dann steht er gar nicht erst im offenen Netz.
+## Wo deine Daten sind
 
-## Lokal weiterentwickeln
+Dateien, Projekte und Mitschriften liegen auf **deinem** Server; das Vorlesen
+mit Piper läuft dort, ohne Wolke. Sobald Claude arbeitet, geht der Inhalt des
+Gesprächs an Anthropic (dort läuft das Modell) — genau wie in der offiziellen
+Claude-App, über dein eigenes Konto. Optional und nur wenn du es einschaltest:
+Browser-Diktat (Google) und Wolken-Stimmen (eigener Schlüssel). Der Anbieter
+dieser App sieht nichts davon: kein Phone-Home, keine Telemetrie, kein
+Lizenzserver.
+
+## Entwickeln
+
+Kein Bauschritt: Datei ändern, Seite neu laden.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install fastapi "uvicorn[standard]" websockets
+.venv/bin/pip install -r requirements.txt
 ./scripts/install-piper.sh
-
-HETZNER_APP_TOKEN=testwort .venv/bin/python -m hetzner_app.server
+.venv/bin/python -m hetzner_app.server
 # → http://127.0.0.1:8787
 ```
 
-Kein Bauschritt: Datei ändern, Seite neu laden. Das Anmelde-Plätzchen ist als
-`secure` markiert, funktioniert also nur über HTTPS — beim Testen auf
-`localhost` macht Chrome eine Ausnahme.
+Die Bausteine: `hetzner_app/tmux.py` (Sitzungen), `state.py` (Zustand),
+`tts.py` (Vorlesen), `geraete.py` (Geräte und Kopplung), `server.py`
+(Schnittstelle), `web/` (die Oberfläche als PWA).
 
-## Immer auf demselben Stand
+## Lizenzen
 
-Das Grundproblem: Du arbeitest am Windows-Rechner, in einer Linux-VM und
-unterwegs am Handy — und keiner weiß vom anderen. Die Lösung nutzt aus, dass
-mit dieser App **die Arbeit auf dem Server passiert**. Der Hetzner ist damit die
-Wahrheit, alle anderen holen sich von dort ab.
-
-Der Anbieter dieser App sieht davon nichts: kein Phone-Home, keine Telemetrie,
-kein Lizenzserver. Der Abgleich läuft über dein eigenes GitHub-Konto — die
-Sicherung schiebt dorthin, damit sie den Server überlebt.
-
-**Einmalig auf dem Hetzner:**
-
-```bash
-./scripts/lager-einrichten.sh Hetzner-App Skillsradar KI-WIKI
-sudo cp deploy/auto-sichern.{service,timer} /etc/systemd/system/
-sudo systemctl enable --now auto-sichern.timer
-```
-
-Ab jetzt sichert der Server alle zehn Minuten von selbst, was Claude Code
-geändert hat.
-
-**Einmalig auf dem Windows-Rechner:** `scripts/abgleich-windows.ps1` nach
-`D:\Virtual Code\` legen, Server und Benutzer eintragen, und in der
-Aufgabenplanung als Aufgabe *„Bei Anmeldung"* eintragen. Danach ist dein
-Rechner beim Hochfahren automatisch auf dem Stand von unterwegs.
-
-Das Skript ist absichtlich vorsichtig: Liegen auf dem Rechner ungesicherte
-Änderungen, überspringt es das Projekt und sagt es dir, statt deine Arbeit zu
-überfahren.
-
-## Was noch fehlt
-
-- **Wischgesten** in der Liste (nach links wischen zum Anheften).
-- Die Audio-Antwort kommt als WAV, was auf Mobilfunk unnötig groß ist. Mit
-  ffmpeg nach Opus wandeln wäre etwa zehnmal kleiner.
-
-Die **Benachrichtigungen** (Glocke: „Melden, wenn fertig") sind fertig gebaut —
-Web-Push mit eigenem VAPID-Schlüssel, Anmeldung übers Handy, der Wächter schickt,
-wenn eine Sitzung von „arbeitet" auf „wartet/fertig" springt, und ein Tipp auf die
-Nachricht öffnet die Sitzung. Siehe `hetzner_app/melden.py` und `web/sw.js`.
+Fremde Bausteine und ihre Lizenzen stehen in
+[`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md). Die Sprachausgabe
+Piper läuft bewusst als getrennter Prozess. Die Lizenz dieses Projekts wird
+mit der Veröffentlichung festgelegt.

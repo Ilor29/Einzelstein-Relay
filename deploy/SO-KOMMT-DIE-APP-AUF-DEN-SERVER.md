@@ -21,7 +21,7 @@ also keinen Zirkel: erst das Skript, dann ich.
   ~160 MB, aber jede Claude-Sitzung hält 200–500 MB; mit 2 GB wird es schnell
   eng, sobald mehrere Chats offen sind.
 - **Keine eigene Domain nötig.** Das Skript baut aus der Server-IP eine echte
-  Adresse über sslip.io (aus `65.21.246.222` wird `65-21-246-222.sslip.io`),
+  Adresse über sslip.io (aus `203.0.113.20` wird `203-0-113-20.sslip.io`),
   für die es ein gültiges HTTPS-Zertifikat bekommt.
 - Ein **eigenes Claude-Abo** pro Person (für die Anmeldung von Claude Code).
 

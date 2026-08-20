@@ -2,7 +2,7 @@
 #
 # Gleiche App, eigener Benutzer, eigener Port (8789) und eigener Piper-Port
 # (5007) — damit sich die Instanzen nicht in die Quere kommen. Erreichbar
-# über lea.65-21-246-222.sslip.io (siehe Caddyfile).
+# über lea.203-0-113-20.sslip.io (siehe Caddyfile).
 #
 # Nach /etc/systemd/system/ kopieren, dann:
 #   sudo systemctl daemon-reload && sudo systemctl enable --now hetzner-app-lea

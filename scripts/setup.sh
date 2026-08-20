@@ -15,7 +15,7 @@ set -euo pipefail
 DOMAIN="${1:-}"
 if [ -z "$DOMAIN" ]; then
   # Keine Domain? Braucht auch niemand: sslip.io macht aus jeder Server-IP
-  # eine echte Adresse (65.21.246.222 → 65-21-246-222.sslip.io), für die
+  # eine echte Adresse (203.0.113.20 → 203-0-113-20.sslip.io), für die
   # Caddy ein ordentliches HTTPS-Zertifikat bekommt. Das funktioniert bei
   # jedem Anbieter — Hetzner, Hostinger, egal —, ganz ohne Domain-Kauf.
   echo "→ Keine Domain angegeben — die Adresse kommt aus der Server-IP …"
