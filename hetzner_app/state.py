@@ -62,6 +62,12 @@ class Meta:
     ohne_rueckfragen: bool = False
     schlaf_zeit: int = 0
     letzte_vorschau: str = ""
+    # Welche Mitschrift-Datei (Kennung ohne .jsonl in ~/.claude/projects/…)
+    # zu DIESEM Gespräch gehört. Claude Code kopiert beim Fortsetzen die ganze
+    # Geschichte in die jeweils neue Datei — die gemerkte Kennung trägt also
+    # immer den kompletten Verlauf. Leer = noch nicht erkannt; dann zeigt die
+    # App übergangsweise die Projekt-Zeitleiste (siehe server.session_verlauf).
+    mitschrift: str = ""
     # Ins Archiv gestellt: Die Karte verschwindet aus der Hauptliste in eine
     # eingeklappte Gruppe ganz unten. Für alte Sitzungen, die man weder täglich
     # sehen noch endgültig löschen will. Aufwecken holt sie zurück.

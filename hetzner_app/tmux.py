@@ -157,6 +157,7 @@ def create(
     first_prompt: str | None = None,
     ohne_rueckfragen: bool = False,
     fortsetzen: bool = False,
+    gespraech: str = "",
 ) -> None:
     """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
 
@@ -165,9 +166,12 @@ def create(
     später umschalten, darum steckt es hier.
 
     Mit fortsetzen wacht eine schlafen gelegte Sitzung wieder auf: Claude
-    setzt das jüngste Gespräch dieses Ordners fort (--continue), statt leer
-    anzufangen. Gibt es dort noch gar kein Gespräch, schlägt --continue fehl —
-    dafür steht der Rückfall dahinter: dann eben frisch. tmux reicht die eine
+    setzt ihr Gespräch fort statt leer anzufangen. Ist die Gesprächs-Kennung
+    (gespraech, der Mitschrift-Dateiname) bekannt, wird GENAU dieses Gespräch
+    fortgesetzt (--resume) — wichtig, sobald in einem Ordner mehrere Gespräche
+    leben: --continue nähme blind das jüngste, auch ein fremdes. Ohne Kennung
+    bleibt --continue. Schlägt beides fehl (Gespräch gelöscht, Ordner leer),
+    steht der Rückfall dahinter: dann eben frisch. tmux reicht die eine
     Befehlszeile an die Shell durch, darum funktioniert das ||.
     """
     if exists(name):
@@ -175,7 +179,13 @@ def create(
 
     befehl = "claude --dangerously-skip-permissions" if ohne_rueckfragen else "claude"
     if fortsetzen:
-        befehl = f"{befehl} --continue || {befehl}"
+        # shlex wäre hier Overkill: Die Kennung ist ein Dateiname aus Claude
+        # Codes eigener Ablage (UUID) — zur Sicherheit trotzdem nur Erlaubtes.
+        sicher = "".join(c for c in gespraech if c.isalnum() or c == "-")
+        if sicher:
+            befehl = f"{befehl} --resume {sicher} || {befehl} --continue || {befehl}"
+        else:
+            befehl = f"{befehl} --continue || {befehl}"
 
     _run(
         "new-session",
