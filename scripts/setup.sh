@@ -113,14 +113,21 @@ if [ ! -f "${KONFIG}/umgebung" ]; then
   chmod 600 "${KONFIG}/umgebung"
 fi
 if ! grep -q '^HETZNER_APP_KONTAKT=' "${KONFIG}/umgebung"; then
-  echo
-  printf "→ Deine E-Mail für die Push-Benachrichtigungen (nur der Push-Dienst sieht sie): "
-  read -r KONTAKT
+  # Nur fragen, wenn wirklich jemand am Terminal sitzt. Unter Cloud-Init gibt
+  # es keine Tastatur — read liefe ins Leere und set -e bräche die ganze
+  # Einrichtung ab (Frischtest 20.08.). Dann eben später nachtragen.
+  KONTAKT=""
+  if [ -t 0 ]; then
+    echo
+    printf "→ Deine E-Mail für die Push-Benachrichtigungen (nur der Push-Dienst sieht sie): "
+    read -r KONTAKT || KONTAKT=""
+  fi
   if [ -n "$KONTAKT" ]; then
     printf 'HETZNER_APP_KONTAKT=%s\n' "$KONTAKT" >> "${KONFIG}/umgebung"
     echo "   Gespeichert."
   else
-    echo "   Übersprungen — kannst du später in ${KONFIG}/umgebung nachtragen."
+    echo "   E-Mail für Push übersprungen — später nachtragbar in ${KONFIG}/umgebung"
+    echo "   (Zeile: HETZNER_APP_KONTAKT=du@example.org)."
   fi
 fi
 

@@ -1,0 +1,79 @@
+#cloud-config
+#
+# Einzelstein Relay — der Einrichtungs-Text für einen frischen Server.
+#
+# So benutzt man ihn: Beim Anlegen des Servers (z. B. Hetzner Cloud →
+# „Server erstellen" → ganz unten das Feld „Cloud config") diesen ganzen
+# Text einfügen. Als System Debian 12 oder Ubuntu wählen, empfohlen sind
+# ~4 GB RAM. Der Server richtet sich beim ersten Start dann selbst ein —
+# das dauert einige Minuten. Mehr Kommandozeile sieht niemand.
+#
+# VORAUSSETZUNG: Das Code-Repo (REPO unten im Skript) muss für den Server
+# erreichbar sein — also öffentlich oder mit hinterlegtem Zugang. Solange
+# das Repo privat ist, funktioniert dieser Weg noch nicht; die Entscheidung
+# liegt bei Roli (siehe deploy/EINRICHTUNG-PLAN.md).
+#
+# NOCH OFFEN (Stein 4, „Einrichtungs-Ansicht"): Wie der Neuling ohne
+# Terminal an den ersten Kopplungscode kommt — der Code lebt nur 15
+# Minuten. Bis das entschieden ist, schreibt die Einrichtung den Code nach
+# /root/WILLKOMMEN.txt und in die Cloud-Init-Ausgabe; wer die Hetzner-
+# Konsole öffnen kann, kommt so hinein.
+
+package_update: true
+packages:
+  - git
+  - sudo
+  - curl
+  - ca-certificates
+
+write_files:
+  - path: /root/einrichten.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      # Holt den Code und ruft die ganz normale Einrichtung auf — dieselbe,
+      # die auch von Hand funktioniert (scripts/setup.sh). Läuft als root
+      # und ohne Terminal; setup.sh kommt damit klar (Frischtest 20.08.).
+      set -euo pipefail
+
+      REPO="https://github.com/Ilor29/Einzelstein-Relay.git"
+      ZIEL="/root/Hetzner-App"
+
+      if [ ! -d "${ZIEL}/.git" ]; then
+        git clone --depth 1 "$REPO" "$ZIEL"
+      fi
+      cd "$ZIEL"
+      ./scripts/setup.sh </dev/null
+
+      # Dem Menschen eine Willkommens-Datei hinterlassen: Adresse und ein
+      # frischer Kopplungscode (15 Minuten gültig ab JETZT — darum erst hier
+      # am Ende erzeugen, nicht schon mitten in der Einrichtung).
+      IP="$(curl -4fsS --max-time 10 https://api.ipify.org || true)"
+      ADRESSE="$(printf '%s' "$IP" | tr . -).sslip.io"
+      CODE="$(./.venv/bin/python -c 'from hetzner_app import geraete; print(geraete.kopplung_neu())')"
+      cat > /root/WILLKOMMEN.txt <<ENDE
+      Dein Einzelstein-Relay-Server ist eingerichtet.
+
+        1. Öffne am Handy im Chrome:  https://${ADRESSE}
+        2. Tippe in der App diesen Kopplungscode ein (15 Minuten gültig):
+
+               ${CODE}
+
+           Neuer Code, falls er abgelaufen ist:
+               cd ${ZIEL} && ./scripts/kopplungscode.sh
+        3. Dann im Chrome-Menü: »Zum Startbildschirm hinzufügen«.
+
+      Danach in der ersten Sitzung bei Claude anmelden: einfach lostippen,
+      die App führt durch die Anmeldung (eigenes Claude-Abo nötig).
+      ENDE
+      cat /root/WILLKOMMEN.txt
+
+runcmd:
+  # tee statt stiller Umleitung: so landet alles doppelt — im eigenen Log
+  # UND in /var/log/cloud-init-output.log (das zeigt die Server-Konsole).
+  - bash -c "/root/einrichten.sh 2>&1 | tee /root/einrichtung.log"
+
+final_message: |
+  Einzelstein Relay: Die Einrichtung ist durchgelaufen (Dauer $UPTIME s).
+  Adresse und Kopplungscode stehen in /root/WILLKOMMEN.txt
+  und oben in dieser Ausgabe.
