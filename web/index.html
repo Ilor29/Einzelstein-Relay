@@ -345,14 +345,14 @@
   <header class="kopf">
     <h1>Sitzungen</h1>
     <span id="verbindung" class="verbindung"><span class="punkt"></span>verbunden</span>
-    <button id="knopf-brain" class="knopf-blank knopf-brain"
+    <button id="knopf-brain" data-tour="brain" class="knopf-blank knopf-brain"
             aria-label="Brain öffnen — dein fester Ansprechpartner">
       <svg viewBox="0 0 24 24"><use href="#i-brain"/></svg>
     </button>
     <button id="knopf-bibliothek" class="knopf-blank" aria-label="Bibliothek">
       <svg viewBox="0 0 24 24"><use href="#i-buch"/></svg>
     </button>
-    <button id="knopf-einstellungen" class="knopf-blank" aria-label="Einstellungen">
+    <button id="knopf-einstellungen" data-tour="einstellungen" class="knopf-blank" aria-label="Einstellungen">
       <svg viewBox="0 0 24 24"><use href="#i-zahnrad"/></svg>
     </button>
   </header>
@@ -364,7 +364,7 @@
   </div>
   <div id="liste" class="liste"></div>
   <div class="fuss">
-    <button id="knopf-neu" class="knopf-voll">
+    <button id="knopf-neu" data-tour="neue-sitzung" class="knopf-voll">
       <svg viewBox="0 0 24 24"><use href="#i-plus"/></svg>
       Neue Sitzung
     </button>
@@ -381,7 +381,7 @@
     <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">
       <svg viewBox="0 0 24 24"><use href="#i-terminal"/></svg>
     </button>
-    <button id="knopf-vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">
+    <button id="knopf-vorlesen" data-tour="vorlesen" class="knopf-blank" aria-label="Antwort vorlesen">
       <svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>
     </button>
     <button id="knopf-freisprech" class="knopf-blank" aria-label="Freisprech-Modus: Antwort vorlesen und danach Mikrofon öffnen">
@@ -448,7 +448,7 @@
   <!-- Ein-Tipp-Befehle fürs Immerwiederkehrende. Wischbar, damit viele
        hineinpassen, ohne die Eingabe zu verdrängen. Der data-text ist, was
        wirklich an Claude geht — die Aufschrift bleibt kurz. -->
-  <div id="schnellbefehle" class="schnellbefehle">
+  <div id="schnellbefehle" data-tour="schnellbefehle" class="schnellbefehle">
     <!-- Die sichtbare Reihe ist komplett selbst bestimmt: Alle Befehle — auch
          die früher fest eingebauten „Los geht's/Weiter/Zusammenfassen" — kommen
          jetzt aus dem Gerätespeicher und werden von der App hier eingefüllt (die
@@ -473,7 +473,7 @@
       </button>
     </div>
   </div>
-  <form id="eingabe-formular" class="eingabezeile">
+  <form id="eingabe-formular" data-tour="eingabe" class="eingabezeile">
     <!-- Vorschau der angehängten Fotos und Dateien. Leer bleibt der Streifen
          verborgen; sonst stünde über dem Feld eine leere Zeile herum. -->
     <div id="anhang-streifen" class="anhang-streifen" hidden></div>
@@ -495,7 +495,7 @@
       <input type="file" id="datei-waehler"
              accept=".pdf,.md,.markdown,.txt,.text,.rtf,.doc,.docx,.odt,.csv,.tsv,.xls,.xlsx,.ods,.ppt,.pptx,.json,.yaml,.yml,.log,.xml,.html"
              multiple hidden>
-      <button type="button" id="knopf-diktat" class="knopf-diktat" aria-label="Diktieren">
+      <button type="button" id="knopf-diktat" data-tour="diktat" class="knopf-diktat" aria-label="Diktieren">
         <svg viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
       </button>
       <!-- Räumt das Diktat im Feld auf: Füllwörter, Dopplungen, Verhörer. -->
@@ -689,7 +689,10 @@
 
     <div class="feld">
       <span class="marke">Was die Symbole bedeuten</span>
-      <p class="hinweis">Die Knöpfe der App auf einen Blick.</p>
+      <p class="hinweis">Die Knöpfe der App auf einen Blick. Oder lass dich
+         führen:</p>
+      <button id="knopf-tour" type="button" class="knopf-rand">
+        Die Einführung noch einmal ansehen</button>
 
       <p class="symbol-gruppe">In der Eingabezeile</p>
       <div class="symbol-liste">
@@ -1000,6 +1003,25 @@
       <input type="file" id="neuskill-datei" accept=".md,.zip" hidden>
 
       <p id="neuskill-fehler" class="fehler" hidden></p>
+    </div>
+  </div>
+</div>
+
+<!-- Spotlight-Tour: dunkle Abdeckung mit einem hellen Loch über dem gerade
+     erklärten Element, daneben das Erklär-Fenster. Schritte und Steuerung in
+     app.js (Abschnitt Spotlight-Tour), Muster aus dem spotlight-tour-Skill. -->
+<div id="tour-overlay" hidden>
+  <div id="tour-loch"></div>
+  <div id="tour-fenster" role="dialog" aria-modal="true" aria-labelledby="tour-titel">
+    <button id="tour-zu" class="knopf-blank tour-zu" aria-label="Einführung beenden">
+      <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+    </button>
+    <p id="tour-kapitel" class="tour-kapitel"></p>
+    <h2 id="tour-titel" class="tour-titel"></h2>
+    <p id="tour-text" class="tour-text"></p>
+    <div class="tour-fuss">
+      <span id="tour-zaehler" class="tour-zaehler"></span>
+      <button id="tour-weiter" type="button" class="knopf-voll tour-weiter">Weiter</button>
     </div>
   </div>
 </div>

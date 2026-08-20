@@ -1933,3 +1933,66 @@ html, body {
 .zieh-hinweis.bereit { color: var(--akzent); }
 .zieh-hinweis.laedt svg { animation: zieh-drehen .8s linear infinite; }
 @keyframes zieh-drehen { to { transform: rotate(360deg); } }
+
+/* --- Spotlight-Tour ----------------------------------------------------------
+   Die geführte Einführung: Ein "Loch" liegt über dem gerade erklärten Element —
+   der riesige Schatten drumherum dunkelt den Rest der Seite ab. Daneben das
+   Erklär-Fenster. Position setzt app.js per JS (CSP erlaubt keine
+   style-Attribute im Markup), hier steht nur das Aussehen. */
+#tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+#tour-loch {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .62);
+  /* Das Loch selbst fängt keine Tipps — aber es liegt über dem Element,
+     bedienen kann man es während der Tour also nicht. Absicht: erst zuhören. */
+  pointer-events: none;
+  transition: top .25s ease, left .25s ease, width .25s ease, height .25s ease;
+}
+#tour-fenster {
+  position: fixed;
+  width: min(92vw, 340px);
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+.tour-zu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--schrift-schwach);
+}
+.tour-kapitel {
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--akzent);
+  margin-bottom: 4px;
+}
+.tour-titel {
+  font: 600 17px/1.3 var(--sans);
+  margin-bottom: 6px;
+  padding-right: 24px;   /* Platz für das Schließen-Kreuz */
+}
+.tour-text {
+  font: 400 14.5px/1.5 var(--sans);
+  color: var(--schrift-leise);
+}
+.tour-text b { color: var(--schrift); }
+.tour-fuss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.tour-zaehler {
+  font: 500 12px/1 var(--sans);
+  color: var(--schrift-schwach);
+}
+.tour-weiter { width: auto; padding: 10px 22px; }
