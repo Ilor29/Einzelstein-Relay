@@ -16,6 +16,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import threading
 import time
 from collections import deque
 from pathlib import Path
@@ -473,6 +474,11 @@ async def create_session(body: NewSession) -> dict:
         cwd=str(cwd),
         ohne_rueckfragen=body.ohne_rueckfragen,
         schlaeft=False,
+        # Trägt eine alte (schlafende/abgestürzte) Karte denselben Namen,
+        # würde die neue Sitzung sonst deren Gesprächs-Bindung erben und
+        # dauerhaft den fremden Verlauf zeigen (Fund der Code-Durchsicht
+        # 20.08.). Frische Sitzung, frische Erkennung.
+        mitschrift="",
     )
 
     if body.first_prompt:
@@ -557,9 +563,16 @@ async def brain_oeffnen() -> dict:
         if vorhanden["state"] in (state.SLEEPING, state.CRASHED):
             meta = state.get(name)
             try:
-                tmux.create(name, ordner_str, ohne_rueckfragen=meta.ohne_rueckfragen, fortsetzen=True)
+                # Wie session_wecken: mit der gemerkten Gesprächs-Kennung
+                # GENAU dieses Gespräch fortsetzen — und die Kennung danach
+                # lösen, weil das Fortsetzen eine neue Mitschrift-Datei
+                # anlegt (Fund der Code-Durchsicht 20.08.: dieser Pfad war
+                # beim Bindungs-Umbau vergessen worden).
+                tmux.create(name, ordner_str, ohne_rueckfragen=meta.ohne_rueckfragen,
+                            fortsetzen=True, gespraech=meta.mitschrift)
             except tmux.TmuxError as error:
                 raise HTTPException(409, str(error))
+            state.update(name, mitschrift="")
         state.update(name, pinned=True, schlaeft=False, archiviert=False)
         return {"name": name, "neu": False}
 
@@ -824,42 +837,81 @@ def stimme_waehlen(body: Stimme) -> dict:
     return {"ok": True, "stimme": body.name}
 
 
+# Schützt Prüfen-und-Setzen der Gesprächs-Zuordnung: Ohne Sperre konnten zwei
+# gleichzeitig pollende Sitzungen dieselbe Mitschrift zugewiesen bekommen
+# (beide lasen die Vergeben-Liste, bevor der jeweils andere schrieb).
+_zuordnung_sperre = threading.Lock()
+
+# Nur wer in diesem Zeitraum geschrieben hat, gilt als „gerade aktiv" —
+# für Terminals wie für Mitschrift-Dateien.
+_ZUORDNUNG_FRISCH_S = 15
+
+# Ist die gebundene Datei so lange still, während das Terminal munter
+# schreibt, hat drinnen ein NEUES Gespräch begonnen (/clear, Absturz mit
+# frischem Start) — dann darf die Erkennung neu binden.
+_ZUORDNUNG_EINGEFROREN_S = 300
+
+
 def _mitschrift_zuordnen(s: tmux.TmuxSession) -> str:
-    """Welches Gespräch gehört diesem Terminal? Einmal erkannt, dauerhaft gemerkt.
+    """Welches Gespräch gehört diesem Terminal? Erkannt und dauerhaft gemerkt.
 
     Den Claude-Prozess fragen können wir nicht (er kennt seine Kennung selbst
     nicht), also lesen wir die Schreib-Spur: Wurde in den letzten Sekunden
-    GENAU EINE noch unvergebene Mitschrift beschrieben, während auch dieses
-    Terminal gerade aktiv war, gehören die beiden zusammen. Bei jeder
-    Unklarheit (zwei frische Dateien, Terminal still) wird NICHT geraten —
-    dann eben beim nächsten Mal. Einmal erkannt, steht die Kennung im Meta
-    und bleibt auch über Schlafen/Wecken hinweg die Wahrheit.
+    GENAU EINE noch unvergebene Mitschrift beschrieben, während dieses
+    Terminal als EINZIGES im Ordner aktiv war, gehören die beiden zusammen.
+    Bei jeder Unklarheit (zwei frische Dateien, Terminal still, ein Nachbar —
+    auch ein fremdes Terminal wie die Fernbedienung — war zeitgleich aktiv)
+    wird NICHT geraten — dann eben beim nächsten Mal.
+
+    Eine bestehende Bindung wird nur in zwei Fällen angefasst: Die Datei ist
+    verschwunden (gelöscht), oder sie liegt seit Minuten still, während das
+    Terminal munter schreibt — dann läuft drinnen längst ein neues Gespräch
+    (/clear, frischer Start nach Absturz), und der Verlauf fröre sonst für
+    immer ein (Fund der Code-Durchsicht 20.08.).
     """
     meta = state.get(s.name)
+    jetzt = time.time()
+    ordner = mitschrift.PROJEKTE / mitschrift._ordnername(s.cwd)
+    terminal_aktiv = jetzt - s.last_activity < _ZUORDNUNG_FRISCH_S
+
     if meta.mitschrift:
+        try:
+            datei_alter = jetzt - (ordner / f"{meta.mitschrift}.jsonl").stat().st_mtime
+        except OSError:
+            datei_alter = None                      # Datei weg — Bindung lösen
+        if datei_alter is None:
+            state.update(s.name, mitschrift="")
+            meta = state.get(s.name)
+        elif not (terminal_aktiv and datei_alter > _ZUORDNUNG_EINGEFROREN_S):
+            return meta.mitschrift                  # Bindung passt weiter
+        # sonst: eingefroren — unten neu erkennen; bis dahin bleibt die alte
+        # Bindung stehen (besser das alte Gespräch als geratenes fremdes).
+
+    if not terminal_aktiv or not ordner.is_dir():
         return meta.mitschrift
 
-    jetzt = time.time()
-    if jetzt - s.last_activity > 15:
-        return ""                       # Terminal still — nichts zuzuordnen
+    # Nur binden, wenn dieses Terminal das EINZIGE gerade aktive im Ordner
+    # ist — sonst könnte die frische Datei dem Nachbarn gehören.
+    for andere in tmux.list_sessions():
+        if (andere.cwd == s.cwd and andere.name != s.name
+                and jetzt - andere.last_activity < _ZUORDNUNG_FRISCH_S):
+            return meta.mitschrift
 
-    ordner = mitschrift.PROJEKTE / mitschrift._ordnername(s.cwd)
-    if not ordner.is_dir():
-        return ""
-    vergeben = state.vergebene_mitschriften()
-    frische = []
-    for datei in ordner.glob("*.jsonl"):
-        if datei.stem in vergeben:
-            continue
-        try:
-            if jetzt - datei.stat().st_mtime < 15:
-                frische.append(datei.stem)
-        except OSError:
-            continue
-    if len(frische) != 1:
-        return ""
-    state.update(s.name, mitschrift=frische[0])
-    return frische[0]
+    with _zuordnung_sperre:
+        vergeben = state.vergebene_mitschriften()
+        frische = []
+        for datei in ordner.glob("*.jsonl"):
+            if datei.stem in vergeben:
+                continue
+            try:
+                if jetzt - datei.stat().st_mtime < _ZUORDNUNG_FRISCH_S:
+                    frische.append(datei.stem)
+            except OSError:
+                continue
+        if len(frische) != 1:
+            return meta.mitschrift
+        state.update(s.name, mitschrift=frische[0])
+        return frische[0]
 
 
 def _gespraechs_bloecke(s: tmux.TmuxSession) -> list[dict]:

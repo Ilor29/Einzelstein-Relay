@@ -261,6 +261,16 @@ def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
     for datei_pfad in dateien:
         alle.extend(_aus_datei(datei_pfad))
 
+    # Der seit-Filter muss auch je NACHRICHT schneiden, nicht nur je Datei:
+    # Eine Nachbar-Mitschrift, die gerade beschrieben wird, bestünde den
+    # mtime-Filter im Ganzen — und ein eben erst begonnenes Gespräch zeigte
+    # doch wieder die komplette fremde Geschichte (Code-Durchsicht 20.08.).
+    # Die Zeitstempel sind UTC-ISO („2026-08-20T19:51:42.609Z"), der Vergleich
+    # als Text funktioniert damit zeichengenau.
+    if seit and not datei:
+        grenze = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(seit))
+        alle = [b for b in alle if b["zeit"] >= grenze]
+
     # Chronologisch. Der Zeitstempel steht in jedem Eintrag und ist überall
     # derselbe — auch über Gespräche und Rechner hinweg.
     alle.sort(key=lambda b: b["zeit"])

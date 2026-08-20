@@ -115,15 +115,23 @@ def liste() -> list[Geraet]:
 
 
 def erlauben(name: str, schluessel: str) -> Geraet:
-    """Ein Gerät freischalten. Wird von Hand aufgerufen, nie über das Netz —
-    es gibt bewusst keine Tür, durch die sich jemand selbst eintragen kann."""
+    """Ein Gerät freischalten — vom Server aus oder nach geprüftem Kopplungscode.
+
+    Unter der Schreibsperre: Ohne sie konnten zwei gleichzeitige Eintragungen
+    (Code-Weg und Erst-Besucher-Weg) einander überschreiben — im schlimmsten
+    Fall löschte der Fremde das frisch gekoppelte Besitzer-Gerät (Fund der
+    Code-Durchsicht 20.08.). Jede Eintragung schließt außerdem die
+    Erst-Besucher-Tür endgültig (siehe _tuer_schliessen).
+    """
     schluessel = schluessel.strip()
     _pruefe_schluessel(schluessel)         # unbrauchbare Schlüssel gar nicht erst annehmen
 
-    geraete = [g for g in _laden() if g.schluessel != schluessel]
-    neu = Geraet(name=name, schluessel=schluessel, hinzugefuegt=int(time.time()))
-    geraete.append(neu)
-    _speichern(geraete)
+    with _sperre:
+        geraete = [g for g in _laden() if g.schluessel != schluessel]
+        neu = Geraet(name=name, schluessel=schluessel, hinzugefuegt=int(time.time()))
+        geraete.append(neu)
+        _speichern(geraete)
+        _tuer_schliessen()
     return neu
 
 
@@ -280,18 +288,33 @@ def kopplung_pruefen_und_verbrauchen(eingabe: str) -> bool:
 # Mittelfristige Schließung: Kopplungswort im Cloud-Init-Text.
 
 ERSTSTART = ORDNER / "erststart"
+# Der endgültige Riegel. „Geräteliste gerade leer" war als Tür-Kriterium zu
+# schwach (Fund der Code-Durchsicht 20.08.): Sperrt jemand sein einziges Gerät
+# aus oder ist geraete.json einmal unlesbar, stünde die Tür im 24-h-Fenster
+# wieder offen. Darum schließt die ERSTE erfolgreiche Eintragung die Tür über
+# diese Datei — dauerhaft, unabhängig vom späteren Inhalt der Geräteliste.
+ERSTKOPPLUNG_ZU = ORDNER / "erstkopplung-zu"
 ERSTKOPPLUNG_FENSTER = int(os.environ.get("HETZNER_ERSTKOPPLUNG_STUNDEN", "24")) * 3600
+
+
+def _tuer_schliessen() -> None:
+    """Die Erst-Besucher-Tür endgültig verriegeln (Aufruf unter _sperre)."""
+    if not ERSTKOPPLUNG_ZU.exists():
+        _atomar_schreiben(ERSTKOPPLUNG_ZU, str(int(time.time())))
 
 
 def erststart_merken() -> None:
     """Beim Dienststart einmalig festhalten, wann dieser Server geboren wurde.
 
-    Auf bestehenden Installationen entsteht der Stempel erst jetzt — dort sind
-    längst Geräte eingetragen, die Tür ist also ohnehin zu.
+    Auf bestehenden Installationen entsteht der Stempel erst mit diesem
+    Update — dort sind aber längst Geräte eingetragen, also wird die Tür
+    sofort mitverriegelt, statt nachträglich ein 24-h-Fenster zu öffnen.
     """
     with _sperre:
         if not ERSTSTART.exists():
             _atomar_schreiben(ERSTSTART, str(int(time.time())))
+        if _laden():
+            _tuer_schliessen()
 
 
 def _erststart() -> float:
@@ -303,7 +326,7 @@ def _erststart() -> float:
 
 def erstkopplung_offen() -> bool:
     """Darf sich das allererste Gerät noch ohne Code eintragen?"""
-    if _laden():
+    if ERSTKOPPLUNG_ZU.exists() or _laden():
         return False
     geburt = _erststart()
     return geburt > 0 and (time.time() - geburt) < ERSTKOPPLUNG_FENSTER
@@ -322,6 +345,7 @@ def erstkopplung_versuchen(name: str, schluessel: str) -> Geraet | None:
             return None
         neu = Geraet(name=name, schluessel=schluessel, hinzugefuegt=int(time.time()))
         _speichern([neu])
+        _tuer_schliessen()
     print(f"Erst-Besucher-Kopplung: Gerät „{name}“ eingetragen — die Tür ist jetzt zu.",
           flush=True)
     return neu
