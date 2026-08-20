@@ -412,15 +412,15 @@ def preview(name: str, max_len: int = 90) -> str:
 def overview() -> list[dict]:
     """Alles, was die Sitzungsübersicht im Handy braucht — in einem Rutsch.
 
-    Ein Eintrag je Projekt, nicht je Terminal. Im selben Ordner laufen leicht
-    mehrere Sitzungen — eine am Rechner, eine per Fernsteuerung, eine aus dem
-    Handy —, und dann stand dasselbe Projekt dreimal untereinander, jedes mit
-    einem Bruchstück der Arbeit. Es ist aber ein Projekt und eine Unterhaltung
-    (siehe mitschrift.py). Also ein Schild in der Liste.
+    Ein Eintrag je GESPRÄCH (seit 20.08.): Jede in der App angelegte Sitzung
+    ist eine eigene Karte — zwei bewusst getrennte Chats im selben Ordner
+    bleiben getrennt. Nur FREMDE Terminals (Rechner-tmux, Fernbedienung)
+    hängen sich an die zuletzt aktive eigene Karte ihres Ordners; dafür war
+    die frühere Ein-Schild-je-Projekt-Bündelung gedacht.
 
-    Bedient wird darunter ein bestimmtes Terminal: das eigene, sonst das
-    zuletzt benutzte. Sein technischer Name steht in "name" — daran hängen alle
-    weiteren Aufrufe, vom Tippen bis zum Abbrechen.
+    Bedient wird je Karte ihr Terminal; sein technischer Name steht in
+    "name" — daran hängen alle weiteren Aufrufe, vom Tippen bis zum
+    Abbrechen.
     """
     metas = _load()
     now = int(time.time())

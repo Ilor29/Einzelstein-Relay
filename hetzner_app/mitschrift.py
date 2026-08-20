@@ -1,4 +1,4 @@
-"""Der Verlauf — ein Strang pro Projekt.
+"""Der Verlauf — ein Strang je Gespräch (und zur Not je Projekt).
 
 Claude Code schreibt jede Sitzung mit: vollständig, sauber getrennt nach
 Sprecher, unter ~/.claude/projects/. Das ist die richtige Quelle — sie überlebt
@@ -12,19 +12,23 @@ der Verlauf in ein fremdes Gespräch. Dann fragten wir den Claude-Prozess nach
 seiner Kennung — die kennt er für sich selbst gar nicht, und der Verlauf war
 ganz weg.
 
-Jetzt stellen wir die Frage nicht mehr. Sie war von Anfang an die falsche:
-Roli arbeitet nicht an Gesprächen, er arbeitet an Projekten. Ob er gestern am
-Rechner, heute früh per Fernsteuerung und jetzt im Handy geredet hat, ist ihm
-gleich — es ist dieselbe Arbeit am selben Ordner.
+Dritter Anlauf (bis 20.08.2026): alle Mitschriften eines Ordners zu EINEM
+Strang verschmelzen („ein Projekt, ein Verlauf"). Das hielt, bis Roli bewusst
+ZWEI getrennte Gespräche im selben Ordner führte — dann zeigten beide Karten
+denselben Chat.
 
-Also ziehen wir alle Mitschriften eines Ordners zu einem einzigen Strang
-zusammen, chronologisch. Ein Projekt, ein Verlauf. Damit kann er gar nicht
-mehr verschwinden: Es gibt nichts mehr zu verwechseln.
+Heutiger Stand (vierter Anlauf): Jedes eigene Terminal kennt seine
+Gesprächs-Kennung (Meta-Feld `mitschrift`, erkannt über die Schreib-Spur in
+server._mitschrift_zuordnen) — lesen(datei=…) liefert dann genau dieses eine
+Gespräch. Die verschmolzene Projekt-Zeitleiste bleibt für fremde Terminals
+und als Übergang, solange die Zuordnung noch fehlt (dann mit seit-Schnitt,
+damit nichts von den Nachbarn geerbt wird).
 """
 
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 PROJEKTE = Path.home() / ".claude" / "projects"
