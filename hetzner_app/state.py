@@ -131,6 +131,11 @@ def update(name: str, **changes) -> Meta:
     return meta
 
 
+def vergebene_mitschriften() -> set[str]:
+    """Alle Gesprächs-Kennungen, die schon einem Terminal gehören."""
+    return {m.mitschrift for m in _load().values() if m.mitschrift}
+
+
 def forget(name: str) -> None:
     with _sperre:
         metas = _load()

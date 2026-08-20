@@ -226,15 +226,40 @@ def _aus_datei(datei: Path) -> list[dict]:
     return stand["bloecke"]
 
 
-def lesen(cwd: str, hoechstens: int = _HOECHSTENS) -> list[dict]:
-    """Die Unterhaltung dieses Projekts — alle Gespräche, in einer Zeitleiste."""
+def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
+          datei: str = "", seit: float = 0.0) -> list[dict]:
+    """Die Unterhaltung — EIN Gespräch (datei) oder die Projekt-Zeitleiste.
+
+    datei: die Gesprächs-Kennung (Dateiname ohne .jsonl) — dann kommt genau
+    dieses Gespräch. Claude Code kopiert beim Fortsetzen das Bisherige in die
+    jeweils neue Datei, eine Datei trägt also immer die ganze Geschichte.
+
+    seit: ohne Kennung nur Mitschriften, die seither beschrieben wurden — für
+    ein frisches Terminal, das noch keiner Datei zugeordnet ist. Sonst erbte
+    ein eben erst begonnenes Gespräch die komplette Projekt-Vergangenheit
+    seiner Nachbarn (Rolis Fund 20.08. abends: zwei Chats im selben Ordner
+    zeigten denselben Verlauf).
+    """
     ordner = PROJEKTE / _ordnername(cwd)
     if not ordner.is_dir():
         return []
 
+    if datei:
+        pfad = ordner / f"{datei}.jsonl"
+        dateien = [pfad] if pfad.is_file() else []
+    else:
+        dateien = list(ordner.glob("*.jsonl"))
+        if seit:
+            def juenger(d: Path) -> bool:
+                try:
+                    return d.stat().st_mtime >= seit
+                except OSError:
+                    return False
+            dateien = [d for d in dateien if juenger(d)]
+
     alle: list[dict] = []
-    for datei in ordner.glob("*.jsonl"):
-        alle.extend(_aus_datei(datei))
+    for datei_pfad in dateien:
+        alle.extend(_aus_datei(datei_pfad))
 
     # Chronologisch. Der Zeitstempel steht in jedem Eintrag und ist überall
     # derselbe — auch über Gespräche und Rechner hinweg.

@@ -680,12 +680,19 @@ def session_wecken(name: str) -> dict:
         raise HTTPException(409, f"Den Ordner {meta.cwd} gibt es nicht mehr.")
 
     try:
-        tmux.create(name, meta.cwd, ohne_rueckfragen=meta.ohne_rueckfragen, fortsetzen=True)
+        # Mit der gemerkten Gesprächs-Kennung wacht GENAU dieses Gespräch auf
+        # (--resume) — nicht blind das jüngste des Ordners, das seit den
+        # getrennten Karten auch ein Nachbar-Chat sein kann.
+        tmux.create(name, meta.cwd, ohne_rueckfragen=meta.ohne_rueckfragen,
+                    fortsetzen=True, gespraech=meta.mitschrift)
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
     # Wer aufwacht, gehört wieder in die Liste — auch wenn er im Archiv lag.
-    state.update(name, schlaeft=False, archiviert=False)
+    # Die Gesprächs-Kennung wird gelöst: Beim Fortsetzen legt Claude Code eine
+    # NEUE Mitschrift-Datei an (mit hineinkopierter Geschichte); die Zuordnung
+    # erkennt sie beim ersten Schreiben frisch (_mitschrift_zuordnen).
+    state.update(name, schlaeft=False, archiviert=False, mitschrift="")
     return {"ok": True}
 
 
@@ -817,9 +824,64 @@ def stimme_waehlen(body: Stimme) -> dict:
     return {"ok": True, "stimme": body.name}
 
 
+def _mitschrift_zuordnen(s: tmux.TmuxSession) -> str:
+    """Welches Gespräch gehört diesem Terminal? Einmal erkannt, dauerhaft gemerkt.
+
+    Den Claude-Prozess fragen können wir nicht (er kennt seine Kennung selbst
+    nicht), also lesen wir die Schreib-Spur: Wurde in den letzten Sekunden
+    GENAU EINE noch unvergebene Mitschrift beschrieben, während auch dieses
+    Terminal gerade aktiv war, gehören die beiden zusammen. Bei jeder
+    Unklarheit (zwei frische Dateien, Terminal still) wird NICHT geraten —
+    dann eben beim nächsten Mal. Einmal erkannt, steht die Kennung im Meta
+    und bleibt auch über Schlafen/Wecken hinweg die Wahrheit.
+    """
+    meta = state.get(s.name)
+    if meta.mitschrift:
+        return meta.mitschrift
+
+    jetzt = time.time()
+    if jetzt - s.last_activity > 15:
+        return ""                       # Terminal still — nichts zuzuordnen
+
+    ordner = mitschrift.PROJEKTE / mitschrift._ordnername(s.cwd)
+    if not ordner.is_dir():
+        return ""
+    vergeben = state.vergebene_mitschriften()
+    frische = []
+    for datei in ordner.glob("*.jsonl"):
+        if datei.stem in vergeben:
+            continue
+        try:
+            if jetzt - datei.stat().st_mtime < 15:
+                frische.append(datei.stem)
+        except OSError:
+            continue
+    if len(frische) != 1:
+        return ""
+    state.update(s.name, mitschrift=frische[0])
+    return frische[0]
+
+
+def _gespraechs_bloecke(s: tmux.TmuxSession) -> list[dict]:
+    """Die Mitschrift-Blöcke, die zu DIESEM Terminal gehören.
+
+    Eigene Terminals sind je EIN Gespräch: erst über die gemerkte Kennung,
+    solange die fehlt nur das, was seit dem Start dieses Terminals
+    geschrieben wurde — nichts von den Nachbarn im selben Ordner erben
+    (Rolis Fund 20.08.: zwei Chats im selben Projekt zeigten denselben
+    Verlauf). Fremde Terminals behalten die Projekt-Zeitleiste.
+    """
+    if s.eigen:
+        datei = _mitschrift_zuordnen(s)
+        if datei:
+            return mitschrift.lesen(s.cwd, datei=datei)
+        return mitschrift.lesen(s.cwd, seit=s.created)
+    return mitschrift.lesen(s.cwd)
+
+
 @app.get("/api/sessions/{name}/text", dependencies=[Depends(require_auth)])
 def session_text(name: str) -> dict:
-    """Claudes letzte Antwort, zum Vorlesen."""
+    """Claudes letzte Antwort DIESES Gesprächs, zum Vorlesen."""
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
@@ -827,7 +889,7 @@ def session_text(name: str) -> dict:
     # Aus der Mitschrift, nicht vom Bildschirm: Dort steht die Antwort ganz,
     # nicht nur der Teil, der gerade zu sehen ist. Sie steht dort als Markdown —
     # ungefiltert vorgelesen wird daraus Kauderwelsch aus Sternchen und Rauten.
-    for block in reversed(mitschrift.lesen(treffer[0].cwd)):
+    for block in reversed(_gespraechs_bloecke(treffer[0])):
         if block["typ"] == "claude" and block["text"].strip():
             gesprochen = tts.fuer_stimme(block["text"])
             if gesprochen:
@@ -839,19 +901,19 @@ def session_text(name: str) -> dict:
 
 @app.get("/api/sessions/{name}/verlauf", dependencies=[Depends(require_auth)])
 def session_verlauf(name: str) -> list[dict]:
-    """Die Unterhaltung dieses Projekts — alle Gespräche in einer Zeitleiste.
+    """Die Unterhaltung DIESES Gesprächs.
 
     Nicht vom Terminal-Bildschirm abgelesen und geraten: Claude Code schreibt
     jede Sitzung ohnehin mit, vollständig und sauber getrennt nach Sprecher.
-    Und nicht ein Verlauf je Terminal, sondern einer je Projekt — ob am
-    Rechner, per Fernsteuerung oder hier gesprochen wurde, ist dieselbe Arbeit
-    am selben Ordner.
+    Seit jedes Gespräch seine eigene Karte hat (20.08.), gilt: ein Verlauf je
+    GESPRÄCH — die alte Projekt-Zeitleiste gibt es nur noch für fremde
+    Terminals und als Übergang, solange die Zuordnung noch nicht erkannt ist.
     """
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
-    bloecke = mitschrift.lesen(treffer[0].cwd)
+    bloecke = _gespraechs_bloecke(treffer[0])
 
     # Findet sich keine Mitschrift — etwa bei einem Ordner, in dem Claude Code
     # noch nie lief —, lesen wir notfalls doch den Bildschirm ab. Besser als
