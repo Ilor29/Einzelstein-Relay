@@ -195,6 +195,9 @@ async def piper_waechter() -> None:
 async def waechter_starten() -> None:
     """Der Wächter behält die Sitzungen im Auge und meldet sich, wenn eine
     fertig ist oder eine Rückfrage hat."""
+    # Geburtsstempel für die Erst-Besucher-Kopplung — einmalig, nie überschrieben.
+    geraete.erststart_merken()
+
     asyncio.create_task(melden.waechter())
 
     # Die Stimme schon mal in den Speicher holen. Sonst wartet man beim ersten
@@ -228,7 +231,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 123
+VERSION = 124
 
 
 @app.get("/api/version")
@@ -277,8 +280,19 @@ def abmelden(request: Request) -> Response:
 
 class Koppeln(BaseModel):
     schluessel: str
-    code: str
+    code: str = ""               # leer = Erst-Besucher-Kopplung (nur solange offen)
     name: str = "Handy"
+
+
+@app.get("/api/kopplung/offen")
+def kopplung_offen() -> dict:
+    """Steht die Erst-Besucher-Tür noch offen? (bewusst nur Ja/Nein)
+
+    Unangemeldet erreichbar, weil die Koppel-Ansicht es VOR der Anmeldung
+    wissen muss. Mehr als Ja/Nein verrät der Endpunkt nicht — und ein
+    Kopplungs-Versuch würde dasselbe verraten (CODE-GUARD-Bericht, 🟡).
+    """
+    return {"offen": geraete.erstkopplung_offen()}
 
 
 @app.post("/api/koppeln")
@@ -287,18 +301,32 @@ def koppeln(body: Koppeln) -> Response:
 
     Der Code ist ein Geheimnis: setup.sh druckt ihn beim Einrichten, oder ein
     schon freigeschaltetes Gerät erzeugt ihn (siehe /api/kopplung/neu). Stimmt
-    er, wird dieses Gerät eingetragen und gleich angemeldet. Ohne gültigen Code
-    passiert nichts — die Tür öffnet weiterhin nur, wer das Geheimnis kennt.
+    er, wird dieses Gerät eingetragen und gleich angemeldet.
+
+    Ausnahme ohne Code: die Erst-Besucher-Kopplung — nur solange NOCH KEIN
+    Gerät eingetragen und der Server jung ist (siehe geraete.py und
+    CODE-GUARD-Bericht-Erstkopplung.md). Danach öffnet die Tür weiterhin nur,
+    wer das Geheimnis kennt.
     """
     # Erst den Schlüssel prüfen, DANN den Code verbrauchen: Sonst wäre der Code
     # bei einem unbrauchbaren Schlüssel schon aufgebraucht, obwohl gar nichts
     # eingetragen wurde.
     if not geraete.schluessel_ok(body.schluessel):
         raise HTTPException(400, "Der Geräteschlüssel ist unbrauchbar.")
-    if not geraete.kopplung_pruefen_und_verbrauchen(body.code):
-        raise HTTPException(403, "Der Kopplungscode stimmt nicht oder ist abgelaufen.")
 
-    geraet = geraete.erlauben(body.name.strip()[:40] or "Handy", body.schluessel)
+    name = body.name.strip()[:40] or "Handy"
+    if not body.code.strip():
+        geraet = geraete.erstkopplung_versuchen(name, body.schluessel)
+        if geraet is None:
+            raise HTTPException(
+                403,
+                "Dieser Server gehört schon jemandem (oder das Erst-Fenster ist "
+                "vorbei) — bitte mit Kopplungscode freischalten.",
+            )
+    else:
+        if not geraete.kopplung_pruefen_und_verbrauchen(body.code):
+            raise HTTPException(403, "Der Kopplungscode stimmt nicht oder ist abgelaufen.")
+        geraet = geraete.erlauben(name, body.schluessel)
     antwort = JSONResponse({"ok": True, "geraet": geraet.name})
     antwort.set_cookie(
         COOKIE, geraete.anmeldung_ausstellen(geraet.name),

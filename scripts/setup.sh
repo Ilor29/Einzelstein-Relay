@@ -169,14 +169,18 @@ echo
 echo "✓ Fertig."
 echo
 echo "  1. Öffne am Handy im Chrome:  https://${DOMAIN}"
+echo "  2. Auf einem FRISCHEN Server verbindet sich das erste Handy direkt —"
+echo "     die App zeigt dafür einen Knopf (24 Stunden lang, solange kein"
+echo "     Gerät eingetragen ist)."
 if [ -n "$KOPPELCODE" ]; then
-  echo "  2. Tippe in der App diesen Kopplungscode ein (15 Minuten gültig):"
+  echo "     Falls der Knopf nicht erscheint: diesen Kopplungscode eintippen"
+  echo "     (15 Minuten gültig):"
   echo
   echo "         ${KOPPELCODE}"
   echo
   echo "     (Neuer Code, falls er abläuft:  ./scripts/kopplungscode.sh)"
 else
-  echo "  2. Schalte das Handy hier auf dem Server frei:"
+  echo "     Notweg über die Kommandozeile:"
   echo "       ./scripts/geraet-erlauben.sh handy <schlüssel-vom-handy>"
 fi
 echo "  3. Dann im Chrome-Menü: »Zum Startbildschirm hinzufügen«."

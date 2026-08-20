@@ -55,11 +55,14 @@ write_files:
       Dein Einzelstein-Relay-Server ist eingerichtet.
 
         1. Öffne am Handy im Chrome:  https://${ADRESSE}
-        2. Tippe in der App diesen Kopplungscode ein (15 Minuten gültig):
+        2. Tippe auf »Diesen Server jetzt verbinden« — das erste Handy
+           braucht keinen Code (24 Stunden lang, solange kein Gerät
+           eingetragen ist). Falls der Knopf nicht mehr erscheint, tippe
+           diesen Kopplungscode ein (15 Minuten gültig):
 
                ${CODE}
 
-           Neuer Code, falls er abgelaufen ist:
+           Neuer Code, falls beides vorbei ist:
                cd ${ZIEL} && ./scripts/kopplungscode.sh
         3. Dann im Chrome-Menü: »Zum Startbildschirm hinzufügen«.
 

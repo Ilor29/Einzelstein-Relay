@@ -121,7 +121,50 @@ async function zeigeSchluessel() {
   const paar = await schluesselHolen();
   $("schluessel").textContent = await oeffentlicherSchluessel(paar);
   zeige("geraet");
+  erstKopplungAnbieten();
 }
+
+// Erst-Besucher-Kopplung: Ein frischer Server gehört noch niemandem — dann
+// zeigt die Ansicht zusätzlich den großen Verbinden-Knopf (ohne Code). Ob die
+// Tür offen ist, weiß nur der Server (kein Gerät eingetragen UND jung genug).
+async function erstKopplungAnbieten() {
+  const kasten = $("erst-kopplung");
+  kasten.hidden = true;
+  try {
+    const { offen } = await (await fetch("/api/kopplung/offen")).json();
+    kasten.hidden = !offen;
+  } catch {
+    // Auskunft nicht zu bekommen — dann eben nur der normale Code-Weg.
+  }
+}
+
+$("knopf-erst-koppeln").addEventListener("click", async () => {
+  const knopf = $("knopf-erst-koppeln");
+  const fehler = $("erst-fehler");
+  fehler.hidden = true;
+  knopf.disabled = true;                 // kein Doppel-Tipp, keine zwei Versuche
+  try {
+    const schluessel = await oeffentlicherSchluessel(await schluesselHolen());
+    const antwort = await fetch("/api/koppeln", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ schluessel, code: "" }),
+    });
+    if (!antwort.ok) {
+      const koerper = await antwort.json().catch(() => ({}));
+      throw new Error(fehlerText(koerper) || "Das Verbinden hat nicht geklappt.");
+    }
+    nachAnmeldung();
+  } catch (err) {
+    knopf.disabled = false;
+    fehler.hidden = false;
+    fehler.textContent = istNetzfehler(err)
+      ? "Keine Verbindung zum Server."
+      : (err.message || "Das Verbinden hat nicht geklappt.");
+    // Falls jemand schneller war: den Kasten neu bewerten.
+    erstKopplungAnbieten();
+  }
+});
 
 $("knopf-kopieren").addEventListener("click", async () => {
   const knopf = $("knopf-kopieren");

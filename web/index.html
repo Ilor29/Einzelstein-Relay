@@ -299,6 +299,19 @@
 <section id="ansicht-geraet" class="ansicht" hidden>
   <div class="anmeldung">
     <h1>Einzelstein Relay</h1>
+    <!-- Erst-Besucher-Kopplung: Ein frischer Server gehört noch niemandem —
+         dann reicht ein Knopf, ganz ohne Code. Ob die Tür offen ist, sagt
+         /api/kopplung/offen; app.js blendet den Kasten entsprechend ein. -->
+    <div id="erst-kopplung" hidden>
+      <p>Dieser Server ist frisch eingerichtet und gehört noch niemandem.
+         Verbinde dieses Handy jetzt — es wird das erste Gerät, und ab dann
+         kommt niemand mehr ohne deinen Kopplungscode herein.</p>
+      <button id="knopf-erst-koppeln" type="button" class="knopf-voll">
+        Diesen Server jetzt verbinden</button>
+      <p id="erst-fehler" class="fehler" hidden></p>
+      <p class="hinweis">Nicht dein Server? Dann nichts antippen.</p>
+    </div>
+
     <p>Dieses Gerät ist noch nicht freigeschaltet. Gib den
        <b>Kopplungscode</b> ein — der Server hat ihn dir beim Einrichten
        angezeigt, oder ein schon verbundenes Gerät erzeugt ihn in den

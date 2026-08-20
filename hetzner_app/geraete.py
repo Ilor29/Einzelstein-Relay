@@ -266,6 +266,67 @@ def kopplung_pruefen_und_verbrauchen(eingabe: str) -> bool:
         return False
 
 
+# --- Erst-Besucher-Kopplung ----------------------------------------------------
+#
+# Ein frisch aufgesetzter Server gehört noch niemandem — und sein Besitzer hat
+# kein Terminal, um an einen Code zu kommen (der aus der Einrichtung lebt nur
+# 15 Minuten). Darum: Solange NULL Geräte eingetragen sind UND der Server jung
+# ist, darf sich das erste Handy ohne Code eintragen. Jede Eintragung schließt
+# die Tür endgültig; nach Ablauf des Fensters gilt nur noch der Code-Weg.
+#
+# Bewusst getragenes Restrisiko (CODE-GUARD-Bericht-Erstkopplung.md): Im
+# offenen Fenster könnte ein Fremder den LEEREN Server übernehmen — der
+# Besitzer merkt es sofort (er kommt nicht rein), Daten liegen keine drauf.
+# Mittelfristige Schließung: Kopplungswort im Cloud-Init-Text.
+
+ERSTSTART = ORDNER / "erststart"
+ERSTKOPPLUNG_FENSTER = int(os.environ.get("HETZNER_ERSTKOPPLUNG_STUNDEN", "24")) * 3600
+
+
+def erststart_merken() -> None:
+    """Beim Dienststart einmalig festhalten, wann dieser Server geboren wurde.
+
+    Auf bestehenden Installationen entsteht der Stempel erst jetzt — dort sind
+    längst Geräte eingetragen, die Tür ist also ohnehin zu.
+    """
+    with _sperre:
+        if not ERSTSTART.exists():
+            _atomar_schreiben(ERSTSTART, str(int(time.time())))
+
+
+def _erststart() -> float:
+    try:
+        return float(ERSTSTART.read_text().strip())
+    except (FileNotFoundError, ValueError, OSError):
+        return 0.0
+
+
+def erstkopplung_offen() -> bool:
+    """Darf sich das allererste Gerät noch ohne Code eintragen?"""
+    if _laden():
+        return False
+    geburt = _erststart()
+    return geburt > 0 and (time.time() - geburt) < ERSTKOPPLUNG_FENSTER
+
+
+def erstkopplung_versuchen(name: str, schluessel: str) -> Geraet | None:
+    """Das allererste Gerät eintragen — atomar, nur wenn wirklich keines da ist.
+
+    Leerheit wird ERST im gesperrten Block geprüft: Zwei gleichzeitige „Erste"
+    dürfen nicht beide gewinnen — der zweite bekommt None.
+    """
+    schluessel = schluessel.strip()
+    _pruefe_schluessel(schluessel)
+    with _sperre:
+        if not erstkopplung_offen():
+            return None
+        neu = Geraet(name=name, schluessel=schluessel, hinzugefuegt=int(time.time()))
+        _speichern([neu])
+    print(f"Erst-Besucher-Kopplung: Gerät „{name}“ eingetragen — die Tür ist jetzt zu.",
+          flush=True)
+    return neu
+
+
 # --- Anmelden ----------------------------------------------------------------
 
 def aufgabe_stellen() -> str:
