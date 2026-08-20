@@ -13,6 +13,7 @@ import base64
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -415,12 +416,65 @@ def _gesund(frist: float = 1.0) -> bool:
         return False
 
 
+def _streuner_abraeumen() -> None:
+    """Verwaiste Piper-Prozesse beenden — Überbleibsel früherer Dienst-Starts.
+
+    Der Dienst lässt beim Neustart seine Kinder absichtlich am Leben
+    (KillMode=process, damit die tmux-Sitzungen überleben) — den alten Piper
+    erbt dabei aber niemand: Er hielt den Port besetzt und beantwortete still
+    die Anfragen des NEUEN Dienstes, während dessen eigener Piper am belegten
+    Port starb. Die Schutzautomatik (speicher_pruefen) überwachte nur den
+    toten Eigenen — der Waise wuchs ungebremst weiter (gefunden 20.08.: drei
+    Waisen, zusammen ~1 GB im Auslagerungsspeicher, Speicher-Ampel rot).
+
+    Darum vor jedem eigenen Start: verwaiste piper.http_server beenden.
+    Erkannt am Kommando UND an unserem Port — so bleiben Piper anderer
+    Instanzen (Lorenz/Lea laufen auf eigenen Ports) auch dann unberührt,
+    wenn sie je unter demselben Benutzer liefen. Fremde Benutzer schützt
+    ohnehin das System (os.kill scheitert dort mit EPERM, das fangen wir).
+    """
+    eigener = _prozess.pid if _prozess is not None else -1
+    streuner = []
+    for eintrag in Path("/proc").iterdir():
+        if not eintrag.name.isdigit():
+            continue
+        pid = int(eintrag.name)
+        if pid in (eigener, os.getpid()):
+            continue
+        try:
+            kommando = (eintrag / "cmdline").read_bytes().decode(errors="replace")
+        except OSError:
+            continue                       # Prozess schon weg oder nicht lesbar
+        # In /proc/*/cmdline trennt ein Nullzeichen die Argumente.
+        kommando = kommando.replace("\x00", " ")
+        if "piper.http_server" not in kommando or f"--port {_PORT}" not in kommando:
+            continue
+        try:
+            os.kill(pid, signal.SIGTERM)
+            streuner.append(pid)
+        except OSError:
+            continue                       # fremder Benutzer oder schon weg
+    if not streuner:
+        return
+    # Kurz warten, bis der Port wirklich frei ist; wer nach der Frist noch
+    # lebt, bekommt das harte Ende — sonst stürbe gleich unser eigener Start.
+    frist = time.monotonic() + 3
+    while time.monotonic() < frist and _gesund(0.3):
+        time.sleep(0.2)
+    for pid in streuner:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+
 def _starten(warte: float = 20.0) -> None:
     """Startet den Piper-Prozess, falls nötig, und wartet, bis er bereit ist."""
     global _prozess
     with _sperre:
         if _laeuft() and _gesund():
             return
+        _streuner_abraeumen()
         # Einen alten Prozess erst sauber abräumen, egal ob er schon tot ist
         # oder noch läuft, aber nicht gesund antwortet. Sonst überschreibt der
         # Popen weiter unten die Variable _prozess, und niemand ruft je wait()
