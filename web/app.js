@@ -15,6 +15,9 @@ const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellun
 
 function zeige(name) {
   for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
+  // Die geführte Einführung startet von selbst, wenn man eine Ansicht zum
+  // ersten Mal betritt (Abschnitt Spotlight-Tour, ganz unten).
+  tourVielleichtStarten(name);
 }
 
 // Aus einer Server-Antwort einen lesbaren Fehlersatz machen. FastAPI schickt
@@ -4264,6 +4267,183 @@ async function start() {
     }
   }
 }
+
+// --- Spotlight-Tour ------------------------------------------------------------
+//
+// Die geführte Einführung nach dem spotlight-tour-Skill: eine dunkle Abdeckung
+// mit einem hellen Loch über dem gerade erklärten Element, daneben ein kurzes
+// Erklär-Fenster. Zwei Kapitel, jedes startet EINMAL von selbst: die Übersicht
+// direkt nach dem ersten Verbinden, das Gespräch beim ersten Öffnen einer
+// Sitzung. Neustart jederzeit über die Einstellungen. Schritte, deren Ziel
+// gerade nicht auf dem Bildschirm ist, werden übersprungen — der Bildschirm
+// entscheidet, nicht die Liste.
+const TOUR_FLAGS = { liste: "relay_tour_liste_v1", sitzung: "relay_tour_sitzung_v1" };
+
+function tourSchritte(ansicht) {
+  if (ansicht === "liste") return [
+    { kapitel: "Erste Schritte", titel: "Schön, dass du da bist",
+      text: "Das hier ist die Fernbedienung für deinen eigenen Claude-Server. " +
+            "Jede Karte auf dieser Seite ist ein Gespräch — und alles läuft " +
+            "auf deinem Server, nicht bei einem fremden Anbieter." },
+    { kapitel: "Erste Schritte", sel: '[data-tour="brain"]', titel: "Dein Brain",
+      text: "Der Brain ist dein erster Ansprechpartner: Er kennt alle deine " +
+            "Vorhaben und behält den Überblick. Ein Tipp genügt — er wird " +
+            "geöffnet, geweckt oder beim ersten Mal frisch angelegt." },
+    { kapitel: "Erste Schritte", sel: '[data-tour="neue-sitzung"]', titel: "Ein Gespräch beginnen",
+      text: "Mit <b>Neue Sitzung</b> startest du ein Gespräch für ein Vorhaben — " +
+            "du gibst ihm nur einen Namen. Beim allerersten Mal führt dich die " +
+            "App durch die Claude-Anmeldung; du brauchst dafür ein eigenes " +
+            "Claude-Konto." },
+    { kapitel: "Erste Schritte", sel: '[data-tour="einstellungen"]', titel: "Die Einstellungen",
+      text: "Hier wählst du die Vorlese-Stimme, verwaltest deine Geräte und " +
+            "findest die Erklärung aller Symbole. Auch diese Einführung " +
+            "kannst du dort jederzeit noch einmal ansehen." },
+  ];
+  if (ansicht === "sitzung") return [
+    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="eingabe"]', titel: "Hier schreibst du",
+      text: "Schreib Claude einfach, was du willst — ganze Sätze, kein " +
+            "Fachchinesisch nötig. Der Pfeil rechts schickt es ab." },
+    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="diktat"]', titel: "Oder sprich einfach",
+      text: "Mikrofon antippen, reden, nochmal antippen — fertig. Diktieren " +
+            "ist der schnellste Weg. Am besten klappt es auf Android mit Chrome." },
+    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="schnellbefehle"]', titel: "Schnellbefehle",
+      text: "Fertige Sätze für einen Tipp, zum Beispiel <b>Los geht's</b> oder " +
+            "<b>Weiter</b>. Kurzer Tipp sendet sofort, langer Druck legt den " +
+            "Satz erst ins Eingabefeld. Über den Zauberstab legst du eigene an." },
+    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="vorlesen"]', titel: "Vorlesen lassen",
+      text: "Der Lautsprecher liest dir Claudes Antwort vor — einmal antippen " +
+            "reicht, es liest weiter, während Claude noch schreibt. Die Stimme " +
+            "wählst du in den Einstellungen." },
+    { kapitel: "Dein erstes Gespräch", titel: "Und wenn Claude fragt?",
+      text: "Manchmal stellt Claude eine Rückfrage — die App zeigt sie dir als " +
+            "Knöpfe, du tippst die Antwort einfach an. Beim allerersten " +
+            "Gespräch kommt so auch die Claude-Anmeldung: Link antippen, " +
+            "anmelden, zurück. Viel Freude!" },
+  ];
+  return [];
+}
+
+let tourAktiv = null;    // { schritte, i, ansicht } — oder null, wenn keine läuft
+
+function tourGesehen(ansicht) {
+  try { return localStorage.getItem(TOUR_FLAGS[ansicht]) === "1"; }
+  catch { return true; }        // gesperrter Speicher: lieber nie aufdrängen
+}
+
+function tourMerken(ansicht) {
+  try { localStorage.setItem(TOUR_FLAGS[ansicht], "1"); } catch {}
+}
+
+function tourVielleichtStarten(name) {
+  if (!(name in TOUR_FLAGS) || tourGesehen(name) || tourAktiv) return;
+  // Der Ansicht kurz Zeit geben, sich aufzubauen (Inhalte laden, Umbrüche).
+  setTimeout(() => {
+    if (!$(`ansicht-${name}`).hidden && !tourAktiv) tourStarten(name);
+  }, 700);
+}
+
+function tourStarten(ansicht) {
+  const schritte = tourSchritte(ansicht).filter((s) => {
+    if (!s.sel) return true;
+    const el = document.querySelector(s.sel);
+    return el && el.offsetParent !== null;      // fehlt oder unsichtbar → überspringen
+  });
+  if (!schritte.length) { tourMerken(ansicht); return; }
+  tourAktiv = { schritte, i: 0, ansicht };
+  $("tour-overlay").hidden = false;
+  tourZeigen();
+}
+
+function tourZeigen() {
+  if (!tourAktiv) return;
+  const s = tourAktiv.schritte[tourAktiv.i];
+  $("tour-kapitel").textContent = s.kapitel;
+  $("tour-titel").textContent = s.titel;
+  // Feste, eigene Texte (fett markierte Knopfnamen) — keine Nutzerdaten.
+  $("tour-text").innerHTML = s.text;
+  $("tour-zaehler").textContent = `${tourAktiv.i + 1} von ${tourAktiv.schritte.length}`;
+  $("tour-weiter").textContent =
+    tourAktiv.i === tourAktiv.schritte.length - 1 ? "Fertig" : "Weiter";
+
+  const el = s.sel ? document.querySelector(s.sel) : null;
+  if (el) el.scrollIntoView({ block: "center" });
+  tourMessen();
+  // Nach Scroll- und Umbau-Momenten nachmessen (Skill-Regel: 1–2× verzögert).
+  setTimeout(tourMessen, 80);
+  setTimeout(tourMessen, 260);
+}
+
+function tourMessen() {
+  if (!tourAktiv) return;
+  const s = tourAktiv.schritte[tourAktiv.i];
+  const loch = $("tour-loch");
+  const fenster = $("tour-fenster");
+  const el = s.sel ? document.querySelector(s.sel) : null;
+  const rand = 10;
+
+  let r = null;
+  if (el && el.offsetParent !== null) {
+    r = el.getBoundingClientRect();
+    const luft = 6;
+    loch.style.top = `${r.top - luft}px`;
+    loch.style.left = `${r.left - luft}px`;
+    loch.style.width = `${r.width + 2 * luft}px`;
+    loch.style.height = `${r.height + 2 * luft}px`;
+  } else {
+    // Willkommens-Schritt ohne Ziel: Loch zusammenziehen, alles abdunkeln.
+    loch.style.top = "50%";
+    loch.style.left = "50%";
+    loch.style.width = "0px";
+    loch.style.height = "0px";
+  }
+
+  // Das Fenster unter das Ziel, sonst darüber — und IMMER hart in den
+  // Bildschirm geklemmt. Die echte Höhe messen, nie schätzen: Mit einer
+  // Schätzung ragt es bei langen Schritten unten raus und der Weiter-Knopf
+  // ist nicht mehr erreichbar (Stolperfalle 1 aus dem Skill).
+  const h = fenster.offsetHeight;
+  const b = fenster.offsetWidth;
+  let top, left;
+  if (r) {
+    top = r.bottom + 14;
+    if (top + h > innerHeight - rand) top = r.top - h - 14;
+    left = Math.min(Math.max(rand, r.left), innerWidth - b - rand);
+  } else {
+    top = (innerHeight - h) / 2;
+    left = (innerWidth - b) / 2;
+  }
+  top = Math.max(rand, Math.min(top, innerHeight - h - rand));
+  fenster.style.top = `${top}px`;
+  fenster.style.left = `${left}px`;
+}
+
+function tourEnde() {
+  if (!tourAktiv) return;
+  tourMerken(tourAktiv.ansicht);
+  tourAktiv = null;
+  $("tour-overlay").hidden = true;
+}
+
+$("tour-weiter").addEventListener("click", () => {
+  if (!tourAktiv) return;
+  if (tourAktiv.i >= tourAktiv.schritte.length - 1) { tourEnde(); return; }
+  tourAktiv.i += 1;
+  tourZeigen();
+});
+$("tour-zu").addEventListener("click", tourEnde);
+addEventListener("resize", tourMessen);
+addEventListener("scroll", tourMessen, true);
+
+// Einstellungen → „Die Einführung noch einmal ansehen": beide Kapitel neu
+// scharf machen und dort anfangen, wo die Tour beginnt — in der Übersicht.
+// Das Sitzungs-Kapitel kommt dann beim nächsten Öffnen eines Gesprächs.
+$("knopf-tour").addEventListener("click", () => {
+  try {
+    localStorage.removeItem(TOUR_FLAGS.liste);
+    localStorage.removeItem(TOUR_FLAGS.sitzung);
+  } catch {}
+  zeige("liste");
+});
 
 // --- Wisch-Aktualisieren ------------------------------------------------------
 //
