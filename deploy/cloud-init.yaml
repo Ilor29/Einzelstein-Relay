@@ -11,11 +11,11 @@
 # Das Code-Repo ist seit 21.08.2026 öffentlich — der Klon unten läuft ohne
 # jeden Zugang. Anonymer Klon am Tag der Freischaltung getestet.
 #
-# NOCH OFFEN (Stein 4, „Einrichtungs-Ansicht"): Wie der Neuling ohne
-# Terminal an den ersten Kopplungscode kommt — der Code lebt nur 15
-# Minuten. Bis das entschieden ist, schreibt die Einrichtung den Code nach
-# /root/WILLKOMMEN.txt und in die Cloud-Init-Ausgabe; wer die Hetzner-
-# Konsole öffnen kann, kommt so hinein.
+# Der erste Zugang läuft über die Erst-Besucher-Kopplung (seit V124): Das
+# erste Handy verbindet sich per Knopf, ganz ohne Code — solange kein Gerät
+# eingetragen und der Server jünger als 24 Stunden ist. Zur Sicherheit
+# schreibt die Einrichtung zusätzlich Adresse und einen Kopplungscode nach
+# /root/WILLKOMMEN.txt und in die Cloud-Init-Ausgabe.
 
 package_update: true
 packages:
