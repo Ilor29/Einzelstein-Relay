@@ -37,6 +37,10 @@ Anthropic; du meldest dich mit deinem eigenen Claude-Konto an.
 
 ## So kommt es auf deinen Server
 
+**Neu hier und kein Technik-Mensch?** Nimm die
+[Schritt-für-Schritt-Anleitung](ANLEITUNG.md) — sie führt dich in einer
+Viertelstunde von null bis zum verbundenen Handy.
+
 **Der bequeme Weg (empfohlen):** Beim Anlegen des Servers den Inhalt von
 [`deploy/cloud-init.yaml`](deploy/cloud-init.yaml) in das Feld „Cloud config"
 einfügen. Der Server richtet sich beim ersten Start selbst ein; danach am

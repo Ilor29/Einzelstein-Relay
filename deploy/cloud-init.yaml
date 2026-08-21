@@ -43,6 +43,11 @@ write_files:
       cd "$ZIEL"
       ./scripts/setup.sh </dev/null
 
+      # Automatische Updates einschalten: Ein Community-Server holt sich alle
+      # 15 Minuten die neueste Fassung aus dem gemeinsamen Lager. Ohne diesen
+      # Schritt bliebe er für immer auf dem Stand seiner Geburt.
+      ./scripts/auto-update-einschalten.sh --ohne-rueckfrage
+
       # Dem Menschen eine Willkommens-Datei hinterlassen: Adresse und ein
       # frischer Kopplungscode (15 Minuten gültig ab JETZT — darum erst hier
       # am Ende erzeugen, nicht schon mitten in der Einrichtung).

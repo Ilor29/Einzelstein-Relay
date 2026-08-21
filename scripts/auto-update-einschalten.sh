@@ -26,11 +26,17 @@ else
   exit 1
 fi
 echo "→ Updates kommen aus:  ${URL}"
-read -r -p "  Ist das das gemeinsame Community-Lager? (j/N) " ANTWORT
-case "$ANTWORT" in
-  j|J|ja|Ja|y|Y) ;;
-  *) echo "Abgebrochen — nichts geändert."; exit 0 ;;
-esac
+# --ohne-rueckfrage: für die automatische Einrichtung (Cloud-Init) — dort gibt
+# es keine Tastatur, und ein frisch geklonter Server zeigt mit origin ohnehin
+# aufs gemeinsame Lager. Von Hand aufgerufen bleibt die Rückfrage: Sie schützt
+# davor, das Zurücksetzen versehentlich auf einem Arbeits-Server einzuschalten.
+if [ "${1:-}" != "--ohne-rueckfrage" ]; then
+  read -r -p "  Ist das das gemeinsame Community-Lager? (j/N) " ANTWORT || ANTWORT=""
+  case "$ANTWORT" in
+    j|J|ja|Ja|y|Y) ;;
+    *) echo "Abgebrochen — nichts geändert."; exit 0 ;;
+  esac
+fi
 
 echo "→ Aktualisierungs-Skript nach /usr/local/sbin legen (root-eigen) …"
 sudo install -o root -g root -m 755 \
