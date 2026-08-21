@@ -12,28 +12,27 @@ Anthropic; du meldest dich mit deinem eigenen Claude-Konto an.
 
 ## Was du bekommst
 
-- **Sitzungs-Übersicht:** alle Gespräche als Karten — anheften, schlafen
-  legen, archivieren; auf einen Blick sehen, was läuft und was auf dich wartet.
-- **Diktat und Vorlesen:** Mikrofon antippen und sprechen; Antworten liest
-  die lokale Stimme „Jonas" (Piper) vor — auf Wunsch stattdessen
-  Wolken-Stimmen mit eigenem Schlüssel.
-- **Brain:** ein fest eingebauter Überblicks-Chat, der deine Vorhaben kennt
-  und den Einstieg erklärt.
-- **Geführte Einführung:** eine Tour zeigt Neulingen beim ersten Start, wo
-  alles ist.
-- **Mitgelieferte Skills** (u. a. CODE//GUARD zur Code- und Rechtsprüfung),
-  die sich mit der App aktuell halten.
-- **Benachrichtigungen:** die App meldet sich, wenn eine Sitzung fertig ist
-  oder eine Rückfrage hat (Web-Push).
+- Alle Gespräche als Karten in einer Übersicht: anheften, schlafen legen,
+  archivieren. Du siehst auf einen Blick, was läuft und was auf dich wartet.
+- Mikrofon antippen und sprechen; die Antwort liest dir die lokale Stimme
+  „Jonas" (Piper) vor. Wer mag, hinterlegt eigene Schlüssel für
+  Wolken-Stimmen.
+- Einen eingebauten „Brain": einen Überblicks-Chat, der deine Vorhaben
+  kennt und dir den Einstieg erklärt.
+- Eine geführte Einführung, die dir beim ersten Start zeigt, wo alles ist.
+- Mitgelieferte Skills, etwa CODE//GUARD für Code- und Rechtsprüfung. Sie
+  halten sich mit der App von selbst aktuell.
+- Die App meldet sich, wenn eine Sitzung fertig ist oder eine Rückfrage
+  hat (Web-Push).
 
 ## Was du brauchst
 
-- Einen kleinen **Linux-Server** (Debian oder Ubuntu, empfohlen ab 4 GB RAM,
-  ~5–10 € im Monat bei Anbietern wie Hetzner oder Hostinger). Keine Domain
-  nötig — die Adresse entsteht aus der Server-IP (sslip.io).
-- Ein eigenes **Claude-Abo** (Anthropic) für die Anmeldung von Claude Code.
-- Ein Handy mit **Chrome** (am besten Android; auf dem iPhone läuft das
-  Vorlesen in Chrome, das Diktat ist dort durch Apple-Grenzen eingeschränkt).
+- Einen kleinen Linux-Server (Debian oder Ubuntu, ab 4 GB RAM, etwa
+  5–10 € im Monat bei Anbietern wie Hetzner oder Hostinger). Eine Domain
+  brauchst du nicht, die Adresse entsteht aus der Server-IP (sslip.io).
+- Ein eigenes Claude-Abo (Anthropic) für die Anmeldung von Claude Code.
+- Ein Handy mit Chrome, am besten Android. Auf dem iPhone läuft das
+  Vorlesen in Chrome; das Diktat ist dort durch Apple-Grenzen eingeschränkt.
 
 ## So kommt es auf deinen Server
 
@@ -67,15 +66,16 @@ ihn in den Einstellungen, das neue tippt ihn ein.
 
 ## Zur Sicherheit
 
-Diese App gibt Zugriff auf deinen Server — entsprechend ernst nimmt sie die
+Diese App gibt Zugriff auf deinen Server, entsprechend ernst nimmt sie die
 Tür:
 
-- **Kein Passwort, sondern Geräteschlüssel:** Jedes Handy erzeugt sich ein
-  eigenes Schlüsselpaar; der geheime Teil verlässt das Gerät nie. Angemeldet
-  wird per Unterschrift, es gibt nichts abzufangen und nichts zu erraten.
-- **Nur eingetragene Geräte kommen herein.** Verlorene Geräte sperrst du in
-  den Einstellungen aus — sofort, samt laufender Anmeldung.
-- Der Dienst lauscht **nur auf 127.0.0.1**; nach außen spricht ausschließlich
+- Kein Passwort, sondern Geräteschlüssel: Jedes Handy erzeugt sich ein
+  eigenes Schlüsselpaar, und der geheime Teil verlässt das Gerät nie.
+  Angemeldet wird per Unterschrift; es gibt nichts abzufangen und nichts
+  zu erraten.
+- Nur eingetragene Geräte kommen herein. Ein verlorenes Handy sperrst du
+  in den Einstellungen aus, sofort und samt laufender Anmeldung.
+- Der Dienst lauscht nur auf 127.0.0.1; nach außen spricht ausschließlich
   Caddy, und der nur HTTPS.
 - Die Erst-Besucher-Kopplung (erstes Gerät ohne Code) ist bewusst doppelt
   begrenzt und vorab geprüft — Abwägung und Restrisiko stehen offen in
@@ -83,13 +83,13 @@ Tür:
 
 ## Wo deine Daten sind
 
-Dateien, Projekte und Mitschriften liegen auf **deinem** Server; das Vorlesen
-mit Piper läuft dort, ohne Wolke. Sobald Claude arbeitet, geht der Inhalt des
-Gesprächs an Anthropic (dort läuft das Modell) — genau wie in der offiziellen
-Claude-App, über dein eigenes Konto. Optional und nur wenn du es einschaltest:
-Browser-Diktat (Google) und Wolken-Stimmen (eigener Schlüssel). Der Anbieter
-dieser App sieht nichts davon: kein Phone-Home, keine Telemetrie, kein
-Lizenzserver.
+Dateien, Projekte und Mitschriften liegen auf deinem Server; das Vorlesen
+mit Piper läuft dort, ohne Wolke. Sobald Claude arbeitet, geht der Inhalt
+des Gesprächs an Anthropic, denn dort läuft das Modell — genau wie in der
+offiziellen Claude-App, über dein eigenes Konto. Nur wenn du es selbst
+einschaltest, kommen dazu: Browser-Diktat (Google) und Wolken-Stimmen
+(eigener Schlüssel). Der Anbieter dieser App sieht von alldem nichts: kein
+Phone-Home, keine Telemetrie, kein Lizenzserver.
 
 ## Entwickeln
 

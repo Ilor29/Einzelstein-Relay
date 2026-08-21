@@ -1,20 +1,20 @@
 # Dein eigener Server in einer Viertelstunde — Schritt für Schritt
 
 Diese Anleitung bringt dich von null zu deinem eigenen Einzelstein-Relay-
-Server. Du brauchst kein Technik-Wissen — nur die Schritte der Reihe nach
-machen. Wenn etwas anders aussieht als beschrieben: nicht raten, sondern in
-der Community nachfragen.
+Server. Du brauchst kein Technik-Wissen, nur ein bisschen Geduld: einfach
+die Schritte der Reihe nach machen. Und wenn etwas anders aussieht als hier
+beschrieben, nicht raten — frag in der Community nach.
 
 ## Was du brauchst
 
-- Etwa **15 Minuten** Zeit.
-- Ein **Handy mit Chrome** (am besten Android — auf dem iPhone bitte auch
-  Chrome benutzen; das Diktat ist dort durch Apple eingeschränkt).
-- Eine **Bankkarte oder PayPal** für den Server-Anbieter. Der Server kostet
-  je nach Größe etwa **5–10 € im Monat** und gehört dir — du kannst ihn
-  jederzeit wieder löschen.
-- Ein **Claude-Konto mit Abo** von Anthropic (claude.ai). Damit meldest du
-  dich am Ende an — deine Gespräche laufen über dein eigenes Konto, nicht
+- Etwa 15 Minuten Zeit.
+- Ein Handy mit Chrome, am besten Android. Auf dem iPhone bitte auch
+  Chrome benutzen; das Diktat ist dort durch Apple eingeschränkt.
+- Eine Bankkarte oder PayPal für den Server-Anbieter. Der Server kostet je
+  nach Größe etwa 5–10 € im Monat und gehört dir; du kannst ihn jederzeit
+  wieder löschen.
+- Ein Claude-Konto mit Abo von Anthropic (claude.ai). Damit meldest du
+  dich am Ende an. Deine Gespräche laufen über dein eigenes Konto, nicht
   über fremde.
 
 ## Schritt 1 — Konto beim Server-Anbieter anlegen
@@ -44,7 +44,7 @@ In der Hetzner-Übersicht auf **„Server erstellen"** klicken und so wählen:
    Text **komplett einfügen**.
 5. Alles andere so lassen und **„Kaufen / Erstellen"** klicken.
 
-Der Server richtet sich jetzt selbst ein. Das dauert **5 bis 10 Minuten** —
+Der Server richtet sich jetzt selbst ein. Das dauert 5 bis 10 Minuten.
 Zeit für einen Kaffee.
 
 ## Schritt 4 — Deine Adresse bauen und öffnen
@@ -62,7 +62,7 @@ Zeit für einen Kaffee.
 ## Schritt 5 — Handy verbinden
 
 Die App begrüßt dich mit **„Dieser Server ist frisch eingerichtet und gehört
-noch niemandem"**. Tippe auf **„Diesen Server jetzt verbinden"** — fertig,
+noch niemandem"**. Tippe auf **„Diesen Server jetzt verbinden"**. Fertig —
 dein Handy ist das erste Gerät. (Dieser Knopf erscheint nur beim allerersten
 Gerät und nur in den ersten 24 Stunden. Danach geht es mit dem
 Kopplungscode — siehe unten.)
