@@ -1,5 +1,7 @@
 # Einzelstein Relay
 
+This page in English: [README.en.md](README.en.md)
+
 Dein eigener KI-Arbeitsplatz auf deinem eigenen Server — bedient vom Handy,
 per Sprache. Du diktierst, die Antwort wird dir vorgelesen. Die Gespräche
 laufen als Claude-Code-Sitzungen in tmux auf deinem Server: Sie arbeiten
