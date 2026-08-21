@@ -27,8 +27,9 @@ also keinen Zirkel: erst das Skript, dann ich.
 
 ## Der Aufbau heute (Schritt für Schritt)
 
-1. **Code auf den Server holen:** das Repo klonen (heute: `git clone` aus dem
-   privaten GitHub-Repo — braucht also einmal Zugang).
+1. **Code auf den Server holen:** das Repo klonen — seit 21.08.2026
+   öffentlich, ganz ohne Zugang:
+   `git clone https://github.com/Ilor29/Einzelstein-Relay.git`.
 2. **Einrichten:** im Projektordner `./scripts/setup.sh` ausführen. Das Skript
    installiert Pakete, Python-Umgebung, Claude Code, Piper samt Stimme, legt die
    serverweiten Arbeitsregeln ab, installiert Caddy (besorgt das HTTPS-

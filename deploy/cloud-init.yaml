@@ -8,10 +8,8 @@
 # ~4 GB RAM. Der Server richtet sich beim ersten Start dann selbst ein —
 # das dauert einige Minuten. Mehr Kommandozeile sieht niemand.
 #
-# VORAUSSETZUNG: Das Code-Repo (REPO unten im Skript) muss für den Server
-# erreichbar sein — also öffentlich oder mit hinterlegtem Zugang. Solange
-# das Repo privat ist, funktioniert dieser Weg noch nicht; die Entscheidung
-# liegt bei Roli (siehe deploy/EINRICHTUNG-PLAN.md).
+# Das Code-Repo ist seit 21.08.2026 öffentlich — der Klon unten läuft ohne
+# jeden Zugang. Anonymer Klon am Tag der Freischaltung getestet.
 #
 # NOCH OFFEN (Stein 4, „Einrichtungs-Ansicht"): Wie der Neuling ohne
 # Terminal an den ersten Kopplungscode kommt — der Code lebt nur 15
