@@ -107,5 +107,11 @@ Die Bausteine: `hetzner_app/tmux.py` (Sitzungen), `state.py` (Zustand),
 
 Fremde Bausteine und ihre Lizenzen stehen in
 [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md). Die Sprachausgabe
-Piper läuft bewusst als getrennter Prozess. Die Lizenz dieses Projekts wird
-mit der Veröffentlichung festgelegt.
+Piper läuft bewusst als getrennter Prozess.
+
+Dieses Projekt ist öffentlich einsehbar, steht aber noch unter keiner
+offenen Lizenz — alle Rechte vorbehalten. Anschauen, ausprobieren und auf
+dem eigenen Server betreiben ist ausdrücklich erwünscht; eine offene Lizenz
+folgt nach Abstimmung. Verbesserungsvorschläge gern als Issue oder Pull
+Request — Änderungen übernimmt ausschließlich der Betreiber, denn dieses
+Repo ist die Update-Quelle der laufenden Installationen.
