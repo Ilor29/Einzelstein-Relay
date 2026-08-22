@@ -2575,20 +2575,48 @@ function pauseSymbol(pausiert) {
 // serverseitig HETZNER_APP_TON_TAGEBUCH=1). Der Server verwirft es ohnehin,
 // solange er nicht ebenfalls eingeschaltet ist.
 const TON_TAGEBUCH_AN = true;   // 20.08. AN: Jagd auf den Ausknopf-Abbruch bei Roli
-function tonEreignis(art) {
+function tonEreignis(art, mehr = {}) {
   if (!TON_TAGEBUCH_AN) return;
   try {
+    const el = $("stimme");
     navigator.sendBeacon("/api/ton-tagebuch", JSON.stringify({
       t: Date.now(), art,
       sichtbar: document.visibilityState,
       kontext: hörCtx?.state || "-",
+      // Seit 22.08.: Player-Zustand und Stand des Vortrags immer dabei —
+      // sonst sieht man nur „hidden" und „visible" und dazwischen nichts.
+      player: el ? (el.paused ? "pause" : "spielt") : "-",
+      stueck: aktuellerIndex,
+      ...mehr,
     }));
   } catch { /* Tagebuch ist Beiwerk, niemals Störer */ }
 }
 
+// Die letzte bekannte Ton-Uhr neben der Wand-Uhr — vom Sekundentakt des
+// Vortrags gepflegt. Beim Aufwachen verrät der Vergleich, was in der dunklen
+// Phase wirklich geschah: Lief die Ton-Uhr weiter (dann wurde gespielt, und
+// wer nichts hörte, hatte ein Ausgabe-Problem), oder stand sie (dann hat
+// Android die ganze Tonleitung angehalten und der Vortrag wartet)?
+let tonUhrMerker = null;      // { wand: ms, ton: s }
+
 document.addEventListener("visibilitychange", () => {
-  if (spricht || restText) tonEreignis("sichtbarkeit");
+  if (!(spricht || restText)) return;
+  if (document.visibilityState === "visible" && tonUhrMerker && hörCtx) {
+    const wandWeg = (Date.now() - tonUhrMerker.wand) / 1000;
+    const tonWeg = hörCtx.currentTime - tonUhrMerker.ton;
+    tonEreignis("wach-bericht", {
+      wand_s: Math.round(wandWeg), ton_s: Math.round(tonWeg),
+      rest: restStuecke ? restStuecke.length : -1,
+    });
+    return;
+  }
+  tonEreignis("sichtbarkeit");
 });
+
+// Friert Chrome die Seite ein (Android-Hosentasche, Akku-Sparen), sagt es das
+// vorher — und beim Auftauen noch einmal. Beides ins Tagebuch.
+document.addEventListener("freeze", () => { if (spricht || restText) tonEreignis("seite-eingefroren"); });
+document.addEventListener("resume", () => { if (spricht || restText) tonEreignis("seite-aufgetaut"); });
 
 function medienSitzungAn() {
   if (!("mediaSession" in navigator)) return;
@@ -2683,6 +2711,11 @@ async function tonAusgangAn(c) {
       // Fürs Ton-Tagebuch: Hält jemand den PLAYER an (nicht den Kontext)?
       el.addEventListener("pause", () => { if (spricht) tonEreignis("player-pause"); });
       el.addEventListener("play", () => { if (spricht) tonEreignis("player-weiter"); });
+      // Stockt der Strom zum Player, ohne dass jemand pausiert hat? Auch das
+      // will das Tagebuch wissen (Jagd auf den Dunkel-Abbruch, 22.08.).
+      for (const was of ["stalled", "waiting", "suspend", "ended", "error"]) {
+        el.addEventListener(was, () => { if (spricht) tonEreignis(`player-${was}`); });
+      }
     } catch {
       tonAusgang = c.destination;      // kein Strom-Ziel: direkter Weg
       tonEreignis("player-fehlt");
@@ -3029,6 +3062,7 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     leisteAn();
     dauerTakt = setInterval(() => {
       if (sprechBeginn === null) return;
+      tonUhrMerker = { wand: Date.now(), ton: c.currentTime };
       // Welches Stück ist GERADE ZU HÖREN? Aus den Startzeiten abgelesen —
       // daran hängen Vor/Zurück und das Weiterlesen nach einer Unterbrechung.
       // (Die Schleife unten reiht weit im Voraus ein, ihr i taugt dafür nicht.)
