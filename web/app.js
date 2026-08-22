@@ -1357,10 +1357,9 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   // schreibt ihn gleich wieder ins Feld — man löscht ihn und er kommt zurück.
   hoertStoppen?.();
 
-  // Die Anhang-Pfade zuerst, der Text dahinter — genau so, wie man es am
-  // Rechner eintippte. Feld und Streifen sofort leeren; klemmt das Senden,
-  // stellen wir beides wieder her.
-  const gesamt = [...pfade, text].filter(Boolean).join(" ");
+  // Feld und Streifen sofort leeren; klemmt das Senden, stellen wir beides
+  // wieder her.
+  const gesamt = nachrichtMitAnhaengen(pfade, text);
   const gemerkt = anhaenge;
   feld.value = "";
   feldAnpassen();           // sonst bleibt das Feld auf voller Höhe stehen
@@ -1397,7 +1396,7 @@ async function schnellbefehl(text) {
   // über die Eingabezeile. Sonst tippt man "Los geht's" und die eben angehängten
   // Bilder bleiben unbemerkt liegen. Pfade zuerst, der Befehlssatz dahinter.
   const pfade = anhaenge.map((a) => a.pfad);
-  const gesamt = [...pfade, text].filter(Boolean).join(" ");
+  const gesamt = nachrichtMitAnhaengen(pfade, text);
   const gemerkt = anhaenge;
   anhaengeLeeren();
 
@@ -1775,6 +1774,18 @@ function anhangStreifenZeichnen() {
 function anhaengeLeeren() {
   anhaenge = [];
   anhangStreifenZeichnen();
+}
+
+// Anhang-Pfade und Text zu einer Nachricht verbinden — Pfade zuerst, genau so,
+// wie man es am Rechner eintippte. Steckt ein ZIP-Archiv dabei, geht ein Satz
+// mit: Ein Archiv nur abzulegen bringt nichts, es soll auch geöffnet werden —
+// aber erst nach einem Blick hinein, nicht blind.
+function nachrichtMitAnhaengen(pfade, text) {
+  const teile = [...pfade, text].filter(Boolean);
+  if (pfade.some((p) => p.toLowerCase().endsWith(".zip"))) {
+    teile.push("(Angehängt ist ein ZIP-Archiv. Schau zuerst hinein, was es enthält, und entpacke es dann an eine passende Stelle.)");
+  }
+  return teile.join(" ");
 }
 
 // Mehrere Anhänge auf einmal hochladen — Fotos wie Dokumente. Jeder Anhang geht

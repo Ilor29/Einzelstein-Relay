@@ -232,7 +232,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 126
+VERSION = 127
 
 
 @app.get("/api/version")
@@ -1049,11 +1049,15 @@ async def session_bild(name: str, bild: UploadFile = File(...)) -> dict:
 # Dokumente, die wir annehmen. Ausführbares und Unbekanntes bleibt draußen —
 # gelesen wird die Datei zwar nur, aber wir legen nichts Beliebiges im Projekt
 # ab. Die Endung bleibt erhalten, damit Claude Code weiß, was es vor sich hat.
+# ZIP ist die eine Ausnahme von "nichts Undurchsichtiges": Das Archiv wird hier
+# nur abgelegt, nicht entpackt — hineingeschaut wird erst in der Sitzung, auf
+# Ansage und mit Blick auf den Inhalt.
 DOK_ENDUNGEN = {
     ".pdf", ".md", ".markdown", ".txt", ".text", ".rtf",
     ".doc", ".docx", ".odt", ".csv", ".tsv",
     ".xls", ".xlsx", ".ods", ".ppt", ".pptx",
     ".json", ".yaml", ".yml", ".log", ".xml", ".html",
+    ".zip",
 }
 
 MAX_DATEI = 30 * 1024 * 1024      # 30 MB — Dokumente sind schwerer als Fotos
@@ -1074,7 +1078,7 @@ async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
         raise HTTPException(
             400,
             "Diese Dateiart nehme ich nicht an. Erlaubt sind PDF, Word, "
-            "Markdown, Text, Tabellen und ähnliche Dokumente.",
+            "Markdown, Text, Tabellen, ZIP-Archive und ähnliche Dokumente.",
         )
 
     inhalt = await datei.read()
