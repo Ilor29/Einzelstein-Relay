@@ -431,6 +431,7 @@ async function ladeListe() {
   // keiner der normalen Gruppen mehr auftauchen — nur ganz unten, zugeklappt.
   const archivierte = sitzungen.filter((s) => s.archiviert);
   const aktive = sitzungen.filter((s) => !s.archiviert);
+  irgendeineLaeuft = aktive.some((s) => s.state === "running");
 
   // Wer auf dich wartet, kommt nach oben — egal ob angeheftet oder nicht.
   // Das ist die eine Sache, die du sofort sehen musst.
@@ -518,23 +519,39 @@ async function ladeSpeicher() {
 
 let listenTakt = null;
 let speicherTakt = null;
+let listeOffen = false;       // Liste ist die aktive Ansicht (Takt darf laufen)
+let irgendeineLaeuft = false; // aus der letzten Kartenliste: arbeitet irgendwo Claude?
+
+// Der Listen-Takt steuert sich selbst (Akku-Stein 22.08.): Bei dunklem
+// Bildschirm steht er ganz, beim Aufwachen geht er sofort weiter (siehe
+// visibilitychange unten). Arbeitet irgendwo Claude, alle fünf Sekunden —
+// so wandert eine Karte von "läuft" nach "wartet auf dich", ohne dass du
+// etwas tust. Ruht alles, reicht alle 15 Sekunden; ändern kannst nur du
+// selbst etwas, und das sieht die Liste ohnehin sofort.
+function listenTaktPlanen() {
+  clearTimeout(listenTakt);
+  listenTakt = null;
+  if (!listeOffen || document.hidden) return;
+  listenTakt = setTimeout(async () => {
+    await ladeListe();
+    listenTaktPlanen();
+  }, irgendeineLaeuft ? 5000 : 15000);
+}
 
 function starteListe() {
   zeige("liste");
   // Der Kontext-Balken gehört zur offenen Sitzung — zurück in der Liste ist er weg.
   $("kontext-balken").hidden = true;
-  ladeListe();
+  listeOffen = true;
+  ladeListe().then(listenTaktPlanen);
   ladeSpeicher();
-  clearInterval(listenTakt);
-  // Alle fünf Sekunden nachsehen — so wandert eine Sitzung von "läuft" nach
-  // "wartet auf dich", ohne dass du etwas tun musst.
-  listenTakt = setInterval(ladeListe, 5000);
   clearInterval(speicherTakt);
   speicherTakt = setInterval(ladeSpeicher, 60000);
 }
 
 function stoppeListe() {
-  clearInterval(listenTakt);
+  listeOffen = false;
+  clearTimeout(listenTakt);
   listenTakt = null;
   clearInterval(speicherTakt);
   speicherTakt = null;
@@ -1155,9 +1172,7 @@ function ansichtWechseln() {
   } else {
     steckdose?.close();
     steckdose = null;
-    ladeVerlauf();
-    clearInterval(verlaufTakt);
-    verlaufTakt = setInterval(ladeVerlauf, 3000);
+    sitzungsTakt();
   }
 }
 
@@ -1228,21 +1243,47 @@ function oeffneSitzung(sitzung) {
   denktBis = 0;
   $("denkt").hidden = true;
   sendeSperren(false);
+  sitzungsTakt();
+}
+
+// Der Sitzungs-Takt: Verlauf, Arbeitet-Claude, Rückfrage — und der Füllstand
+// seltener, weil er jedes Mal die Mitschrift liest. Wie der Listen-Takt
+// steuert er sich selbst (Akku-Stein 22.08.): Arbeitet Claude, alle drei
+// Sekunden, damit die Antwort zügig erscheint. Ruht Claude, alle zwölf —
+// dann kann sich nur durch dich etwas ändern, und Senden stößt den Takt
+// ohnehin sofort an. Bei dunklem Bildschirm steht er ganz still; beim
+// Aufwachen geht es sofort weiter (siehe visibilitychange).
+let kontextZuletzt = 0;
+let taktLauf = 0;             // jeder Anstoß zählt hoch; ein alter Lauf plant nichts mehr
+async function sitzungsTakt() {
+  const lauf = ++taktLauf;
+  clearTimeout(verlaufTakt);
+  verlaufTakt = null;
+  if (!aktuelleSitzung || imTerminal || document.hidden) return;
   ladeVerlauf();
   pruefeFrage();
-  aktualisiereKontextBalken();
-  // Der Füllstand ändert sich langsamer als der Verlauf und liest jedes Mal die
-  // Mitschrift — darum nur jeden vierten Takt (~12 s), nicht alle 3 s.
-  let kontextTick = 0;
-  clearInterval(verlaufTakt);
-  verlaufTakt = setInterval(() => {
-    ladeVerlauf();
-    pruefeObClaudeArbeitet();
-    pruefeFrage();
-    pruefeObTonZurueck();
-    if (++kontextTick % 4 === 0) aktualisiereKontextBalken();
-  }, 3000);
+  if (Date.now() - kontextZuletzt > 12000) {
+    kontextZuletzt = Date.now();
+    aktualisiereKontextBalken();
+  }
+  // Erst die Antwort abwarten — dann stimmt "beschäftigt" für die Planung.
+  await pruefeObClaudeArbeitet();
+  if (lauf !== taktLauf || !aktuelleSitzung || imTerminal || document.hidden) return;
+  verlaufTakt = setTimeout(sitzungsTakt, beschaeftigt ? 3000 : 12000);
 }
+
+// Das Klopfen fürs Weiterlesen nach einem Anruf (pruefeObTonZurueck) bleibt
+// ein eigener, billiger Takt ohne Netz — er muss auch in der Hosentasche
+// weiterlaufen, wo der Sitzungs-Takt schläft.
+setInterval(pruefeObTonZurueck, 3000);
+
+// Bildschirm wieder an: die schlafenden Takte sofort wecken, damit man nicht
+// erst Sekunden auf den aktuellen Stand wartet.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (listeOffen && !listenTakt) ladeListe().then(listenTaktPlanen);
+  if (aktuelleSitzung && !imTerminal && !verlaufTakt) sitzungsTakt();
+});
 
 function verbinde(name) {
   steckdose?.close();
@@ -1329,7 +1370,9 @@ async function sendeInSitzung(text) {
   warBeschaeftigt = true;
   $("denkt").hidden = false;
   sendeSperren(true);
-  setTimeout(ladeVerlauf, 600);
+  // Den Takt neu anstoßen: Im Leerlauf schläft er bis zu zwölf Sekunden, und
+  // so lange soll niemand auf die erste Zeile der Antwort warten.
+  setTimeout(sitzungsTakt, 600);
 }
 
 // Eingabezeile: bequemer als direkt ins Terminal zu tippen, weil die
