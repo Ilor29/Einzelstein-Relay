@@ -927,7 +927,10 @@ def _gespraechs_bloecke(s: tmux.TmuxSession) -> list[dict]:
         datei = _mitschrift_zuordnen(s)
         if datei:
             return mitschrift.lesen(s.cwd, datei=datei)
-        return mitschrift.lesen(s.cwd, seit=s.created)
+        # Übergang ohne Bindung: nur, was seit dem Start geschrieben wurde —
+        # und nichts, was schon einer anderen Karte gehört.
+        return mitschrift.lesen(s.cwd, seit=s.created,
+                                ausser=state.vergebene_mitschriften())
     return mitschrift.lesen(s.cwd)
 
 

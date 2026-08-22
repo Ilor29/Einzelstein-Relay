@@ -231,7 +231,8 @@ def _aus_datei(datei: Path) -> list[dict]:
 
 
 def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
-          datei: str = "", seit: float = 0.0) -> list[dict]:
+          datei: str = "", seit: float = 0.0,
+          ausser: set[str] | frozenset[str] = frozenset()) -> list[dict]:
     """Die Unterhaltung — EIN Gespräch (datei) oder die Projekt-Zeitleiste.
 
     datei: die Gesprächs-Kennung (Dateiname ohne .jsonl) — dann kommt genau
@@ -243,6 +244,12 @@ def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
     ein eben erst begonnenes Gespräch die komplette Projekt-Vergangenheit
     seiner Nachbarn (Rolis Fund 20.08. abends: zwei Chats im selben Ordner
     zeigten denselben Verlauf).
+
+    ausser: Kennungen, die gar nicht erst gelesen werden — die Gespräche, die
+    schon fest zu anderen Karten gehören. Der seit-Filter allein reicht
+    nicht: Schreibt der Nachbar nach dem Start der neuen Karte weiter, ist
+    alles davon „seither" und landete in der frischen, noch leeren Karte
+    (Rolis Fund 22.08.: neuer Chat im n8n-Ordner zeigte den Jour Fix).
     """
     ordner = PROJEKTE / _ordnername(cwd)
     if not ordner.is_dir():
@@ -252,7 +259,7 @@ def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
         pfad = ordner / f"{datei}.jsonl"
         dateien = [pfad] if pfad.is_file() else []
     else:
-        dateien = list(ordner.glob("*.jsonl"))
+        dateien = [d for d in ordner.glob("*.jsonl") if d.stem not in ausser]
         if seit:
             def juenger(d: Path) -> bool:
                 try:
