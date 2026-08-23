@@ -89,6 +89,11 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
 
     # --- Was du gesagt hast ---
     if rolle == "user":
+        # Was Claude Code selbst einstreut (seit Sommer 2026 etwa der volle
+        # Text eines geladenen Skills, „Base directory for this skill: …"),
+        # ist als isMeta markiert — das hast nicht du gesagt, es bleibt weg.
+        if eintrag.get("isMeta") or eintrag.get("sourceToolUseID"):
+            return []
         # Werkzeug-Ergebnisse kommen ebenfalls als "user" herein — das sind
         # aber keine Nachrichten von dir, sondern Rückmeldungen an Claude.
         if isinstance(inhalt, list) and any(
@@ -115,6 +120,7 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
             text.startswith("<")
             or text.startswith("[Image:")
             or text.startswith("[Request interrupted")
+            or text.startswith("Base directory for this skill")
             or "system-reminder" in text[:80]
             or "Called the Read tool" in text[:80]
         ):
