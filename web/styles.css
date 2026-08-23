@@ -1103,10 +1103,13 @@ html, body {
 .klein-knopf.spricht { color: var(--laeuft); }
 .klein-knopf.getan  { color: var(--laeuft); }
 
-/* Ein geschicktes Foto — als Bild, nicht als Pfad. */
+/* Ein geschicktes Foto — als Bild, nicht als Pfad.
+   Auf dem Handy drei Viertel der Breite; am Rechner wären das fast ein Meter
+   Bildschirm für einen Screenshot, deshalb zusätzlich eine feste Grenze.
+   Antippen öffnet es ohnehin in voller Größe. */
 .foto {
   align-self: flex-end;
-  max-width: 75%;
+  max-width: min(75%, 420px);
   display: flex;
   flex-direction: column;
   gap: .3rem;
