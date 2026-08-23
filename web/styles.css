@@ -468,6 +468,11 @@ html, body {
   white-space: nowrap;
 }
 .kopf-sitzung h1 { font-size: .95rem; }
+/* Sieben Knöpfe neben dem Namen: enger gesetzt, damit auf einem schmalen
+   Handy vom Kartennamen mehr als ein Buchstabe übrig bleibt. */
+.kopf-sitzung { gap: .1rem; padding-left: .5rem; padding-right: .5rem; }
+.kopf-sitzung .knopf-blank { padding: .4rem .3rem; }
+.kopf-sitzung h1 { margin-right: .3rem; }
 
 .verbindung {
   display: flex;
@@ -1647,6 +1652,28 @@ html, body {
   font-size: .92rem;
 }
 .bib-suchfeld:focus { outline: none; border-color: var(--schrift-schwach); }
+
+/* Die Lupe im Verlauf: dasselbe Feld wie in der Bibliothek, daneben der
+   Zähler („3/12") und die Pfeile zum Springen. */
+.verlauf-suche { gap: .2rem; padding-bottom: .4rem; border-bottom: 1px solid var(--linie); }
+.verlauf-suche .bib-suchfeld { flex: 1; min-width: 0; }
+.verlauf-suche .knopf-blank { padding: .35rem; font-size: .8rem; }
+.verlauf-suche .knopf-blank svg { width: 18px; height: 18px; }
+.verlauf-suche-stand {
+  flex: none;
+  font-family: var(--mono);
+  font-size: .75rem;
+  color: var(--schrift-schwach);
+  padding: 0 .2rem;
+  white-space: nowrap;
+}
+mark.treffer {
+  background: color-mix(in srgb, var(--akzent) 28%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+mark.treffer.aktuell { background: var(--akzent); color: #fff; }
 
 .bib-reiter {
   flex: none;

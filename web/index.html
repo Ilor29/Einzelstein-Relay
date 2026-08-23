@@ -145,6 +145,11 @@
       <path d="M9 10.8V4h6v6.8l2 2.7v1.5H7v-1.5l2-2.7z"/>
     </g>
 
+    <g id="i-lupe" fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+    </g>
+
     <g id="i-terminal" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 17l6-5-6-5"/>
@@ -378,6 +383,9 @@
       <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
     </button>
     <h1 id="sitzung-name"></h1>
+    <button id="knopf-suche" data-tour="suche" class="knopf-blank" aria-label="Im Verlauf suchen">
+      <svg viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
+    </button>
     <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">
       <svg viewBox="0 0 24 24"><use href="#i-terminal"/></svg>
     </button>
@@ -415,6 +423,20 @@
     <span class="kontext-schiene"><span id="kontext-fuellung" class="kontext-fuellung"></span></span>
     <span id="kontext-text" class="kontext-text"></span>
   </button>
+  <!-- Die Lupe im Verlauf: sucht rein im Browser, ohne Claude zu bemühen.
+       Treffer werden im Text hervorgehoben, die Pfeile springen von einem zum
+       nächsten — der Zusammenhang drumherum bleibt sichtbar. -->
+  <div id="verlauf-suche" class="bib-suche verlauf-suche" hidden>
+    <svg class="bib-suche-lupe" viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
+    <input type="search" id="verlauf-suchfeld" class="bib-suchfeld"
+           placeholder="Im Verlauf suchen …" autocomplete="off" enterkeyhint="search">
+    <span id="verlauf-suche-stand" class="verlauf-suche-stand"></span>
+    <button type="button" id="verlauf-suche-zurueck" class="knopf-blank" aria-label="Voriger Treffer">▲</button>
+    <button type="button" id="verlauf-suche-weiter" class="knopf-blank" aria-label="Nächster Treffer">▼</button>
+    <button type="button" id="verlauf-suche-zu" class="knopf-blank" aria-label="Suche schließen">
+      <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+    </button>
+  </div>
   <div id="verlauf" class="verlauf"></div>
   <div id="terminal" class="terminal" hidden></div>
   <div class="sondertasten" id="sondertasten" hidden></div>

@@ -985,6 +985,9 @@ async function ladeVerlauf() {
     }
   }));
 
+  // Der Verlauf wurde neu gebaut — die Lupe muss ihre Treffer neu setzen.
+  if (verlaufSuche) verlaufDurchsuchen(false);
+
   // Ans Ende ziehen, wenn wir mitlaufen sollen — aber erst in der nächsten
   // Bildwiederholung, wenn der neue Inhalt wirklich vermessen ist. Sofort wäre
   // scrollHeight noch der alte Wert, und wir landeten zu kurz.
@@ -992,6 +995,123 @@ async function ladeVerlauf() {
     requestAnimationFrame(() => { behaelter.scrollTop = behaelter.scrollHeight; });
   }
 }
+
+// --- Die Lupe im Verlauf -----------------------------------------------------
+//
+// „Wo war das nochmal?" kostete bisher eine Claude-Antwort: Wartezeit, Geld
+// und Kontext, obwohl die Antwort längst auf dem Bildschirm stand. Die Lupe
+// sucht rein im Browser durch die angezeigten Blöcke, hebt Treffer hervor
+// und springt mit den Pfeilen von einem zum nächsten. Sie filtert nicht —
+// der Zusammenhang um den Treffer herum ist meist das, was man sehen will.
+
+let verlaufSuche = "";       // das Suchwort, leer = Lupe zu
+let suchTreffer = [];        // die <mark>-Elemente in Lesereihenfolge
+let suchIndex = -1;          // welcher Treffer gerade „aktuell" ist
+
+// Alle Markierungen wieder in schlichten Text zurückverwandeln.
+function markierungenEntfernen() {
+  for (const m of $("verlauf").querySelectorAll("mark.treffer")) {
+    m.replaceWith(document.createTextNode(m.textContent));
+  }
+  $("verlauf").normalize();   // zerstückelte Textknoten wieder zusammenfügen
+}
+
+// Den Verlauf nach dem Suchwort durchkämmen und Treffer einpacken.
+// springen=true: danach zum ersten Treffer (ab dem sichtbaren Bereich) gehen.
+function verlaufDurchsuchen(springen = true) {
+  markierungenEntfernen();
+  suchTreffer = [];
+  suchIndex = -1;
+  const wort = verlaufSuche.trim().toLowerCase();
+  if (wort) {
+    const laeufer = document.createTreeWalker($("verlauf"), NodeFilter.SHOW_TEXT);
+    const knoten = [];
+    while (laeufer.nextNode()) knoten.push(laeufer.currentNode);
+    for (const k of knoten) {
+      const text = k.nodeValue;
+      let von = text.toLowerCase().indexOf(wort);
+      if (von < 0) continue;
+      const teile = document.createDocumentFragment();
+      let bis = 0;
+      while (von >= 0) {
+        teile.append(text.slice(bis, von));
+        const m = document.createElement("mark");
+        m.className = "treffer";
+        m.textContent = text.slice(von, von + wort.length);
+        teile.append(m);
+        suchTreffer.push(m);
+        bis = von + wort.length;
+        von = text.toLowerCase().indexOf(wort, bis);
+      }
+      teile.append(text.slice(bis));
+      k.replaceWith(teile);
+    }
+  }
+  if (springen && suchTreffer.length) {
+    // Mit dem ersten Treffer anfangen, der noch nicht über dem Bildschirm
+    // liegt — so landet man in der Nähe dessen, was man gerade liest.
+    const oben = $("verlauf").getBoundingClientRect().top;
+    let erster = suchTreffer.findIndex((m) => m.getBoundingClientRect().top >= oben);
+    if (erster < 0) erster = suchTreffer.length - 1;
+    trefferZeigen(erster);
+  } else {
+    trefferZeigen(suchIndex);
+  }
+}
+
+function trefferZeigen(i) {
+  suchTreffer.forEach((m) => m.classList.remove("aktuell"));
+  const stand = $("verlauf-suche-stand");
+  if (!suchTreffer.length) {
+    suchIndex = -1;
+    stand.textContent = verlaufSuche.trim() ? "0" : "";
+    return;
+  }
+  suchIndex = (i + suchTreffer.length) % suchTreffer.length;
+  const m = suchTreffer[suchIndex];
+  m.classList.add("aktuell");
+  stand.textContent = `${suchIndex + 1}/${suchTreffer.length}`;
+  folgeUnten = false;   // beim Springen nicht gleich wieder ans Ende gezogen werden
+  m.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+function sucheOeffnen() {
+  $("verlauf-suche").hidden = false;
+  $("knopf-suche").classList.add("an");
+  const feld = $("verlauf-suchfeld");
+  feld.focus();
+  feld.select();
+}
+
+function sucheSchliessen() {
+  $("verlauf-suche").hidden = true;
+  $("knopf-suche").classList.remove("an");
+  $("verlauf-suchfeld").value = "";
+  $("verlauf-suche-stand").textContent = "";
+  verlaufSuche = "";
+  markierungenEntfernen();
+  suchTreffer = [];
+  suchIndex = -1;
+}
+
+$("knopf-suche").addEventListener("click", () => {
+  if ($("verlauf-suche").hidden) sucheOeffnen(); else sucheSchliessen();
+});
+$("verlauf-suche-zu").addEventListener("click", sucheSchliessen);
+$("verlauf-suche-weiter").addEventListener("click", () => trefferZeigen(suchIndex + 1));
+$("verlauf-suche-zurueck").addEventListener("click", () => trefferZeigen(suchIndex - 1));
+$("verlauf-suchfeld").addEventListener("input", (e) => {
+  verlaufSuche = e.target.value;
+  verlaufDurchsuchen(true);
+});
+$("verlauf-suchfeld").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    trefferZeigen(suchIndex + (e.shiftKey ? -1 : 1));
+  } else if (e.key === "Escape") {
+    sucheSchliessen();
+  }
+});
 
 // --- Claudes Rückfragen ------------------------------------------------------
 //
@@ -1164,6 +1284,7 @@ function ansichtWechseln() {
     .setAttribute("href", imTerminal ? "#i-lesen" : "#i-terminal");
 
   if (imTerminal) {
+    sucheSchliessen();   // die Lupe gehört zur Lese-Ansicht
     clearInterval(verlaufTakt);
     verlaufTakt = null;
     baueTerminal();
@@ -1204,6 +1325,7 @@ function baueTerminal() {
 function oeffneSitzung(sitzung) {
   stoppeListe();
   aktuelleSitzung = sitzung;
+  sucheSchliessen();   // ein altes Suchwort gehört nicht zur neuen Karte
   // Anhänge gehören zu der Sitzung, aus der sie hochgeladen wurden — beim
   // Wechsel weg damit, sonst schickte man das Foto ins falsche Projekt.
   anhaengeLeeren();
@@ -4402,6 +4524,10 @@ function tourSchritte(ansicht) {
       text: "Der Lautsprecher liest dir Claudes Antwort vor — einmal antippen " +
             "reicht, es liest weiter, während Claude noch schreibt. Die Stimme " +
             "wählst du in den Einstellungen." },
+    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="suche"]', titel: "Im Verlauf suchen",
+      text: "Die Lupe sucht ein Wort im bisherigen Gespräch — direkt auf dem " +
+            "Handy, ohne Claude zu fragen. Treffer werden hervorgehoben, mit " +
+            "den Pfeilen springst du von einem zum nächsten." },
     { kapitel: "Dein erstes Gespräch", titel: "Und wenn Claude fragt?",
       text: "Manchmal stellt Claude eine Rückfrage — die App zeigt sie dir als " +
             "Knöpfe, du tippst die Antwort einfach an. Beim allerersten " +
