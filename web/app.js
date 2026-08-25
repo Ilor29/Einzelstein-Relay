@@ -43,6 +43,9 @@ async function api(pfad, optionen = {}) {
     zeige("anmeldung");
     throw new Error("Nicht angemeldet.");
   }
+  // 304 „nicht verändert" ist kein Fehler — der Aufrufer weiß, was er
+  // damit anfängt (siehe ladeVerlauf).
+  if (antwort.status === 304) return antwort;
   if (!antwort.ok) {
     const körper = await antwort.json().catch(() => ({}));
     throw new Error(fehlerText(körper) || `Fehler ${antwort.status}`);
@@ -920,6 +923,11 @@ function verlaufBlock(block) {
 }
 
 let zuletztGesehen = "";
+// Das ETag der letzten Verlaufs-Antwort. Schicken wir es mit, antwortet der
+// Server bei unverändertem Verlauf mit einem leeren 304 statt 50 KB — auf
+// einer schwachen Handy-Verbindung der Unterschied zwischen „sofort" und
+// „ewig".
+let verlaufEtag = "";
 
 // Soll der Verlauf am Ende mitlaufen? Solange du unten stehst — und immer gleich
 // nach dem Absenden —, zieht jede neue Antwort nach unten ins Sichtfeld. Scrollst
@@ -964,9 +972,14 @@ async function ladeVerlauf() {
 
   let bloecke;
   try {
-    bloecke = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf`, taktOptionen()
-    )).json();
+    const optionen = taktOptionen();
+    if (verlaufEtag) optionen.headers = { "If-None-Match": verlaufEtag };
+    const antwort = await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf`, optionen
+    );
+    if (antwort.status === 304) return;         // nichts Neues
+    verlaufEtag = antwort.headers.get("ETag") || "";
+    bloecke = await antwort.json();
   } catch {
     return;
   }
@@ -1379,6 +1392,7 @@ function oeffneSitzung(sitzung) {
                            // stünde es riesig da, wenn vorher viel drin war
   offeneFrage = "";
   zuletztGesehen = "";     // neue Sitzung, alles frisch
+  verlaufEtag = "";
   folgeUnten = true;       // beim Öffnen ans Ende, zum Neuesten
   beschaeftigt = false;    // Freisprech soll nicht sofort beim Öffnen auslösen
   warBeschaeftigt = false;

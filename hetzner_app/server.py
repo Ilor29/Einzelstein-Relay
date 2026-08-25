@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -232,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 138
+VERSION = 139
 
 
 @app.get("/api/version")
@@ -959,7 +960,7 @@ def session_text(name: str) -> dict:
 
 
 @app.get("/api/sessions/{name}/verlauf", dependencies=[Depends(require_auth)])
-def session_verlauf(name: str) -> list[dict]:
+def session_verlauf(name: str, request: Request) -> Response:
     """Die Unterhaltung DIESES Gesprächs.
 
     Nicht vom Terminal-Bildschirm abgelesen und geraten: Claude Code schreibt
@@ -967,6 +968,13 @@ def session_verlauf(name: str) -> list[dict]:
     Seit jedes Gespräch seine eigene Karte hat (20.08.), gilt: ein Verlauf je
     GESPRÄCH — die alte Projekt-Zeitleiste gibt es nur noch für fremde
     Terminals und als Übergang, solange die Zuordnung noch nicht erkannt ist.
+
+    Die App fragt alle paar Sekunden nach, und meistens hat sich nichts
+    geändert. Trotzdem gingen jedes Mal 50 KB (gepackt) übers Handynetz —
+    auf einer schwachen Verbindung dauerte das länger als der Takt selbst
+    (Roli, 25.08.: „es braucht ewig, bis sich die Seite refresht"). Darum
+    bekommt jede Antwort ein ETag, und wer es mit If-None-Match zurückschickt,
+    kriegt bei unverändertem Verlauf nur ein leeres 304.
     """
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
@@ -978,9 +986,16 @@ def session_verlauf(name: str) -> list[dict]:
     # noch nie lief —, lesen wir notfalls doch den Bildschirm ab. Besser als
     # eine leere Seite.
     if not bloecke:
-        return verlauf.lesen(tmux.capture(name, lines=5000))
+        bloecke = verlauf.lesen(tmux.capture(name, lines=5000))
 
-    return bloecke
+    koerper = json.dumps(bloecke, ensure_ascii=False).encode()
+    etag = '"' + hashlib.sha1(koerper).hexdigest()[:16] + '"'
+    # Locker vergleichen: Caddy darf beim Packen ein „-gzip" anhängen, der
+    # Browser ein „W/" voranstellen — der Kern muss stimmen, mehr nicht.
+    if etag.strip('"') in request.headers.get("if-none-match", ""):
+        return Response(status_code=304, headers={"ETag": etag})
+    return Response(koerper, media_type="application/json",
+                    headers={"ETag": etag, "Cache-Control": "no-store"})
 
 
 # Was wir annehmen. Alles andere fliegt raus — hier landet nichts Ausführbares.
