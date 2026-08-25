@@ -1426,13 +1426,18 @@ async function sitzungsTakt() {
 // weiterlaufen, wo der Sitzungs-Takt schläft.
 setInterval(pruefeObTonZurueck, 3000);
 
-// Bildschirm wieder an: die schlafenden Takte sofort wecken, damit man nicht
-// erst Sekunden auf den aktuellen Stand wartet.
+// Bildschirm wieder an: SOFORT nachladen, nicht erst auf den nächsten Takt
+// warten. Bewusst ohne Rücksicht auf einen schon geplanten Takt: Chrome auf
+// Android friert eine App nach fünf Minuten im Hintergrund ein, und ein
+// Zeitgeber, der in der Zeit fällig war, kommt danach nicht verlässlich —
+// die Anzeige blieb dann stehen, bis man die App neu startete (Rolis Fund
+// 25.08.: kurze Antwort im Brain, erst nach Neustart zu sehen). Die
+// Takt-Funktionen räumen einen alten Zeitgeber selbst weg.
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
-  if (listeOffen && !listenTakt) ladeListe().then(listenTaktPlanen);
-  if (aktuelleSitzung && !imTerminal && !verlaufTakt) sitzungsTakt();
-  if (!$("ansicht-routinen").hidden && !routinenTakt) ladeRoutinen().then(routinenTaktPlanen);
+  if (listeOffen) ladeListe().then(listenTaktPlanen);
+  if (aktuelleSitzung && !imTerminal) sitzungsTakt();
+  if (!$("ansicht-routinen").hidden) ladeRoutinen().then(routinenTaktPlanen);
 });
 
 function verbinde(name) {
