@@ -232,7 +232,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 135
+VERSION = 136
 
 
 @app.get("/api/version")
@@ -564,15 +564,12 @@ async def brain_oeffnen() -> dict:
             meta = state.get(name)
             try:
                 # Wie session_wecken: mit der gemerkten Gesprächs-Kennung
-                # GENAU dieses Gespräch fortsetzen — und die Kennung danach
-                # lösen, weil das Fortsetzen eine neue Mitschrift-Datei
-                # anlegt (Fund der Code-Durchsicht 20.08.: dieser Pfad war
-                # beim Bindungs-Umbau vergessen worden).
+                # GENAU dieses Gespräch fortsetzen. Die Kennung bleibt
+                # stehen — siehe dort, warum.
                 tmux.create(name, ordner_str, ohne_rueckfragen=meta.ohne_rueckfragen,
                             fortsetzen=True, gespraech=meta.mitschrift)
             except tmux.TmuxError as error:
                 raise HTTPException(409, str(error))
-            state.update(name, mitschrift="")
         state.update(name, pinned=True, schlaeft=False, archiviert=False)
         return {"name": name, "neu": False}
 
@@ -702,10 +699,17 @@ def session_wecken(name: str) -> dict:
         raise HTTPException(409, str(error))
 
     # Wer aufwacht, gehört wieder in die Liste — auch wenn er im Archiv lag.
-    # Die Gesprächs-Kennung wird gelöst: Beim Fortsetzen legt Claude Code eine
-    # NEUE Mitschrift-Datei an (mit hineinkopierter Geschichte); die Zuordnung
-    # erkennt sie beim ersten Schreiben frisch (_mitschrift_zuordnen).
-    state.update(name, schlaeft=False, archiviert=False, mitschrift="")
+    #
+    # Die Gesprächs-Kennung BLEIBT. Früher wurde sie hier gelöst, in der
+    # Annahme, das Fortsetzen lege eine neue Mitschrift-Datei an. Das tut
+    # Claude Code seit Sommer 2026 nicht mehr: --resume schreibt in dieselbe
+    # Datei weiter. Gelöst hieß: Die geweckte Karte hing ohne Bindung in der
+    # Luft und zeigte alles, was im Ordner seither geschrieben wurde — auch
+    # den Nachbar-Chat (Rolis Fund 25.08.: „Marketing" und „Skillsradar 01"
+    # zusammengewachsen). Sollte das Fortsetzen doch einmal woanders landen
+    # (Datei gelöscht, Rückfall auf --continue), greift die Einfrier-Erkennung
+    # in _mitschrift_zuordnen und bindet neu.
+    state.update(name, schlaeft=False, archiviert=False)
     return {"ok": True}
 
 
