@@ -50,6 +50,23 @@ async function api(pfad, optionen = {}) {
   return antwort;
 }
 
+// Zeitlimit für die Takt-Anfragen (Verlauf, Liste, Arbeitet-Claude …).
+//
+// Seit die Takte sich selbst weiterplanen (Akku-Stein 22.08.), hängt der
+// nächste Takt an der Antwort des vorigen. Bleibt EINE Anfrage im Netz stecken
+// — Funkloch, Netzwechsel, ein Handy, das die Verbindung halb einschläfert —,
+// dann kommt nie ein nächster Takt: "Claude denkt nach" steht ewig, und die
+// fertige Antwort erscheint erst, wenn du den Chat verlässt und neu öffnest.
+// Mit dem Limit läuft so eine Anfrage nach 15 Sekunden ins Leere, der Takt
+// merkt es als Fehler und macht einfach weiter.
+function taktOptionen() {
+  try {
+    return { signal: AbortSignal.timeout(15000) };
+  } catch {
+    return {};   // sehr alte Browser: dann eben ohne Limit
+  }
+}
+
 // --- Anmeldung mit Geräteschlüssel -------------------------------------------
 //
 // Kein Passwort. Das Gerät erzeugt sich ein Schlüsselpaar; der geheime Teil ist
@@ -406,7 +423,7 @@ const offeneGruppen = new Set();
 async function ladeListe() {
   let sitzungen;
   try {
-    sitzungen = await (await api("/sessions")).json();
+    sitzungen = await (await api("/sessions", taktOptionen())).json();
   } catch {
     return;   // nicht angemeldet — die Ansicht hat schon gewechselt
   }
@@ -533,8 +550,7 @@ function listenTaktPlanen() {
   listenTakt = null;
   if (!listeOffen || document.hidden) return;
   listenTakt = setTimeout(async () => {
-    await ladeListe();
-    listenTaktPlanen();
+    try { await ladeListe(); } finally { listenTaktPlanen(); }
   }, irgendeineLaeuft ? 5000 : 15000);
 }
 
@@ -948,7 +964,9 @@ async function ladeVerlauf() {
 
   let bloecke;
   try {
-    bloecke = await (await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf`)).json();
+    bloecke = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf`, taktOptionen()
+    )).json();
   } catch {
     return;
   }
@@ -1128,7 +1146,7 @@ async function pruefeFrage() {
   let frage;
   try {
     frage = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/frage`
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/frage`, taktOptionen()
     )).json();
   } catch {
     return;
@@ -1225,7 +1243,7 @@ function sendeSperren(sperr) {
 async function pruefeObClaudeArbeitet() {
   if (!aktuelleSitzung) return;
   try {
-    const sitzungen = await (await api("/sessions")).json();
+    const sitzungen = await (await api("/sessions", taktOptionen())).json();
     const jetzt = sitzungen.find((s) => s.name === aktuelleSitzung.name);
     const arbeitet = jetzt?.state === "running";
 
@@ -1389,9 +1407,15 @@ async function sitzungsTakt() {
     aktualisiereKontextBalken();
   }
   // Erst die Antwort abwarten — dann stimmt "beschäftigt" für die Planung.
-  await pruefeObClaudeArbeitet();
-  if (lauf !== taktLauf || !aktuelleSitzung || imTerminal || document.hidden) return;
-  verlaufTakt = setTimeout(sitzungsTakt, beschaeftigt ? 3000 : 12000);
+  // Und was auch immer dabei schiefgeht: Der nächste Takt wird geplant. Ein
+  // Takt, der einmal ausfällt, darf nicht das Ende aller Takte sein.
+  try {
+    await pruefeObClaudeArbeitet();
+  } finally {
+    if (lauf === taktLauf && aktuelleSitzung && !imTerminal && !document.hidden) {
+      verlaufTakt = setTimeout(sitzungsTakt, beschaeftigt ? 3000 : 12000);
+    }
+  }
 }
 
 // Das Klopfen fürs Weiterlesen nach einem Anruf (pruefeObTonZurueck) bleibt
@@ -2520,7 +2544,7 @@ async function aktualisiereKontextBalken() {
   let k;
   try {
     k = (await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/kontext`
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/kontext`, taktOptionen()
     )).json()).kontext;
   } catch {
     return;   // Netzhänger oder Sitzung weg: die alte Anzeige stehen lassen
