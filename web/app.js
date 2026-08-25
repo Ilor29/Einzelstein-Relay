@@ -11,7 +11,7 @@
 // du immer wieder hängengeblieben.
 const $ = (id) => document.getElementById(id);
 
-const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen", "bibliothek"];
+const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen", "bibliothek", "routinen"];
 
 function zeige(name) {
   for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
@@ -1429,6 +1429,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   if (listeOffen && !listenTakt) ladeListe().then(listenTaktPlanen);
   if (aktuelleSitzung && !imTerminal && !verlaufTakt) sitzungsTakt();
+  if (!$("ansicht-routinen").hidden && !routinenTakt) ladeRoutinen().then(routinenTaktPlanen);
 });
 
 function verbinde(name) {
@@ -3930,6 +3931,183 @@ async function oeffneBibliothek(ziel) {
 
 $("knopf-bibliothek").addEventListener("click", () => oeffneBibliothek(null));
 
+// --- Routinen: was der Server nach Zeitplan von selbst tut -----------------
+//
+// Der Server läuft rund um die Uhr, und mit der Zeit tut er allerhand ohne
+// dich: Sicherung, Wächter, nächtliche Läufe. Bisher stand das nur in der
+// crontab, vom Handy aus unsichtbar. Hier sieht man es als Liste — mit
+// Zeitplan in Worten, wann es zuletzt lief und wann es wieder dran ist — und
+// kann eine Routine anhalten, sofort starten oder ihr Protokoll lesen.
+
+let routinenTakt = null;
+
+// "heute 21:04", "morgen 7:00", sonst "Mi 26.08. 6:30".
+function wannText(sek) {
+  if (!sek) return "";
+  const d = new Date(sek * 1000);
+  const jetzt = new Date();
+  const tag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((tag(d) - tag(jetzt)) / 86400000);
+  const uhr = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+  if (diff === 0) return `heute ${uhr}`;
+  if (diff === 1) return `morgen ${uhr}`;
+  if (diff === -1) return `gestern ${uhr}`;
+  const wt = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][d.getDay()];
+  const dm = `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.`;
+  return `${wt} ${dm} ${uhr}`;
+}
+
+function routineKarte(r) {
+  const el = document.createElement("div");
+  el.className = "bib-karte routine-karte";
+  if (r.pausiert) el.classList.add("pausiert");
+  if (r.laeuft) el.classList.add("laeuft");
+
+  const kopf = document.createElement("div");
+  kopf.className = "bib-kopf";
+  const name = document.createElement("span");
+  name.className = "bib-name";
+  name.textContent = r.name;
+  kopf.append(name);
+  if (r.projekt) {
+    const projekt = document.createElement("span");
+    projekt.className = "routine-projekt";
+    projekt.textContent = r.projekt;
+    kopf.append(projekt);
+  }
+  el.append(kopf);
+
+  if (r.beschreibung) {
+    const text = document.createElement("div");
+    text.className = "routine-text";
+    text.textContent = r.beschreibung;
+    el.append(text);
+  }
+
+  const zeit = document.createElement("div");
+  zeit.className = "routine-zeit";
+  const stand = r.laeuft ? "läuft gerade"
+    : r.pausiert ? "pausiert"
+    : r.naechster ? `nächster Lauf ${wannText(r.naechster)}` : "";
+  const teile = [];
+  if (r.zeitplan) teile.push(r.zeitplan);
+  if (r.letzter) teile.push(`zuletzt ${wannText(r.letzter)}`);
+  const b = document.createElement("b");
+  b.textContent = stand;
+  zeit.append(b);
+  if (teile.length) zeit.append(document.createTextNode((stand ? " · " : "") + teile.join(" · ")));
+  el.append(zeit);
+
+  const knoepfe = document.createElement("div");
+  knoepfe.className = "routine-knoepfe";
+  const knopf = (text, symbol, tun, aus = false) => {
+    const k = document.createElement("button");
+    k.type = "button";
+    k.className = "routine-knopf";
+    k.disabled = aus;
+    k.innerHTML = `<svg viewBox="0 0 24 24"><use href="#${symbol}"/></svg>`;
+    k.append(document.createTextNode(text));
+    k.addEventListener("click", (e) => { e.stopPropagation(); tun(k); });
+    knoepfe.append(k);
+    return k;
+  };
+  if (r.quelle === "cron") {
+    knopf("Jetzt", "i-abspielen", (k) => routineTun(r, "jetzt", k), r.laeuft);
+    if (r.pausiert) knopf("Weiter", "i-abspielen", (k) => routineTun(r, "weiter", k));
+    else knopf("Pause", "i-pause", (k) => routineTun(r, "pause", k));
+  } else {
+    const dienst = document.createElement("span");
+    dienst.className = "hinweis";
+    dienst.textContent = "Systemdienst — nur ansehen";
+    knoepfe.append(dienst);
+  }
+  el.append(knoepfe);
+
+  el.addEventListener("click", () => protokollZeigen(r));
+  return el;
+}
+
+async function ladeRoutinen() {
+  let liste;
+  try {
+    liste = await (await api("/routinen", taktOptionen())).json();
+  } catch {
+    return;
+  }
+  const behaelter = $("routinen-liste");
+  if (!liste.length) {
+    const leer = document.createElement("p");
+    leer.className = "routine-leer";
+    leer.textContent = "Auf diesem Server läuft noch nichts nach Zeitplan.";
+    behaelter.replaceChildren(leer);
+    return;
+  }
+  behaelter.replaceChildren(...liste.map(routineKarte));
+}
+
+// Der Takt: solange die Ansicht offen ist, alle zehn Sekunden nachsehen —
+// so wandert "läuft gerade" von selbst zu "zuletzt eben". Dunkler Bildschirm:
+// stillstehen, beim Aufwachen weiter (siehe visibilitychange).
+function routinenTaktPlanen() {
+  clearTimeout(routinenTakt);
+  routinenTakt = null;
+  if ($("ansicht-routinen").hidden || document.hidden) return;
+  routinenTakt = setTimeout(async () => {
+    try { await ladeRoutinen(); } finally { routinenTaktPlanen(); }
+  }, 10000);
+}
+
+async function routineTun(r, was, k) {
+  k.disabled = true;
+  try {
+    await api(`/routinen/${encodeURIComponent(r.id)}/${was}`, { method: "POST" });
+    if (was === "jetzt") melde(`${r.name} gestartet.`);
+    else if (was === "pause") melde(`${r.name} pausiert — läuft nicht mehr von selbst.`);
+    else melde(`${r.name} läuft wieder nach Plan.`);
+  } catch (e) {
+    alert(e.message || "Das hat nicht geklappt.");
+  }
+  await ladeRoutinen();
+}
+
+async function protokollZeigen(r) {
+  $("protokoll-titel").textContent = r.name;
+  $("protokoll-quelle").textContent = "";
+  $("protokoll-text").textContent = "Lade …";
+  $("protokoll-blatt").hidden = false;
+  try {
+    const p = await (await api(`/routinen/${encodeURIComponent(r.id)}/protokoll`)).json();
+    $("protokoll-quelle").textContent = p.quelle || "";
+    $("protokoll-text").textContent = p.text
+      || (r.quelle === "timer"
+          ? "Dieser Dienst schreibt sein Protokoll ins System-Journal; von hier aus ist es nicht lesbar."
+          : "Noch kein Protokoll — die Routine hat bisher nichts geschrieben.");
+    const pre = $("protokoll-text");
+    pre.scrollTop = pre.scrollHeight;
+  } catch (e) {
+    $("protokoll-text").textContent = e.message || "Protokoll ließ sich nicht laden.";
+  }
+}
+
+function protokollBlattZu() { $("protokoll-blatt").hidden = true; }
+$("protokoll-schatten").addEventListener("click", protokollBlattZu);
+$("protokoll-schliessen").addEventListener("click", protokollBlattZu);
+
+$("knopf-routinen").addEventListener("click", async () => {
+  stoppeListe();
+  zeige("routinen");
+  $("routinen-liste").replaceChildren();
+  await ladeRoutinen();
+  routinenTaktPlanen();
+});
+
+$("knopf-routinen-zurueck").addEventListener("click", () => {
+  clearTimeout(routinenTakt);
+  routinenTakt = null;
+  protokollBlattZu();
+  starteListe();
+});
+
 // Der Brain-Knopf: ein Tipp holt den festen Ansprechpartner — egal ob er läuft,
 // schläft, abgestürzt oder (auf einem frischen Server) noch gar nicht da ist.
 // Der Server nimmt/weckt/erzeugt ihn; hier öffnen wir ihn dann.
@@ -4523,6 +4701,11 @@ function tourSchritte(ansicht) {
       text: "Der Brain ist dein erster Ansprechpartner: Er kennt alle deine " +
             "Vorhaben und behält den Überblick. Ein Tipp genügt — er wird " +
             "geöffnet, geweckt oder beim ersten Mal frisch angelegt." },
+    { kapitel: "Erste Schritte", sel: '[data-tour="routinen"]', titel: "Die Routinen",
+      text: "Die Uhr zeigt, was dein Server nach Zeitplan von selbst erledigt — " +
+            "Sicherung, Wächter, nächtliche Läufe. Du siehst, wann etwas " +
+            "zuletzt lief und wann es wieder dran ist, kannst es anhalten, " +
+            "sofort starten oder sein Protokoll lesen." },
     { kapitel: "Erste Schritte", sel: '[data-tour="neue-sitzung"]', titel: "Ein Gespräch beginnen",
       text: "Mit <b>Neue Sitzung</b> startest du ein Gespräch für ein Vorhaben — " +
             "du gibst ihm nur einen Namen. Beim allerersten Mal führt dich die " +

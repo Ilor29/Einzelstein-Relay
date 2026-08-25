@@ -30,7 +30,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import bibliothek, geraete, melden, mitschrift, speicher, state, tmux, tts, verbrauch, verlauf
+from . import bibliothek, geraete, melden, mitschrift, routinen, speicher, state, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -232,7 +232,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 133
+VERSION = 134
 
 
 @app.get("/api/version")
@@ -1173,6 +1173,61 @@ MODELLE = {
     "claude-opus-4-6": ("Opus 4.6", "ältere Version", "weitere"),
     "claude-sonnet-4-6": ("Sonnet 4.6", "ältere Version — schlanker", "weitere"),
 }
+
+
+# --- Routinen: was auf dem Server von selbst läuft ---------------------------
+
+_ROUTINE_KENNUNG = re.compile(r"^[0-9a-f]{10}$")
+
+
+def _routine_kennung(kennung: str) -> str:
+    """Nur Kennungen von Cron-Zeilen dürfen etwas auslösen — die Timer
+    (Kennung „t-…") gehören root und werden nur angezeigt."""
+    if not _ROUTINE_KENNUNG.match(kennung):
+        raise HTTPException(400, "Diese Routine lässt sich hier nicht steuern.")
+    return kennung
+
+
+@app.get("/api/routinen", dependencies=[Depends(require_auth)])
+async def routinen_liste() -> list:
+    """Alle Zeitpläne dieses Kontos: crontab und eigene systemd-Timer."""
+    return await asyncio.to_thread(routinen.lesen)
+
+
+@app.post("/api/routinen/{kennung}/jetzt", dependencies=[Depends(require_auth)])
+async def routine_jetzt(kennung: str) -> dict:
+    try:
+        return await asyncio.to_thread(routinen.jetzt_ausfuehren, _routine_kennung(kennung))
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@app.post("/api/routinen/{kennung}/pause", dependencies=[Depends(require_auth)])
+async def routine_pause(kennung: str) -> dict:
+    try:
+        return await asyncio.to_thread(routinen.pausieren, _routine_kennung(kennung), True)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/routinen/{kennung}/weiter", dependencies=[Depends(require_auth)])
+async def routine_weiter(kennung: str) -> dict:
+    try:
+        return await asyncio.to_thread(routinen.pausieren, _routine_kennung(kennung), False)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/api/routinen/{kennung}/protokoll", dependencies=[Depends(require_auth)])
+async def routine_protokoll(kennung: str) -> dict:
+    if not (_ROUTINE_KENNUNG.match(kennung) or re.match(r"^t-[a-z0-9-]{1,80}$", kennung)):
+        raise HTTPException(400, "Unbekannte Kennung.")
+    try:
+        return await asyncio.to_thread(routinen.protokoll, kennung)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.get("/api/speicher", dependencies=[Depends(require_auth)])

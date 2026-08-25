@@ -1625,6 +1625,69 @@ html, body {
 }
 .knopf-rand:active { background: var(--erhoben-2); }
 
+/* --- Routinen ---
+   Eine Karte je Zeitplan: Name, wofür es gut ist, wann es dran ist, und die
+   drei Handgriffe. Ruhig wie die Bibliothek — hier schaut man nach, man
+   hetzt nicht. */
+.routinen-hinweis { padding: .5rem .9rem 0; }
+.routine-karte { cursor: pointer; }
+.routine-projekt {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .03em;
+  color: var(--akzent);
+}
+.routine-text {
+  font-size: .82rem;
+  color: var(--schrift-leise);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.routine-zeit {
+  font-size: .78rem;
+  color: var(--schrift-schwach);
+  line-height: 1.5;
+}
+.routine-zeit b { font-weight: 600; color: var(--schrift-leise); }
+.routine-karte.pausiert .routine-zeit b { color: var(--schrift-schwach); }
+.routine-karte.laeuft .routine-zeit b { color: var(--laeuft); }
+.routine-knoepfe { display: flex; gap: .4rem; margin-top: .2rem; flex-wrap: wrap; }
+.routine-knopf {
+  background: var(--erhoben);
+  color: var(--schrift-leise);
+  border: 1px solid var(--linie);
+  border-radius: 9px;
+  padding: .4rem .7rem;
+  font-size: .8rem;
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.routine-knopf svg { width: 15px; height: 15px; }
+.routine-knopf:active { background: var(--erhoben-2); }
+.routine-knopf:disabled { opacity: .45; }
+.routine-leer { color: var(--schrift-schwach); text-align: center; padding: 2rem 1rem; }
+.protokoll-text {
+  font-family: var(--mono);
+  font-size: .72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--schrift-leise);
+  background: var(--erhoben-2);
+  border-radius: 10px;
+  padding: .7rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: .4rem 0 calc(.5rem + var(--unten));
+}
+
 /* --- Bibliothek ---
    Die Reiter oben zum Filtern, darunter die Skill-Karten. Ruhiger als die
    Sitzungsliste — hier stöbert man, statt auf einen Blick etwas zu erfassen. */

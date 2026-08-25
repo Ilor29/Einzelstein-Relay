@@ -282,6 +282,11 @@
 
     <!-- Ein aufgeschlagenes Buch: die Skill-Bibliothek. Zwei Seiten, die sich
          in der Mitte treffen — wie das Symbol auf Rolis Tastatur. -->
+    <g id="i-uhr" fill="none" stroke="currentColor" stroke-width="1.7"
+       stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="M12 7.5V12l3 2"/>
+    </g>
     <g id="i-buch" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 7v14"/>
@@ -353,6 +358,9 @@
     <button id="knopf-brain" data-tour="brain" class="knopf-blank knopf-brain"
             aria-label="Brain öffnen — dein fester Ansprechpartner">
       <svg viewBox="0 0 24 24"><use href="#i-brain"/></svg>
+    </button>
+    <button id="knopf-routinen" data-tour="routinen" class="knopf-blank" aria-label="Routinen — was von selbst läuft">
+      <svg viewBox="0 0 24 24"><use href="#i-uhr"/></svg>
     </button>
     <button id="knopf-bibliothek" class="knopf-blank" aria-label="Bibliothek">
       <svg viewBox="0 0 24 24"><use href="#i-buch"/></svg>
@@ -846,6 +854,11 @@
             holt ihn immer, egal ob er läuft, schläft oder neu ist.</span>
         </div>
         <div class="symbol-zeile">
+          <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-uhr"/></svg>
+          <span>Routinen — alles, was der Server nach Zeitplan von selbst
+            erledigt. Anhalten, sofort starten, Protokoll lesen.</span>
+        </div>
+        <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-buch"/></svg>
           <span>Deine Bibliothek mit Skills.</span>
         </div>
@@ -890,6 +903,33 @@
 <!-- Bibliothek -->
 <!-- Deine Skills als Karten: mit dem Namen, den du vergeben hast, deiner
      Beschreibung und einer Kategorie. Oben die Reiter zum Filtern. -->
+<!-- Routinen: was der Server nach Zeitplan von selbst tut -->
+<section id="ansicht-routinen" class="ansicht" hidden>
+  <header class="kopf">
+    <button id="knopf-routinen-zurueck" class="knopf-blank" aria-label="Zurück">
+      <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
+    </button>
+    <h1>Routinen</h1>
+  </header>
+  <p class="hinweis routinen-hinweis">Was dein Server nach Zeitplan von selbst
+    erledigt. Antippen zeigt das Protokoll.</p>
+  <div id="routinen-liste" class="bib-liste"></div>
+</section>
+
+<!-- Das Protokoll einer Routine — ein Blatt von unten. -->
+<div id="protokoll-blatt" class="blatt" hidden>
+  <div class="blatt-schatten" id="protokoll-schatten"></div>
+  <div class="blatt-inhalt">
+    <div class="blatt-kopf">
+      <button type="button" id="protokoll-schliessen" class="knopf-blank"
+              aria-label="Schließen">✕</button>
+      <h2 id="protokoll-titel">Protokoll</h2>
+    </div>
+    <p id="protokoll-quelle" class="hinweis"></p>
+    <pre id="protokoll-text" class="protokoll-text"></pre>
+  </div>
+</div>
+
 <section id="ansicht-bibliothek" class="ansicht" hidden>
   <header class="kopf">
     <button id="knopf-bib-zurueck" class="knopf-blank" aria-label="Zurück">
