@@ -371,6 +371,37 @@ async def attach(name: str, cols: int, rows: int) -> asyncio.subprocess.Process:
     )
 
 
+# Die Größe, mit der jede Sitzung angelegt wird (siehe create: -x 120 -y 40).
+STANDARD_BREITE, STANDARD_HOEHE = 120, 40
+
+
+def fenster_zuruecksetzen(name: str) -> None:
+    """Nach dem letzten Zuschauer die Standardgröße wiederherstellen.
+
+    Schaut man vom Handy ins Terminal, schrumpft tmux das Fenster auf die
+    Handybreite — und lässt es so, auch wenn der Zuschauer längst weg ist
+    (Rolis Brain stand auf 52 Zeichen). In der Breite kürzt Claude Code seine
+    Fußzeile mit „…", und der Hinweis „esc to interrupt", an dem wir
+    erkennen, dass Claude arbeitet, steht nie auf dem Schirm: Die App hält
+    Claude für fertig, der Denk-Balken verschwindet, die Antwort kommt
+    „nie". Also: Ist niemand mehr dran, zurück auf 120×40.
+    """
+    socket, sitzung = _zerlegen(name)
+    if socket != SOCKET:
+        return
+    try:
+        clients = _run("list-clients", "-t", sitzung, socket=socket).strip()
+    except TmuxError:
+        return
+    if clients:
+        return                      # es schaut noch jemand zu
+    try:
+        _run("resize-window", "-t", sitzung, "-x", str(STANDARD_BREITE),
+             "-y", str(STANDARD_HOEHE), socket=socket)
+    except TmuxError:
+        pass
+
+
 def resize(name: str, cols: int, rows: int) -> None:
     socket, sitzung = _zerlegen(name)
     # Fremde Sitzungen nicht umgrößen: Dort sitzt womöglich noch jemand am

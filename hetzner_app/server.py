@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 140
+VERSION = 141
 
 
 @app.get("/api/version")
@@ -1745,6 +1745,9 @@ async def terminal(
         if process.returncode is None:
             process.terminate()
             await process.wait()
+        # Das Fenster nicht in Handybreite zurücklassen — sonst erkennt die
+        # App nicht mehr, wann Claude arbeitet (siehe tmux.fenster_zuruecksetzen).
+        await asyncio.to_thread(tmux.fenster_zuruecksetzen, name)
 
 
 # --- Die Oberfläche ----------------------------------------------------------

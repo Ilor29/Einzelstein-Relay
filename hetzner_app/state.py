@@ -158,6 +158,16 @@ def forget(name: str) -> None:
 # Denk-Balken aus, während Claude längst arbeitete.
 _ARBEITET = re.compile(r"esc to in", re.IGNORECASE)
 
+# Zweites Signal: die Kreisel-Zeile, die Claude Code beim Arbeiten über der
+# Eingabe zeigt — „✻ Thinking…", „· Brewing…", „⠋ Cogitating…". In einem
+# schmalen Fenster fällt „esc to interrupt" hinten weg, der Kreisel vorne
+# bleibt. Nur am Zeilenanfang und nur mit dem „…"-Wort, damit ein Aufzählungs-
+# punkt im Text nicht als Arbeit durchgeht.
+_KREISEL = re.compile(
+    r"^\s*[✻✽✶✳✢·⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠠⠄⠂⠁⠈]\s+[^\s(]{2,30}…",
+    re.MULTILINE,
+)
+
 # Rückfragen von Claude — Berechtigungen, Ja/Nein, Auswahllisten.
 _FRAGT = re.compile(
     r"(Do you want|Would you like|\(y/n\)|❯\s*1\.|Proceed\?|Möchtest du|Soll ich)",
@@ -178,7 +188,7 @@ def detect(name: str) -> str:
     except tmux.TmuxError:
         return IDLE
 
-    if _ARBEITET.search(screen):
+    if _ARBEITET.search(screen) or _KREISEL.search(screen):
         return RUNNING
     if _FRAGT.search(screen):
         return WAITING
