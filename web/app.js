@@ -4038,6 +4038,32 @@ async function oeffneBibliothek(ziel) {
 
 $("knopf-bibliothek").addEventListener("click", () => oeffneBibliothek(null));
 
+// --- Befehle vom Leitstand -------------------------------------------------
+//
+// Zeigt der Leitstand (LEIT//PULS) diese App in seinem Reiter, will er
+// manchmal etwas von ihr: Sein Server-Reiter sieht, welche Karte Speicher
+// hält und lange ruht, und bietet einen Mond zum Schlafenlegen. Selbst darf
+// er das nicht — angemeldet ist nur diese App hier. Also schickt er uns eine
+// Nachricht (postMessage), wir tun es mit unserer Anmeldung und melden
+// zurück. Angenommen wird nur, was vom eigenen Elternfenster kommt und von
+// „leitstand." vor unserem eigenen Hostnamen — keine fremde Seite kann so
+// Karten schlafen legen. Schlafen ist ohnehin harmlos: Aufwecken ist ein Tipp.
+window.addEventListener("message", async (e) => {
+  if (window.parent === window || e.source !== window.parent) return;
+  if (e.origin !== `https://leitstand.${location.host}`) return;
+  const d = e.data;
+  if (!d || d.tu !== "schlafen" || typeof d.name !== "string") return;
+  const antwort = { tat: "schlafen", name: d.name, ok: false };
+  try {
+    await api(`/sessions/${encodeURIComponent(d.name)}/schlafen`, { method: "POST" });
+    antwort.ok = true;
+    if (listeOffen) ladeListe();
+  } catch (fehler) {
+    antwort.fehler = fehler.message || "hat nicht geklappt";
+  }
+  e.source.postMessage(antwort, e.origin);
+});
+
 // --- Routinen: was der Server nach Zeitplan von selbst tut -----------------
 //
 // Der Server läuft rund um die Uhr, und mit der Zeit tut er allerhand ohne
