@@ -4966,6 +4966,19 @@ $("knopf-tour").addEventListener("click", () => {
     hinweis.classList.remove("bereit");
   }
 
+  // Am Rechner (Breitbild) ist die Lesespalte schmal zentriert — die Raender
+  // links und rechts gehoeren keinem Roll-Container. Wer mit der Maus dort
+  // steht und rollt, bewegt nichts (aufgefallen 25.08. im LEIT//PULS).
+  // Darum: Rad-Rollen ueber "totem" Grund an den Verlauf weiterreichen.
+  document.addEventListener("wheel", (e) => {
+    const ziel = e.target;
+    if (!(ziel instanceof Element)) return;
+    if (ziel.closest("#verlauf, #terminal, textarea, input, .blatt, pre")) return;
+    const v = document.getElementById("verlauf");
+    if (!v || v.offsetParent === null) return;
+    v.scrollTop += e.deltaY;
+  }, { passive: true });
+
   document.addEventListener("touchstart", (e) => {
     geeignet = false;
     if (e.touches.length !== 1) return;
