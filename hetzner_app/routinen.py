@@ -333,6 +333,10 @@ def jetzt_ausfuehren(kennung: str) -> dict:
             break
     else:
         raise KeyError("Diese Routine gibt es nicht (mehr).")
+    # Schickt die Zeile ihre Ausgabe ins Nichts („> /dev/null 2>&1"), nehmen
+    # wir das für den Hand-Lauf weg — sonst bliebe unser Protokoll leer, und
+    # genau das will man nach „Jetzt" sehen.
+    befehl = re.sub(r"\s*>>?\s*/dev/null(\s+2>&1)?\s*$", "", befehl)
     ORDNER.mkdir(parents=True, exist_ok=True)
     log = ORDNER / f"{kennung}.log"
     with open(log, "w") as f:
