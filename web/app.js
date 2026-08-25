@@ -548,7 +548,7 @@ let irgendeineLaeuft = false; // aus der letzten Kartenliste: arbeitet irgendwo 
 function listenTaktPlanen() {
   clearTimeout(listenTakt);
   listenTakt = null;
-  if (!listeOffen || document.hidden) return;
+  if (!listeOffen || ruht()) return;
   listenTakt = setTimeout(async () => {
     try { await ladeListe(); } finally { listenTaktPlanen(); }
   }, irgendeineLaeuft ? 5000 : 15000);
@@ -1402,7 +1402,7 @@ async function sitzungsTakt() {
   const lauf = ++taktLauf;
   clearTimeout(verlaufTakt);
   verlaufTakt = null;
-  if (!aktuelleSitzung || imTerminal || document.hidden) return;
+  if (!aktuelleSitzung || imTerminal || ruht()) return;
   ladeVerlauf();
   pruefeFrage();
   if (Date.now() - kontextZuletzt > 12000) {
@@ -1415,7 +1415,7 @@ async function sitzungsTakt() {
   try {
     await pruefeObClaudeArbeitet();
   } finally {
-    if (lauf === taktLauf && aktuelleSitzung && !imTerminal && !document.hidden) {
+    if (lauf === taktLauf && aktuelleSitzung && !imTerminal && !ruht()) {
       verlaufTakt = setTimeout(sitzungsTakt, beschaeftigt ? 3000 : 12000);
     }
   }
@@ -1433,12 +1433,39 @@ setInterval(pruefeObTonZurueck, 3000);
 // die Anzeige blieb dann stehen, bis man die App neu startete (Rolis Fund
 // 25.08.: kurze Antwort im Brain, erst nach Neustart zu sehen). Die
 // Takt-Funktionen räumen einen alten Zeitgeber selbst weg.
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) return;
+function sofortNachladen() {
   if (listeOffen) ladeListe().then(listenTaktPlanen);
   if (aktuelleSitzung && !imTerminal) sitzungsTakt();
   if (!$("ansicht-routinen").hidden) ladeRoutinen().then(routinenTaktPlanen);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) sofortNachladen();
 });
+
+// Eingebettet als Reiter (LEIT//PULS zeigt die App in einem eingebetteten
+// Fenster): Liegt ein anderer Reiter vorne, ist unser Fenster ausgeblendet —
+// für den Browser aber nicht "hidden", also kommt beim Zurückwechseln kein
+// visibilitychange. Ein IntersectionObserver auf dem Wurzelelement sagt uns,
+// ob wir tatsächlich im Sichtfeld liegen (das funktioniert auch aus einem
+// eingebetteten Fenster heraus, die Fenstergröße dagegen nicht — sie behält
+// beim Ausblenden ihren alten Wert). Ruht die App unsichtbar, spart sie die
+// Abfragen wie bei dunklem Bildschirm; beim Aufklappen lädt sie sofort nach.
+let imSichtfeld = true;
+function eingeklappt() {
+  return !imSichtfeld;
+}
+// Ruht die App — Bildschirm dunkel oder Reiter zugeklappt?
+function ruht() {
+  return document.hidden || eingeklappt();
+}
+if ("IntersectionObserver" in window) {
+  new IntersectionObserver((eintraege) => {
+    const jetzt = eintraege[eintraege.length - 1].isIntersecting;
+    if (!imSichtfeld && jetzt) sofortNachladen();
+    imSichtfeld = jetzt;
+  }).observe(document.documentElement);
+}
 
 function verbinde(name) {
   steckdose?.close();
@@ -4117,7 +4144,7 @@ async function ladeRoutinen() {
 function routinenTaktPlanen() {
   clearTimeout(routinenTakt);
   routinenTakt = null;
-  if ($("ansicht-routinen").hidden || document.hidden) return;
+  if ($("ansicht-routinen").hidden || ruht()) return;
   routinenTakt = setTimeout(async () => {
     try { await ladeRoutinen(); } finally { routinenTaktPlanen(); }
   }, 10000);
