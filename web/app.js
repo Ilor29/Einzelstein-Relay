@@ -1342,7 +1342,9 @@ function baueTerminal() {
 
 function oeffneSitzung(sitzung) {
   stoppeListe();
+  entwurfMerken();     // was in der vorigen Karte noch im Feld stand
   aktuelleSitzung = sitzung;
+  offeneSitzungMerken(sitzung.name);
   sucheSchliessen();   // ein altes Suchwort gehört nicht zur neuen Karte
   // Anhänge gehören zu der Sitzung, aus der sie hochgeladen wurden — beim
   // Wechsel weg damit, sonst schickte man das Foto ins falsche Projekt.
@@ -1360,6 +1362,7 @@ function oeffneSitzung(sitzung) {
   });
   zeigeModus(sitzung.modus);
   zeige("sitzung");
+  entwurfHolen();
 
   // Zum Lesen aufmachen, nicht ins Terminal. Das ist der Normalfall.
   imTerminal = false;
@@ -1553,6 +1556,7 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   const gemerkt = anhaenge;
   feld.value = "";
   feldAnpassen();           // sonst bleibt das Feld auf voller Höhe stehen
+  entwurfMerken();          // der Entwurf ist abgeschickt, nichts mehr zu merken
   anhaengeLeeren();
 
   try {
@@ -2110,7 +2114,62 @@ function feldAnpassen() {
   eingabeFeld.style.height = Math.min(eingabeFeld.scrollHeight, grenze) + "px";
 }
 
-eingabeFeld.addEventListener("input", feldAnpassen);
+// --- Nicht vergessen, wo du warst ------------------------------------------
+//
+// Android wirft die App im Hintergrund gern weg, wenn der Speicher knapp wird;
+// beim Zurückkommen lädt sie frisch — und stand dann auf der Startseite, der
+// halb getippte Text war weg. Deshalb merken wir uns die offene Karte und den
+// Entwurf im Feld und stellen beides beim Start wieder her. Der Entwurf wird
+// je Karte gemerkt, damit ein Text nicht in der falschen Sitzung auftaucht.
+const OFFENE_SITZUNG = "relay_offene_sitzung";
+
+function entwurfSchluessel() {
+  return aktuelleSitzung ? `relay_entwurf_${aktuelleSitzung.name}` : null;
+}
+
+function entwurfMerken() {
+  const k = entwurfSchluessel();
+  if (!k) return;
+  try {
+    if (eingabeFeld.value.trim()) localStorage.setItem(k, eingabeFeld.value);
+    else localStorage.removeItem(k);
+  } catch { /* nicht merkbar */ }
+}
+
+function entwurfHolen() {
+  const k = entwurfSchluessel();
+  if (!k || eingabeFeld.value) return;
+  try {
+    const text = localStorage.getItem(k);
+    if (text) { eingabeFeld.value = text; feldAnpassen(); }
+  } catch { /* dann eben leer */ }
+}
+
+// Die Karte, die beim Start wieder aufgehen soll — oder keine.
+function offeneSitzungMerken(name) {
+  try {
+    if (name) localStorage.setItem(OFFENE_SITZUNG, name);
+    else localStorage.removeItem(OFFENE_SITZUNG);
+  } catch { /* nicht merkbar */ }
+}
+
+async function sitzungWiederOeffnen(sitzungen) {
+  let name = null;
+  try { name = localStorage.getItem(OFFENE_SITZUNG); } catch { return; }
+  if (!name) return;
+  try {
+    if (!Array.isArray(sitzungen)) sitzungen = await (await api("/sessions")).json();
+  } catch { return; }
+  const s = sitzungen.find((x) => x.name === name);
+  if (s) oeffneSitzung(s);
+  else offeneSitzungMerken(null);     // die Karte gibt es nicht mehr
+}
+
+eingabeFeld.addEventListener("input", () => { feldAnpassen(); entwurfMerken(); });
+// Diktat und Glätten setzen den Text ohne input-Ereignis — beim Wegschalten
+// sichern wir darum in jedem Fall noch einmal.
+document.addEventListener("visibilitychange", () => { if (document.hidden) entwurfMerken(); });
+window.addEventListener("pagehide", entwurfMerken);
 
 // Enter schickt ab; Umschalt+Enter macht einen Absatz.
 eingabeFeld.addEventListener("keydown", (e) => {
@@ -2330,7 +2389,9 @@ $("knopf-zurueck").addEventListener("click", () => {
   steckdose = null;
   clearInterval(verlaufTakt);
   verlaufTakt = null;
+  entwurfMerken();
   aktuelleSitzung = null;
+  offeneSitzungMerken(null);
   starteListe();
 });
 
@@ -4641,10 +4702,14 @@ $("teilen-neu").addEventListener("click", () => {
   if (gut?.text) $("neu-auftrag").value = gut.text;
 });
 
-function nachAnmeldung() {
+function nachAnmeldung(sitzungen) {
   starteListe();
-  kurzbefehlAusfuehren();
-  teilenAusfuehren();
+  // Stand die App vorher in einer Karte, geht sie dort wieder auf — bevor ein
+  // Kurzbefehl oder Geteiltes womöglich etwas anderes aufmachen.
+  sitzungWiederOeffnen(sitzungen).then(() => {
+    kurzbefehlAusfuehren();
+    teilenAusfuehren();
+  });
 }
 
 async function start() {
@@ -4653,8 +4718,8 @@ async function start() {
 
   // Schon angemeldet?
   try {
-    await (await api("/sessions")).json();
-    nachAnmeldung();
+    const sitzungen = await (await api("/sessions")).json();
+    nachAnmeldung(sitzungen);
     return;
   } catch (err) {
     if (istNetzfehler(err)) { zeigeNetzHinweis(); return; }
