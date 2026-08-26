@@ -188,7 +188,13 @@ def detect(name: str) -> str:
     except tmux.TmuxError:
         return IDLE
 
-    if _ARBEITET.search(screen) or _KREISEL.search(screen):
+    # Nur der untere Rand zählt: Kreisel, Eingabekasten und Fußzeile stehen
+    # in den letzten Zeilen. Im Verlauf darüber darf „esc to interrupt" oder
+    # „✻ Thinking…" ruhig als Zitat stehen — am 27.08. hielt die App die
+    # Relay-Karte für ewig beschäftigt, weil Claude dort genau diesen Hinweis
+    # in seiner Antwort erklärt hatte.
+    fuss = "\n".join(screen.rstrip().splitlines()[-10:])
+    if _ARBEITET.search(fuss) or _KREISEL.search(fuss):
         return RUNNING
     if _FRAGT.search(screen):
         return WAITING
