@@ -1538,7 +1538,12 @@ async function sendeInSitzung(text) {
   if (imTerminal) {
     // Im rohen Terminal NICHT die Zeit voranstellen — dort tippst du Befehle,
     // und ein Zeitstempel davor wäre Unsinn.
-    steckdose?.send(text + "\r");
+    // Text und Enter NICHT im selben Paket: Kommen beide in einem Atemzug,
+    // verschluckt Claude Code das Enter gelegentlich — der Text bleibt dann
+    // als Geist in der Eingabezeile stehen und kommt nie an (26.08., drei
+    // Karten). Dieselbe Pause wie beim Senden aus der Lese-Ansicht.
+    steckdose?.send(text);
+    setTimeout(() => steckdose?.send("\r"), 350);
     return;
   }
 
