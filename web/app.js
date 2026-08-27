@@ -2218,8 +2218,15 @@ async function sitzungWiederOeffnen(sitzungen) {
 
 eingabeFeld.addEventListener("input", () => { feldAnpassen(); entwurfMerken(); });
 // Diktat und Glätten setzen den Text ohne input-Ereignis — beim Wegschalten
-// sichern wir darum in jedem Fall noch einmal.
-document.addEventListener("visibilitychange", () => { if (document.hidden) entwurfMerken(); });
+// sichern wir darum in jedem Fall noch einmal. Vorher geht das Mikrofon aus:
+// Android würgt die Erkennung im Hintergrund ohnehin ab, und der Neustart
+// schrieb das Feld dann ohne den halb gesprochenen Satz neu — beim Wegwerfen
+// der Seite überschrieb genau dieser Stand den guten Entwurf.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) return;
+  hoertStoppen?.();
+  entwurfMerken();
+});
 window.addEventListener("pagehide", entwurfMerken);
 
 // Enter schickt ab; Umschalt+Enter macht einen Absatz.
@@ -2303,6 +2310,9 @@ $("knopf-diktat").addEventListener("click", () => {
       // Mitwachsen und mitlaufen: Du sollst sehen, dass er dich hört.
       feldAnpassen();
       feld.scrollTop = feld.scrollHeight;
+      // Jedes Stück sofort in den Entwurf — stirbt die Seite in der
+      // Hosentasche, ist das Gesprochene trotzdem gemerkt.
+      entwurfMerken();
     };
 
     erkennung.onerror = (e) => {
