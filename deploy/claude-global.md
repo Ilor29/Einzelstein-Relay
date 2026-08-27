@@ -41,3 +41,13 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
   `~/projekte/Brain/REGISTER.md` (Zweck, Stand, nächster Schritt).
 - Vor Behauptungen wie „verkaufsfertig" oder „rechtlich sauber": Lizenz- und
   Rechtslage prüfen (CODE//GUARD), nie aus dem Gedächtnis freigeben.
+- **Entwürfe zeigt man direkt, nicht über Umwege.** Für Webseiten und HTML-Entwürfe
+  gibt es einen eigenen Webspace: Was in `~/seiten/` liegt, ist sofort unter
+  `https://seiten-roli.65-21-246-222.sslip.io/<ordner>/` erreichbar (Dienst
+  `seiten-roli.service`, Port 8803, kein Passwort, auf noindex gesetzt). Roli
+  arbeitet viel vom Handy, er braucht einen Link. Dasselbe gibt es für Lorenz
+  (`seiten-lorenz`) und Lea (`seiten-lea`).
+- **Seiten vor dem Zeigen selbst im Browser aufmachen.** Playwright liegt in
+  `/home/roli/werkzeuge/browser/.venv`. Screenshot machen, Konsole auf Fehler
+  ansehen, auf fehlende Dateien prüfen. Nicht raten lassen, was man selbst
+  nachsehen kann.
