@@ -3058,6 +3058,19 @@ try {
   });
 } catch { /* dann eben ohne */ }
 
+// Lag beim letzten Mal noch ein Vortrag in der Luft, als die Seite starb?
+// Dann hat Android die App mitsamt Ton weggeworfen (oder der Browser wurde
+// geschlossen) — genau der Abriss, der sonst keine Spur hinterlässt.
+try {
+  const lief = localStorage.getItem("relay_vortrag_lief");
+  if (lief) {
+    localStorage.removeItem("relay_vortrag_lief");
+    tonEreignis("vortrag-abgerissen", {
+      vor_s: Math.round((Date.now() - Number(lief)) / 1000),
+    });
+  }
+} catch { /* dann eben ohne */ }
+
 // Die letzte bekannte Ton-Uhr neben der Wand-Uhr — vom Sekundentakt des
 // Vortrags gepflegt. Beim Aufwachen verrät der Vergleich, was in der dunklen
 // Phase wirklich geschah: Lief die Ton-Uhr weiter (dann wurde gespielt, und
@@ -3309,6 +3322,7 @@ function zeichen(knopf, name) {
 function stille() {
   spricht = false;
   sprechLauf++;               // ein laufender Vortrag erkennt daran: Schluss
+  try { localStorage.removeItem("relay_vortrag_lief"); } catch { /* egal */ }
   for (const q of aktiveQuellen) {
     try { q.stop(); } catch { /* war schon vorbei */ }
   }
@@ -3478,6 +3492,10 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 
   restText = "";       // ein neuer Vortrag hebt einen alten Rest auf
   spricht = true;
+  // Dauerhaft merken, dass ein Vortrag läuft. Wirft Android die App in der
+  // Hosentasche weg, verschwindet er spurlos — beim nächsten Start verrät
+  // dieser Merker dem Tagebuch, dass ein Vortrag nie sauber zu Ende kam.
+  try { localStorage.setItem("relay_vortrag_lief", String(Date.now())); } catch { /* egal */ }
   sprecherKnopf = knopf;
   knopf.classList.add("spricht");
   zeichen(knopf, "#i-stopp");
@@ -3499,14 +3517,28 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
   dauerTonAn();
 
   async function hole(stueck) {
-    const antwort = await api("/speak", {
-      method: "POST",
-      // stimmeName nur bei der Hörprobe — sonst spricht die gewählte.
-      body: JSON.stringify(
-        stimmeName ? { text: stueck, stimme: stimmeName } : { text: stueck }
-      ),
-    });
-    return dekodiere(await antwort.arrayBuffer());
+    // Ein einzelner Schluckauf (Funkloch im Hintergrund, Piper-Neustart) darf
+    // nicht den ganzen Vortrag abreißen — genau so starb er am 28.08. um
+    // 13:56 lautlos in der Hosentasche. Erst nach drei Fehlversuchen ist
+    // wirklich Schluss, und jeder Fehlversuch steht im Ton-Tagebuch.
+    for (let versuch = 1; ; versuch++) {
+      try {
+        const antwort = await api("/speak", {
+          method: "POST",
+          // stimmeName nur bei der Hörprobe — sonst spricht die gewählte.
+          body: JSON.stringify(
+            stimmeName ? { text: stueck, stimme: stimmeName } : { text: stueck }
+          ),
+        });
+        return await dekodiere(await antwort.arrayBuffer());
+      } catch (err) {
+        tonEreignis("hole-fehler", {
+          versuch, fehler: String((err && err.message) || err).slice(0, 80),
+        });
+        if (versuch >= 3 || abgebrochen()) throw err;
+        await new Promise((r) => setTimeout(r, 1200 * versuch));
+      }
+    }
   }
 
   const abgebrochen = () => !spricht || lauf !== sprechLauf || sprecherKnopf !== meins;
@@ -3613,9 +3645,17 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 
     // Auf das Ende des letzten Stücks warten, dann aufräumen.
     await warteBisTonzeit(startZeit, abgebrochen);
-    if (!abgebrochen()) stille();
+    if (!abgebrochen()) {
+      tonEreignis("vortrag-ende");
+      stille();
+    }
   } catch (err) {
     if (lauf === sprechLauf) {
+      // Fürs Tagebuch: WARUM ist der Vortrag gestorben? Vorher endete er hier
+      // wortlos, und im Hintergrund sah niemand die Meldung.
+      tonEreignis("vortrag-fehler", {
+        fehler: String((err && err.message) || err).slice(0, 120),
+      });
       stille();
       melde("Das Vorlesen hat nicht geklappt.");
     }
@@ -3651,14 +3691,22 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     const nachschub = async (abgebrochen) => {
       const beginn = Date.now();
       let fertigInFolge = 0;    // wie oft „nichts Neues UND Claude ruht" in Folge
+      let holFehler = 0;        // Netz-Schluckaufe in Folge — erst bei drei Schluss
       while (!abgebrochen()) {
         let voll = "";
         try {
           voll = ((await (await api(
             `/sessions/${encodeURIComponent(vortragsSitzung)}/text`
           )).json()).text) || "";
+          holFehler = 0;
         } catch {
-          return null;          // kein Text zu holen — dann eben Schluss
+          // Ein Funkloch im Hintergrund beendete hier sofort den ganzen
+          // Folge-Vortrag. Erst nach drei Fehlschlägen in Folge aufgeben.
+          holFehler++;
+          tonEreignis("nachschub-fehler", { holFehler });
+          if (holFehler >= 3) return null;
+          await new Promise((r) => setTimeout(r, 1500));
+          continue;
         }
         const neu = neuerTeil(gelesen, voll);
         if (neu) {
