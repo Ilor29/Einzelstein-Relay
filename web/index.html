@@ -287,6 +287,12 @@
       <circle cx="12" cy="12" r="8.5"/>
       <path d="M12 7.5V12l3 2"/>
     </g>
+    <!-- Zwei Kettenglieder: die gesammelten Links einer Karte. -->
+    <g id="i-kette" fill="none" stroke="currentColor" stroke-width="1.7"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.6 13.4a4 4 0 0 0 5.6 0l2.9-2.9a4 4 0 1 0-5.6-5.6l-1.6 1.6"/>
+      <path d="M13.4 10.6a4 4 0 0 0-5.6 0l-2.9 2.9a4 4 0 1 0 5.6 5.6l1.6-1.6"/>
+    </g>
     <g id="i-buch" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 7v14"/>
@@ -393,6 +399,9 @@
     <h1 id="sitzung-name"></h1>
     <button id="knopf-suche" data-tour="suche" class="knopf-blank" aria-label="Im Verlauf suchen">
       <svg viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
+    </button>
+    <button id="knopf-linkliste" data-tour="linkliste" class="knopf-blank" aria-label="Gesammelte Links">
+      <svg viewBox="0 0 24 24"><use href="#i-kette"/></svg>
     </button>
     <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">
       <svg viewBox="0 0 24 24"><use href="#i-terminal"/></svg>
@@ -771,6 +780,10 @@
           <span>Freisprechen — vorlesen und danach gleich das Mikrofon öffnen.</span>
         </div>
         <div class="symbol-zeile">
+          <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-kette"/></svg>
+          <span>Gesammelte Links — alles, was Claude hier verlinkt hat.</span>
+        </div>
+        <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-terminal"/></svg>
           <span>Zwischen Lesen und dem echten Terminal wechseln.</span>
         </div>
@@ -927,6 +940,22 @@
     </div>
     <p id="protokoll-quelle" class="hinweis"></p>
     <pre id="protokoll-text" class="protokoll-text"></pre>
+  </div>
+</div>
+
+<!-- Die gesammelten Links einer Karte — ein Blatt von unten. -->
+<div id="links-blatt" class="blatt" hidden>
+  <div class="blatt-schatten" id="links-schatten"></div>
+  <div class="blatt-inhalt">
+    <div class="blatt-kopf">
+      <button type="button" id="links-schliessen" class="knopf-blank"
+              aria-label="Schließen">✕</button>
+      <h2>Gesammelte Links</h2>
+    </div>
+    <p class="hinweis">Jeder Internet-Link aus Claudes Antworten landet hier,
+       der neueste zuerst. Das Kreuz wirft einen Link raus — er kommt dann
+       auch nicht wieder.</p>
+    <div id="links-liste" class="links-liste"></div>
   </div>
 </div>
 

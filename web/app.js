@@ -993,6 +993,9 @@ async function ladeVerlauf() {
   if (abdruck === zuletztGesehen) return;
   zuletztGesehen = abdruck;
 
+  // Links aus den Antworten in die Sammlung legen — darf den Verlauf nie stören.
+  try { linksSammeln(bloecke); } catch { /* dann eben ohne */ }
+
   const behaelter = $("verlauf");
   // Die Werkzeug-Kästen ("Bash(…)", "Read(…)") gehören ins Terminal, nicht ins
   // Gespräch. Die Lese-Ansicht zeigt, was Claude *sagt* — wer sehen will, was es
@@ -1026,6 +1029,130 @@ async function ladeVerlauf() {
     requestAnimationFrame(() => { behaelter.scrollTop = behaelter.scrollHeight; });
   }
 }
+
+// --- Gesammelte Links --------------------------------------------------------
+//
+// Claude nennt einen Link — eine Vorschau, eine Doku, ein fertiger Entwurf —
+// und zwei Antworten später ist er im Verlauf vergraben. Die Kette oben sammelt
+// darum jeden Internet-Link aus Claudes Antworten, je Karte, der neueste
+// zuerst. Was du rauswirfst, bleibt draußen, auch wenn der Link im Verlauf
+// noch steht.
+
+function linklisteSchluessel() { return `relay_links_${aktuelleSitzung.name}`; }
+function linklisteWegSchluessel() { return `relay_links_weg_${aktuelleSitzung.name}`; }
+
+function linklisteLesen(schluessel) {
+  try {
+    const roh = JSON.parse(localStorage.getItem(schluessel) || "[]");
+    return Array.isArray(roh) ? roh : [];
+  } catch { return []; }
+}
+
+function linklisteSchreiben(schluessel, liste) {
+  try { localStorage.setItem(schluessel, JSON.stringify(liste)); } catch {}
+}
+
+// Zieht die Links aus einem Antwort-Text: Markdown-Links samt Anzeigetext,
+// nackte Adressen ohne. Nur http und https — Server-Pfade und mailto nützen
+// in einer Nachschlage-Liste am Handy nichts.
+function linksAusText(text) {
+  const funde = [];
+  const muster = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s<>"'`\])]+)/g;
+  let m;
+  while ((m = muster.exec(text))) {
+    // Satzzeichen am Ende gehören dem Satz, nicht dem Link — Sternchen
+    // ebenso, die stammen aus **fetten** Links.
+    const url = (m[2] || m[3] || "").replace(/[.,;:!?*]+$/, "");
+    if (url.length > 10) funde.push({ url, wort: m[1] || "" });
+  }
+  return funde;
+}
+
+function linksSammeln(bloecke) {
+  if (!aktuelleSitzung) return;
+  const liste = linklisteLesen(linklisteSchluessel());
+  const weg = new Set(linklisteLesen(linklisteWegSchluessel()));
+  const bekannt = new Set(liste.map((l) => l.url));
+  let neu = false;
+  for (const block of bloecke) {
+    if (block.typ !== "claude" || !block.text) continue;
+    for (const fund of linksAusText(block.text)) {
+      if (bekannt.has(fund.url) || weg.has(fund.url)) continue;
+      bekannt.add(fund.url);
+      liste.push({ url: fund.url, wort: fund.wort, wann: Date.now() });
+      neu = true;
+    }
+  }
+  while (liste.length > 100) liste.shift();     // die ältesten fallen raus
+  if (neu) linklisteSchreiben(linklisteSchluessel(), liste);
+}
+
+function linkRauswerfen(url) {
+  linklisteSchreiben(
+    linklisteSchluessel(),
+    linklisteLesen(linklisteSchluessel()).filter((l) => l.url !== url)
+  );
+  // Merken, dass er raus soll — sonst sammelte ihn der nächste Takt gleich
+  // wieder ein, solange er im Verlauf steht.
+  const weg = linklisteLesen(linklisteWegSchluessel());
+  if (!weg.includes(url)) weg.push(url);
+  while (weg.length > 300) weg.shift();
+  linklisteSchreiben(linklisteWegSchluessel(), weg);
+}
+
+function linkBlattZeigen() {
+  if (!aktuelleSitzung) return;
+  const ziel = $("links-liste");
+  ziel.replaceChildren();
+  const liste = linklisteLesen(linklisteSchluessel());
+
+  if (!liste.length) {
+    const leer = document.createElement("p");
+    leer.className = "hinweis";
+    leer.textContent = "Noch nichts gesammelt. Sobald Claude hier einen Link nennt, taucht er auf.";
+    ziel.append(leer);
+  }
+
+  for (const eintrag of [...liste].reverse()) {
+    const zeile = document.createElement("div");
+    zeile.className = "link-zeile";
+
+    const a = document.createElement("a");
+    a.className = "link-zeile-text";
+    a.href = eintrag.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    const titel = document.createElement("span");
+    titel.className = "link-titel";
+    titel.textContent = eintrag.wort || linkAnzeige(eintrag.url);
+    const adresse = document.createElement("span");
+    adresse.className = "link-adresse";
+    adresse.textContent = eintrag.url.length > 70
+      ? eintrag.url.slice(0, 67) + "…" : eintrag.url;
+    a.append(titel, adresse);
+
+    const wegKnopf = document.createElement("button");
+    wegKnopf.type = "button";
+    wegKnopf.className = "knopf-blank";
+    wegKnopf.setAttribute("aria-label", "Link aus der Sammlung werfen");
+    wegKnopf.textContent = "✕";
+    wegKnopf.addEventListener("click", () => {
+      linkRauswerfen(eintrag.url);
+      zeile.remove();
+      if (!$("links-liste").children.length) linkBlattZeigen();
+    });
+
+    zeile.append(a, wegKnopf);
+    ziel.append(zeile);
+  }
+
+  $("links-blatt").hidden = false;
+}
+
+function linkBlattZu() { $("links-blatt").hidden = true; }
+$("knopf-linkliste").addEventListener("click", linkBlattZeigen);
+$("links-schatten").addEventListener("click", linkBlattZu);
+$("links-schliessen").addEventListener("click", linkBlattZu);
 
 // --- Die Lupe im Verlauf -----------------------------------------------------
 //
@@ -4887,6 +5014,10 @@ function tourSchritte(ansicht) {
       text: "Die Lupe sucht ein Wort im bisherigen Gespräch — direkt auf dem " +
             "Handy, ohne Claude zu fragen. Treffer werden hervorgehoben, mit " +
             "den Pfeilen springst du von einem zum nächsten." },
+    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="linkliste"]', titel: "Gesammelte Links",
+      text: "Die Kette hebt jeden Link auf, den Claude in diesem Gespräch " +
+            "nennt — der neueste zuerst. Nichts mehr im Verlauf ausgraben: " +
+            "antippen, Liste auf, Link öffnen." },
     { kapitel: "Dein erstes Gespräch", titel: "Und wenn Claude fragt?",
       text: "Manchmal stellt Claude eine Rückfrage — die App zeigt sie dir als " +
             "Knöpfe, du tippst die Antwort einfach an. Beim allerersten " +

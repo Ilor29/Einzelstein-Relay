@@ -1124,6 +1124,37 @@ html, body {
   border: 1px solid var(--linie);
   cursor: pointer;
 }
+/* Die gesammelten Links: eine Zeile je Link, antippen öffnet, das Kreuz
+   wirft ihn raus. */
+.links-liste { display: flex; flex-direction: column; overflow-y: auto; }
+.link-zeile {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem .1rem;
+  border-bottom: 1px solid var(--linie);
+}
+.link-zeile:last-child { border-bottom: 0; }
+.link-zeile-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  text-decoration: none;
+}
+.link-titel {
+  color: var(--akzent);
+  font-size: .92rem;
+  overflow-wrap: anywhere;
+}
+.link-adresse {
+  color: var(--schrift-leise);
+  font-family: var(--mono);
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+
 .bildunterschrift {
   font-size: .82rem;
   color: var(--schrift-leise);
