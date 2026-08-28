@@ -240,10 +240,13 @@ def _google_sprechen(text: str, voice_name: str) -> bytes:
     Handy dekodiert mp3 wie WAV über Web Audio."""
     if not _GC_KEY:
         raise TTSError("Für Google ist kein Schlüssel hinterlegt.")
+    # Das gewählte Tempo gilt auch hier: Googles speakingRate ist der Kehrwert
+    # von Pipers Längen-Faktor (größer = schneller statt langsamer).
+    rate = round(1 / TEMPOS[gewaehltes_tempo()], 2)
     daten = json.dumps({
         "input": {"text": text},
         "voice": {"languageCode": "de-DE", "name": voice_name},
-        "audioConfig": {"audioEncoding": "MP3"},
+        "audioConfig": {"audioEncoding": "MP3", "speakingRate": rate},
     }).encode()
     req = urllib.request.Request(
         f"{_GC_BASIS}/text:synthesize?key={_GC_KEY}",
@@ -333,6 +336,40 @@ def stimmen() -> list[dict]:
         liste.append({"name": key, "anzeige": v["anzeige"], "art": v["art"],
                       "gewaehlt": key == gewaehlt})
     return liste
+
+
+# --- Sprechtempo -------------------------------------------------------------
+#
+# Piper nimmt je Anfrage einen Längen-Faktor (length_scale): kleiner heißt
+# schneller. Google kennt dafür speakingRate (größer heißt schneller).
+# ElevenLabs kann kein Tempo — dort gilt die Wahl schlicht nicht.
+TEMPO_DATEI = Path.home() / ".hetzner-app" / "tempo.txt"
+# Gemessen 28.08.: Piper setzt den Faktor nur gedämpft um (0,87 brachte kaum
+# 5 % — erst 0,8 ist deutlich hörbar). Darum kräftigere Werte als die reine
+# Prozentrechnung vermuten ließe.
+TEMPOS = {
+    "gemuetlich": 1.18,
+    "normal": 1.0,
+    "flott": 0.8,
+}
+
+
+def gewaehltes_tempo() -> str:
+    if TEMPO_DATEI.exists():
+        try:
+            name = TEMPO_DATEI.read_text().strip()
+        except OSError:
+            return "normal"
+        if name in TEMPOS:
+            return name
+    return "normal"
+
+
+def tempo_waehlen(name: str) -> None:
+    if name not in TEMPOS:
+        raise ValueError("Dieses Tempo gibt es nicht.")
+    TEMPO_DATEI.parent.mkdir(parents=True, exist_ok=True)
+    TEMPO_DATEI.write_text(name)
 
 
 def gewaehlte_stimme() -> str:
@@ -602,6 +639,11 @@ def _sprechen(text: str, name: str) -> bytes:
     stem, sprecher = _zerlegen_stimme(name)
 
     anfrage: dict = {"text": text, "voice": stem}
+    tempo = TEMPOS[gewaehltes_tempo()]
+    if tempo != 1.0:
+        # Nur mitschicken, wenn es vom Normalwert abweicht — sonst bleibt es
+        # beim Standard des jeweiligen Stimmmodells.
+        anfrage["length_scale"] = tempo
     if sprecher is not None:
         # Bei mehrstimmigen Modellen den gewählten Sprecher setzen; bei
         # Einzelstimmen bleibt es beim Standard.

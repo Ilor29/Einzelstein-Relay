@@ -3996,8 +3996,66 @@ $("knopf-einstellungen").addEventListener("click", async () => {
     liste.append(el);
   }
 
+  ladeTempo();
   ladeGeraete();
 });
+
+// Das Sprechtempo — gespeichert auf dem Server, gilt also auf jedem Gerät.
+// Beim Wählen kommt sofort eine kurze Probe im neuen Tempo.
+const TEMPO_NAMEN = {
+  gemuetlich: ["Gemütlich", "etwas langsamer — gut zum Mitdenken"],
+  normal: ["Normal", "das eingebaute Tempo der Stimme"],
+  flott: ["Flott", "spart Zeit bei langen Antworten"],
+};
+
+async function ladeTempo() {
+  const wahl = $("tempo-wahl");
+  wahl.replaceChildren();
+
+  let stand;
+  try {
+    stand = await (await api("/tempo")).json();
+  } catch { return; }   // dann fehlt der Abschnitt eben — kein Beinbruch
+
+  for (const stufe of stand.stufen) {
+    const [name, sub] = TEMPO_NAMEN[stufe] || [stufe, ""];
+    const el = document.createElement("div");
+    el.className = "ordner" + (stufe === stand.tempo ? " gewaehlt" : "");
+    el.innerHTML = `
+      <span class="punkt-wahl"></span>
+      <span class="stimme-name"></span>
+      <span class="sub"></span>
+      <button class="klein-knopf" aria-label="Anhören">
+        <svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>
+      </button>`;
+    el.querySelector(".stimme-name").textContent = name;
+    el.querySelector(".sub").textContent = sub;
+
+    const waehlen = async () => {
+      await api("/tempo", { method: "POST", body: JSON.stringify({ name: stufe }) });
+      wahl.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
+      el.classList.add("gewaehlt");
+    };
+
+    el.addEventListener("click", async () => {
+      try { await waehlen(); }
+      catch (err) { melde(err.message || "Das Tempo ließ sich gerade nicht wählen."); }
+    });
+
+    // Anhören wählt MIT — eine Probe in einem Tempo, das danach nicht gilt,
+    // wäre nur verwirrend.
+    el.querySelector("button").addEventListener("click", async (e) => {
+      e.stopPropagation();
+      tonEntsperren();
+      const knopf = e.currentTarget;
+      if (spricht && sprecherKnopf === knopf) { stille(); return; }
+      try { await waehlen(); } catch { /* dann nur die Probe im alten Tempo */ }
+      await sprich("In diesem Tempo lese ich dir jetzt alles vor.", knopf);
+    });
+
+    wahl.append(el);
+  }
+}
 
 // Die angemeldeten Geräte, jedes mit einem Knopf zum Aussperren. Ein verlorenes
 // Handy verliert damit sofort seinen Zugang — nicht erst, wenn die Anmeldung

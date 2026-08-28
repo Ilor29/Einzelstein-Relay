@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 150
+VERSION = 151
 
 
 @app.get("/api/version")
@@ -847,6 +847,21 @@ def stimme_waehlen(body: Stimme) -> dict:
     except ValueError as fehler:
         raise HTTPException(400, str(fehler))
     return {"ok": True, "stimme": body.name}
+
+
+@app.get("/api/tempo", dependencies=[Depends(require_auth)])
+def tempo() -> dict:
+    """Das gewählte Sprechtempo und die verfügbaren Stufen."""
+    return {"tempo": tts.gewaehltes_tempo(), "stufen": list(tts.TEMPOS)}
+
+
+@app.post("/api/tempo", dependencies=[Depends(require_auth)])
+def tempo_waehlen(body: Stimme) -> dict:
+    try:
+        tts.tempo_waehlen(body.name)
+    except ValueError as fehler:
+        raise HTTPException(400, str(fehler))
+    return {"ok": True, "tempo": body.name}
 
 
 # Schützt Prüfen-und-Setzen der Gesprächs-Zuordnung: Ohne Sperre konnten zwei
