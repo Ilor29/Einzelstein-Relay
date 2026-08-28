@@ -990,6 +990,9 @@ html, body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Nie seitlich: overflow-y allein machte die Querrichtung auch scrollbar,
+     und ein einziger übriger langer Pfad ließ den ganzen Verlauf wackeln. */
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding: 1rem .8rem;
   display: flex;
@@ -1126,6 +1129,7 @@ html, body {
   color: var(--schrift-leise);
   text-align: right;
   padding-right: .2rem;
+  overflow-wrap: anywhere;    /* lange Pfade umbrechen statt überstehen */
 }
 
 /* "Claude anhalten" — erscheint nur, während er wirklich arbeitet.
