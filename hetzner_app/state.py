@@ -62,6 +62,9 @@ class Meta:
     ohne_rueckfragen: bool = False
     schlaf_zeit: int = 0
     letzte_vorschau: str = ""
+    # Wie viel Speicher (MB) die Sitzung beim Schlafenlegen gerade hielt —
+    # so viel hat das Schlafen freigegeben. Die Liste zeigt die Summe.
+    gespart_mb: int = 0
     # Welche Mitschrift-Datei (Kennung ohne .jsonl in ~/.claude/projects/…)
     # zu DIESEM Gespräch gehört. Claude Code kopiert beim Fortsetzen die ganze
     # Geschichte in die jeweils neue Datei — die gemerkte Kennung trägt also
@@ -557,6 +560,7 @@ def overview() -> list[dict]:
             "anzeige": meta.anzeige or name,
             "terminals": 0,
             "archiviert": meta.archiviert,
+            "gespartMb": meta.gespart_mb,
         })
 
     # Sitzungen, die niemand schlafen gelegt hat und die trotzdem kein

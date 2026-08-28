@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 146
+VERSION = 147
 
 
 @app.get("/api/version")
@@ -666,6 +666,8 @@ def session_schlafen(name: str) -> dict:
         cwd=treffer[0].cwd,
         schlaf_zeit=int(time.time()),
         letzte_vorschau=state.preview(name),
+        # Vor dem Abriss messen: So viel Speicher gibt das Schlafen frei.
+        gespart_mb=speicher.chat_mb(name),
     )
     tmux.kill(name)
     return {"ok": True}

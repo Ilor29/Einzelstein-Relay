@@ -106,6 +106,25 @@ def _prozessbaum_rss(wurzel_pid: str) -> int:
     return summe // 1024
 
 
+def chat_mb(name: str) -> int:
+    """Speicherverbrauch EINER Sitzung (Prozessbaum ihrer Panes), in MB.
+
+    Gemessen wird direkt vor dem Schlafenlegen — die Zahl sagt dann ehrlich,
+    wie viel das Schlafen freigegeben hat.
+    """
+    try:
+        aus = subprocess.run(
+            ["tmux", "-L", "hz", "list-panes", "-t", f"=hz-{name}",
+             "-F", "#{pane_pid}"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return 0
+    if aus.returncode != 0:
+        return 0
+    return sum(_prozessbaum_rss(pid.strip()) for pid in aus.stdout.split())
+
+
 def dickster_chat() -> dict | None:
     """Welche Sitzung auf dem hz-Socket gerade am meisten Speicher hält.
 

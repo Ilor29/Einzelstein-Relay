@@ -1127,6 +1127,15 @@ html, body {
 /* Die gesammelten Links: eine Zeile je Link, antippen öffnet, das Kreuz
    wirft ihn raus. */
 .links-liste { display: flex; flex-direction: column; overflow-y: auto; }
+
+/* Der Zusatz in einer Gruppen-Kopfzeile („hält 1,3 GB frei"). */
+.gruppe-zusatz {
+  margin-left: auto;
+  font-size: .72rem;
+  color: var(--schrift-leise);
+  white-space: nowrap;
+}
+.gruppe .gruppe-zusatz + .anzahl { margin-left: .5rem; }
 .link-zeile {
   display: flex;
   align-items: center;

@@ -459,10 +459,13 @@ async function ladeListe() {
   const rest = aktive.filter((s) => s.state !== "waiting");
 
   const angeheftet = rest.filter((s) => s.pinned);
-  const eigene = rest.filter((s) => !s.pinned && s.eigen);
+  // Die schlafen gelegten in ihre eigene Gruppe — zwischen den zuletzt
+  // benutzten wirkten sie wie offene Baustellen, dabei ruhen sie ja gerade.
+  const schlafende = rest.filter((s) => !s.pinned && s.eigen && s.state === "sleeping");
+  const eigene = rest.filter((s) => !s.pinned && s.eigen && s.state !== "sleeping");
   const fremde = rest.filter((s) => !s.pinned && !s.eigen);
 
-  const gruppe = (titel, eintraege, { zu = false } = {}) => {
+  const gruppe = (titel, eintraege, { zu = false, zusatz = "" } = {}) => {
     if (eintraege.length === 0) return;
 
     // Steht die Gruppe schon offen? Dann beim Neuaufbau offen lassen.
@@ -473,8 +476,10 @@ async function ladeListe() {
     kopf.innerHTML = `
       ${zu ? `<span class="pfeil">${offen ? "▾" : "▸"}</span>` : ""}
       <span class="titel"></span>
+      ${zusatz ? `<span class="gruppe-zusatz"></span>` : ""}
       <span class="anzahl">${eintraege.length}</span>`;
     kopf.querySelector(".titel").textContent = titel;
+    if (zusatz) kopf.querySelector(".gruppe-zusatz").textContent = zusatz;
     liste.append(kopf);
 
     const karten = eintraege.map(karte);
@@ -503,6 +508,15 @@ async function ladeListe() {
   gruppe("Wartet auf dich", wartend);
   gruppe("Angeheftet", angeheftet);
   gruppe("Zuletzt benutzt", eigene);
+  // Die Ruhenden, mit der Speicher-Summe im Kopf: Man soll sehen, dass sich
+  // das Schlafenlegen lohnt — auf dem kleinen Server zählt jedes Megabyte.
+  const gespart = schlafende.reduce((summe, s) => summe + (s.gespartMb || 0), 0);
+  gruppe("Schläft", schlafende, {
+    zu: true,
+    zusatz: gespart >= 100
+      ? `hält ${gespart >= 1000 ? (gespart / 1024).toFixed(1).replace(".", ",") + " GB" : gespart + " MB"} frei`
+      : "",
+  });
   // Sitzungen, die nicht von dieser App stammen — allen voran die, in der
   // Claude Code gerade selbst läuft. Eingeklappt, weil es viele sind.
   gruppe("Läuft auch auf dem Server", fremde, { zu: true });
