@@ -3040,10 +3040,23 @@ function tonEreignis(art, mehr = {}) {
       // sonst sieht man nur „hidden" und „visible" und dazwischen nichts.
       player: el ? (el.paused ? "pause" : "spielt") : "-",
       stueck: aktuellerIndex,
+      // Seit 28.08.: die Abtastrate des Ton-Motors. Klingt die Stimme plötzlich
+      // höher UND schneller, ist das ein Raten-Sprung (etwa Bluetooth wechselt
+      // das Profil, sobald das Mikrofon aufgeht) — hier steht dann der Beleg.
+      rate: hörCtx ? hörCtx.sampleRate : 0,
       ...mehr,
     }));
   } catch { /* Tagebuch ist Beiwerk, niemals Störer */ }
 }
+
+// Wechselt während des Vortrags das Ton-Gerät (Bluetooth kommt/geht, Auto
+// koppelt, Mikrofon reißt das Profil um)? Genau solche Wechsel können die
+// Stimme höher/tiefer und schneller/langsamer klingen lassen — ins Tagebuch.
+try {
+  navigator.mediaDevices?.addEventListener("devicechange", () => {
+    if (spricht || restText) tonEreignis("geraetewechsel");
+  });
+} catch { /* dann eben ohne */ }
 
 // Die letzte bekannte Ton-Uhr neben der Wand-Uhr — vom Sekundentakt des
 // Vortrags gepflegt. Beim Aufwachen verrät der Vergleich, was in der dunklen
