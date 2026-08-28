@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 147
+VERSION = 148
 
 
 @app.get("/api/version")
@@ -499,8 +499,13 @@ async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
         return
     # Auch beim allerersten Auftrag kann schon ein Dialog über der Eingabe
     # liegen (Einrichtungsfragen beim Start). Wegdrücken, wenn er es selbst
-    # anbietet — sonst tippt der Auftrag ins Leere.
-    if await asyncio.to_thread(tmux.dialog_zustand, name) == "abbrechbar":
+    # anbietet — sonst tippt der Auftrag ins Leere. Die Vertrauensfrage zum
+    # frischen Ordner beantwortet die App selbst mit Ja.
+    zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "vertrauensfrage":
+        await asyncio.to_thread(tmux.vertrauensfrage_beantworten, name)
+        await asyncio.to_thread(tmux.warte_bis_bereit, name, 15)
+    elif zustand == "abbrechbar":
         tmux.send_key(name, "Escape")
         await asyncio.sleep(0.8)
     tmux.send_text(name, prompt)
@@ -1661,7 +1666,13 @@ async def session_senden(name: str, body: Nachricht) -> dict:
     # Escape als Ausweg an, drücken wir ihn weg; wenn nicht, lieber ein
     # ehrlicher Fehler als eine stumm verlorene Nachricht.
     zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
-    if zustand == "abbrechbar":
+    if zustand == "vertrauensfrage":
+        # Die Frage nach dem frischen Ordner — die App öffnet nur Ordner des
+        # Nutzers, also Ja. Escape wäre hier das Ende der ganzen Sitzung.
+        await asyncio.to_thread(tmux.vertrauensfrage_beantworten, name)
+        await asyncio.to_thread(tmux.warte_bis_bereit, name, 15)
+        zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    elif zustand == "abbrechbar":
         tmux.send_key(name, "Escape")
         await asyncio.sleep(0.8)
         zustand = await asyncio.to_thread(tmux.dialog_zustand, name)

@@ -473,6 +473,16 @@ html, body {
 .kopf-sitzung { gap: .1rem; padding-left: .5rem; padding-right: .5rem; }
 .kopf-sitzung .knopf-blank { padding: .4rem .3rem; }
 .kopf-sitzung h1 { margin-right: .3rem; }
+/* Der Zurück-Knopf ist das meistgetippte Ziel der Zeile — als sichtbare
+   Fläche und mit mehr Luft, damit der Daumen nicht auf dem Namen daneben
+   landet (der öffnet das Umbenennen). */
+.kopf-sitzung #knopf-zurueck {
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  padding: .45rem .55rem;
+  margin-right: .3rem;
+  color: var(--schrift);
+}
 
 .verbindung {
   display: flex;

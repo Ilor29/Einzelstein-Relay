@@ -272,11 +272,40 @@ def dialog_zustand(name: str) -> str:
     fuss = "\n".join(schirm.rstrip().splitlines()[-12:]).lower()
     if "shift+tab to cycle" in fuss:
         return "frei"  # die normale Statuszeile — kein Dialog liegt davor
+    # Die Vertrauensfrage ZUERST: Ihre Fußzeile sagt zwar "Esc to cancel",
+    # aber Escape beendet hier gleich ganz Claude. Genau das ist am 28.08.
+    # passiert — die App drückte den vermeintlich harmlosen Dialog weg und
+    # riss damit die frisch angelegte Sitzung ab.
+    if "trust this folder" in fuss or "trust the files" in fuss:
+        return "vertrauensfrage"
     if "esc to cancel" in fuss:
         return "abbrechbar"
     if "enter to continue" in fuss or "enter to confirm" in fuss:
         return "blockiert"
     return "frei"
+
+
+def vertrauensfrage_beantworten(name: str) -> bool:
+    """Beantwortet Claude Codes Vertrauensfrage mit „Yes, I trust this folder".
+
+    Die App öffnet nur Ordner, die der Nutzer selbst angelegt oder gewählt
+    hat — die Frage ist hier also immer ein Ja. Vorgewählt ist allerdings
+    „No, exit", darum erst hinunter zur Ja-Zeile, dann Enter.
+    """
+    for _ in range(3):
+        if dialog_zustand(name) != "vertrauensfrage":
+            return True
+        try:
+            schirm = capture(name, lines=None)
+        except TmuxError:
+            return False
+        gewaehlt = next((z for z in schirm.splitlines() if "❯" in z), "")
+        if "trust" not in gewaehlt.lower():
+            send_key(name, "Down")
+            time.sleep(0.3)
+        send_key(name, "Enter")
+        time.sleep(1.2)
+    return dialog_zustand(name) != "vertrauensfrage"
 
 
 # Ein einzelnes send-keys-Argument kappt der Kernel bei rund 128 KB
