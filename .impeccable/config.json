@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "web/styles.css"
+        ],
+        "createdAt": "2026-08-28T08:52:00.719Z",
+        "reason": "Bestandsdesign: 2px-Akzentrand markiert die eigene Sprechblase, im CSS begruendet"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "web/styles.css"
+        ],
+        "createdAt": "2026-08-28T08:52:00.851Z",
+        "reason": "Fuellstands-Balken (Breite ist der Messwert) und Tour-Spotlight (box-shadow-Loch muss per Rect wandern), beides seltene, absichtliche Bewegung"
+      }
+    ]
+  }
+}
