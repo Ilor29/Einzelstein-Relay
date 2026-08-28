@@ -3560,6 +3560,18 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
     leisteAn();
     dauerTakt = setInterval(() => {
       if (sprechBeginn === null) return;
+      // Läuft die Ton-Uhr im Takt der Wand-Uhr? Wenn nicht, wird gerade
+      // gedrosselt oder gedehnt — genau das hört man als „erst zäh, dann zu
+      // schnell". Nur deutliche Scheren ins Tagebuch, sonst wird es geschwätzig.
+      if (tonUhrMerker) {
+        const dWand = (Date.now() - tonUhrMerker.wand) / 1000;
+        const dTon = c.currentTime - tonUhrMerker.ton;
+        if (dWand > 0.4 && Math.abs(dTon - dWand) > 0.3) {
+          tonEreignis("ton-uhr-schere", {
+            wand_ms: Math.round(dWand * 1000), ton_ms: Math.round(dTon * 1000),
+          });
+        }
+      }
       tonUhrMerker = { wand: Date.now(), ton: c.currentTime };
       // Welches Stück ist GERADE ZU HÖREN? Aus den Startzeiten abgelesen —
       // daran hängen Vor/Zurück und das Weiterlesen nach einer Unterbrechung.
