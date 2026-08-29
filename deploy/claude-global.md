@@ -51,3 +51,11 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
   `/home/roli/werkzeuge/browser/.venv`. Screenshot machen, Konsole auf Fehler
   ansehen, auf fehlende Dateien prüfen. Nicht raten lassen, was man selbst
   nachsehen kann.
+- **Wachstums-Tricks von anderen nie eins zu eins übernehmen, wenn sie
+  manipulativ sind.** Ein Vorbild liefert oft die gute Grundidee (z. B.
+  Kommentar löst automatische Antwort aus) UND einen manipulativen
+  Mechanismus obendrauf (Folgen-Zwang, künstlicher Mehrfach-Bestätigungs-
+  Loop, um mehr Interaktion vorzutäuschen). Die Grundidee übernehmen, den
+  manipulativen Teil bewusst weglassen — sonst widerspricht das eigene
+  Handeln der Position, die man nach außen vertritt (Beschluss 29.08.2026,
+  Skillkontor-Kommentar-Trichter als erster Anlassfall).
