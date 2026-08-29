@@ -59,3 +59,9 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
   manipulativen Teil bewusst weglassen — sonst widerspricht das eigene
   Handeln der Position, die man nach außen vertritt (Beschluss 29.08.2026,
   Skillkontor-Kommentar-Trichter als erster Anlassfall).
+- **Hochgeladene Bilder sind Durchreiche, kein Archiv.** Screenshots, die Roli
+  zum Vorlesen schickt, landen in `<projekt>/.hetzner-bilder/` und werden
+  nächtlich aufgeräumt: dort nach 14 Tagen, in `~/Skool_KI/` nach 30 Tagen
+  (`~/.bilder-aufraeumen.sh`, Protokoll in `~/logs/bilder-aufraeumen.log`).
+  Was aus einem Bild wichtig ist, gehört deshalb in die Notiz, nicht im Bild
+  liegen gelassen.
