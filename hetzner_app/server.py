@@ -27,11 +27,11 @@ from fastapi import (
     Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile,
     WebSocket, WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import bibliothek, geraete, melden, mitschrift, routinen, speicher, state, tmux, tts, verbrauch, verlauf
+from . import bibliothek, geraete, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 152
+VERSION = 153
 
 
 @app.get("/api/version")
@@ -834,6 +834,78 @@ async def speak(body: Speak) -> Response:
     return Response(content=audio, media_type="audio/wav")
 
 
+# --- Vorlesen als Strom (das Radio-Prinzip, siehe strom.py) ------------------
+#
+# Die App meldet einen Vortrag an und bekommt eine Kennung. Unter
+# /api/vortrag/<kennung>.wav fließt dann EINE endlose WAV-Datei, Satz für Satz,
+# die das <audio>-Element im Handy wie einen Radiosender abspielt — mit
+# Sperrbildschirm-Anzeige und Hosentaschen-Schutz, den Web Audio nie bekam.
+
+class VortragAnmeldung(BaseModel):
+    text: str
+    stimme: str | None = None      # nur für die Hörprobe
+    sitzung: str | None = None     # Folge-Modus: dort weiterlesen, solange Claude schreibt
+
+
+@app.post("/api/vortrag", dependencies=[Depends(require_auth)])
+def vortrag_anmelden(body: VortragAnmeldung) -> dict:
+    if not body.text.strip():
+        raise HTTPException(400, "Kein Text zum Vorlesen.")
+    if len(body.text) > 100_000:
+        raise HTTPException(413, "Der Text zum Vorlesen ist zu lang.")
+    sitzung = body.sitzung
+    if sitzung and not any(s.name == sitzung for s in tmux.list_sessions()):
+        sitzung = None                 # dann eben ohne Folge-Modus
+    kennung = strom.anmelden(body.text, body.stimme, sitzung)
+    return {"id": kennung, "stuecke": len(strom.holen(kennung).stuecke)}
+
+
+async def _vorlese_text_async(name: str) -> str:
+    return (await asyncio.to_thread(_vorlese_text, name)) or ""
+
+
+async def _arbeitet_async(name: str) -> bool:
+    return (await asyncio.to_thread(state.detect, name)) == state.RUNNING
+
+
+@app.get("/api/vortrag/{kennung}.wav", dependencies=[Depends(require_auth)])
+async def vortrag_strom(kennung: str, ab: int = 0) -> StreamingResponse:
+    v = strom.holen(kennung)
+    if v is None:
+        raise HTTPException(404, "Diesen Vortrag gibt es nicht mehr.")
+    try:
+        # Das erste Stück VOR dem Strom sprechen: Scheitert die Stimme, soll
+        # eine klare Meldung kommen, kein halb angefangener Strom.
+        erstes = await strom.erstes_stueck(v, max(0, ab))
+    except tts.TTSError as fehler:
+        v.fehler = str(fehler)
+        raise HTTPException(503, str(fehler))
+    return StreamingResponse(
+        strom.strom(v, max(0, ab), erstes, _vorlese_text_async, _arbeitet_async),
+        media_type="audio/wav",
+        headers={
+            "Cache-Control": "no-store",
+            "Accept-Ranges": "none",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@app.get("/api/vortrag/{kennung}/stand", dependencies=[Depends(require_auth)])
+def vortrag_stand(kennung: str) -> dict:
+    """Wo der Strom steht: ob er fertig ist, warum er abbrach, wann welches
+    Stück beginnt (damit die App Vor/Zurück satzweise kann)."""
+    v = strom.holen(kennung)
+    if v is None:
+        raise HTTPException(404, "Diesen Vortrag gibt es nicht mehr.")
+    return {
+        "fertig": v.fertig,
+        "fehler": v.fehler,
+        "stuecke": len(v.stuecke),
+        "startzeiten": [round(z, 2) for z in v.startzeiten],
+    }
+
+
 @app.get("/api/stimmen", dependencies=[Depends(require_auth)])
 def stimmen() -> list[dict]:
     """Welche Stimmen bereitliegen — und welche gerade spricht."""
@@ -961,9 +1033,8 @@ def _gespraechs_bloecke(s: tmux.TmuxSession) -> list[dict]:
     return mitschrift.lesen(s.cwd)
 
 
-@app.get("/api/sessions/{name}/text", dependencies=[Depends(require_auth)])
-def session_text(name: str) -> dict:
-    """Claudes letzte Antwort DIESES Gesprächs, zum Vorlesen."""
+def _vorlese_text(name: str) -> str:
+    """Claudes letzte Antwort DIESES Gesprächs, fürs Ohr aufbereitet."""
     treffer = [s for s in tmux.list_sessions() if s.name == name]
     if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
@@ -975,10 +1046,16 @@ def session_text(name: str) -> dict:
         if block["typ"] == "claude" and block["text"].strip():
             gesprochen = tts.fuer_stimme(block["text"])
             if gesprochen:
-                return {"text": gesprochen}
+                return gesprochen
 
     # Keine Mitschrift? Dann eben doch vom Bildschirm.
-    return {"text": tts.for_speech(tmux.capture(name, lines=200))}
+    return tts.for_speech(tmux.capture(name, lines=200))
+
+
+@app.get("/api/sessions/{name}/text", dependencies=[Depends(require_auth)])
+def session_text(name: str) -> dict:
+    """Claudes letzte Antwort DIESES Gesprächs, zum Vorlesen."""
+    return {"text": _vorlese_text(name)}
 
 
 @app.get("/api/sessions/{name}/verlauf", dependencies=[Depends(require_auth)])

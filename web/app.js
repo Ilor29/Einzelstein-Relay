@@ -2404,6 +2404,11 @@ $("knopf-diktat").addEventListener("click", () => {
     return;
   }
 
+  // Läuft gerade ein Vortrag, ist das Mikrofon der Wunsch „jetzt rede ich":
+  // Vortrag aus. Vorher hörte das Mikrofon zwar zu, warf aber alles weg, was
+  // es während des Vortrags verstand — es leuchtete, und nichts kam an (30.08.).
+  if (spricht) stille();
+
   // Was schon im Feld stand, bleibt stehen; das Diktat kommt dahinter.
   const vorher = feld.value ? feld.value.trimEnd() + " " : "";
   let fertig = "";        // die abgeschlossenen Sätze
@@ -2434,8 +2439,9 @@ $("knopf-diktat").addEventListener("click", () => {
 
     erkennung.onresult = (e) => {
       // Redet die App gerade selbst, ist alles, was hereinkommt, ihre eigene
-      // Stimme aus dem Lautsprecher — nicht deine. Weghören.
-      if (spricht) return;
+      // Stimme aus dem Lautsprecher — nicht deine. Weghören. Eine Pause ist
+      // aber keine Rede: Dann darf diktiert werden.
+      if (spricht && !manuellPausiert) return;
 
       // Nur das jüngste Ergebnis zählt — alles davor ist schon in `fertig`.
       const letztes = e.results[e.results.length - 1];
@@ -2988,6 +2994,7 @@ let sprungZiel = null;
 
 function springe(richtung) {
   if (!spricht || aktuellerIndex === null) return;
+  if (stromKennung) { stromSpringe(aktuellerIndex + richtung); return; }
   sprungZiel = aktuellerIndex + richtung;
 }
 
@@ -3330,6 +3337,7 @@ function stille() {
   restStuecke = [];           // von Hand gestoppt heißt: nichts steht mehr aus
   aktuellerIndex = null;
   sprungZiel = null;
+  stromAus();
   dauerTonAus();
   tonAusgangAus();
   dauerAus();
@@ -3411,6 +3419,9 @@ function tonKontextUeberwachen(c) {
     // wecken, dann urteilen. Ein Anruf lässt sich nicht wecken — nur bei dem
     // wird wirklich unterbrochen. Eine Hand-Pause (manuellPausiert) hält den
     // Ton bewusst an, die bleibt ohnehin unangetastet.
+    // Im Strom-Modus spielt der Ton-Kontext gar nicht mit — was Android mit
+    // ihm macht, ist dann egal und darf den Vortrag nicht abbrechen.
+    if (stromKennung) return;
     if (spricht && !manuellPausiert && c.state !== "running") {
       tonEreignis("kontext-angehalten");
       try { await c.resume(); } catch { /* dann ist es wohl ein Anruf */ }
@@ -3471,8 +3482,19 @@ function haeppchen(text, mindestens = 90) {
 }
 
 /** Liest einen Text vor. Ein zweiter Druck — auf denselben oder einen anderen
- *  Knopf — hört sofort auf. Es spricht immer nur eine Stimme. */
-async function sprich(text, knopf, stimmeName = null, nachschub = null) {
+ *  Knopf — hört sofort auf. Es spricht immer nur eine Stimme.
+ *
+ *  Zwei Wege zum Lautsprecher:
+ *  - Android und alles andere: der Ton-STROM (sprichStrom). Der Server liefert
+ *    den ganzen Vortrag als eine endlose WAV-Datei, das <audio>-Element spielt
+ *    sie wie ein Internet-Radio — und genau das lässt Android auch in der
+ *    Hosentasche weiterlaufen, mit Pause-Knopf auf dem Sperrbildschirm.
+ *  - iPhone/iPad: die HÄPPCHEN über Web Audio (sprichHaeppchen). Dort läuft es
+ *    seit Lorenz' Test so; iOS ist mit dem Strom nicht erprobt, und der
+ *    Fingertipp-Zwang beim Tonstart macht es dort eigen.
+ *  `sitzung` schaltet im Strom den Folge-Modus ein (der Server liest weiter,
+ *  solange Claude schreibt); `nachschub` ist das Gegenstück für die Häppchen. */
+async function sprich(text, knopf, stimmeName = null, nachschub = null, sitzung = null) {
   // Läuft schon etwas? Dann erst mal Ruhe.
   const derselbe = sprecherKnopf === knopf;
   if (spricht) {
@@ -3482,6 +3504,14 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 
   if (!text?.trim()) return;
 
+  if (!IST_IOS) return sprichStrom(text, knopf, stimmeName, sitzung);
+  return sprichHaeppchen(text, knopf, stimmeName, nachschub);
+}
+
+/** Der gemeinsame Anfang jedes Vortrags: Mikrofon zu, Knopf auf „Stopp",
+ *  Zähler hochsetzen. Zurück kommt die Frage „wurden wir inzwischen gestoppt?"
+ *  und die Nummer dieses Laufs. */
+function vortragBeginnen(knopf) {
   // Nie mit offenem Mikrofon sprechen.
   //
   // Sonst hört das Mikrofon die eigene Stimme aus dem Lautsprecher und schreibt
@@ -3502,6 +3532,202 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
 
   const meins = knopf;       // um zu merken, ob wir zwischendurch gestoppt wurden
   const lauf = ++sprechLauf; // diese Ausgabe; ein Stopp erhöht den Zähler
+  const abgebrochen = () => !spricht || lauf !== sprechLauf || sprecherKnopf !== meins;
+  return { abgebrochen, lauf };
+}
+
+// --- Der Ton-Strom (Android und alles außer iOS) ------------------------------
+
+let stromKennung = null;      // der beim Server angemeldete Vortrag — null: kein Strom
+let stromAb = 0;              // ab welchem Stück der laufende Strom zählt
+let stromStartzeiten = [];    // Sekunde im Strom, ab der Stück k zu hören ist
+let stromFertig = null;       // löst das wartende sprich() aus, wenn der Vortrag endet
+let stromVerdrahtet = false;
+
+function stromElement() {
+  const el = $("stimme");
+  if (stromVerdrahtet) return el;
+  stromVerdrahtet = true;
+  // Wer den Player anhält, ohne dass wir es waren (Anruf, Kopfhörer gezogen,
+  // Android nimmt den Ton), soll wie eine Hand-Pause behandelt werden: Der
+  // Vortrag bleibt stehen, wo er ist, und „Weiter" spielt ihn fort.
+  el.addEventListener("pause", () => {
+    if (!spricht || !stromKennung || el.ended) return;
+    tonEreignis("player-pause");
+    if (!manuellPausiert) {
+      manuellPausiert = true;
+      pauseSymbol(true);
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
+    }
+  });
+  el.addEventListener("play", () => {
+    if (!spricht || !stromKennung) return;
+    tonEreignis("player-weiter");
+    if (manuellPausiert) {
+      manuellPausiert = false;
+      pauseSymbol(false);
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
+    }
+  });
+  for (const was of ["stalled", "waiting", "suspend"]) {
+    el.addEventListener(was, () => { if (spricht && stromKennung) tonEreignis(`player-${was}`); });
+  }
+  el.addEventListener("ended", () => stromZuEnde(false));
+  el.addEventListener("error", () => stromZuEnde(true));
+  return el;
+}
+
+/** Der Strom ist aus — regulär zu Ende oder gestorben. Beim Server nachfragen,
+ *  ob er einen Grund kennt (die Stimme kann mitten im Vortrag ausfallen; dem
+ *  Player sieht das aus wie ein normales Ende). */
+async function stromZuEnde(fehlerhaft) {
+  if (!spricht || !stromKennung) return;
+  const kennung = stromKennung;
+  let stand = null;
+  try { stand = await (await api(`/vortrag/${encodeURIComponent(kennung)}/stand`)).json(); }
+  catch { /* dann ohne Grund */ }
+  if (!spricht || stromKennung !== kennung) return;
+  const grund = stand?.fehler || (fehlerhaft ? "Der Ton-Strom ist abgerissen." : "");
+  if (grund) {
+    tonEreignis("vortrag-fehler", { fehler: grund.slice(0, 120) });
+    stille();
+    melde("Das Vorlesen hat nicht geklappt: " + grund);
+    return;
+  }
+  tonEreignis("vortrag-ende");
+  stille();
+}
+
+function stromAus() {
+  const fertig = stromFertig;
+  stromKennung = null;
+  stromStartzeiten = [];
+  stromFertig = null;
+  const el = $("stimme");
+  if (el && el.getAttribute("src")) {
+    // Quelle wegnehmen, nicht nur pausieren — sonst lädt der Browser den
+    // Strom im Hintergrund weiter, und der Server spräche ins Leere.
+    try { el.pause(); el.removeAttribute("src"); el.load(); } catch { /* egal */ }
+  }
+  fertig?.();
+}
+
+/** Den Strom ab Stück `ab` anwerfen (Start oder Sprung). */
+async function stromAnwerfen(el, ab) {
+  stromAb = ab;
+  el.srcObject = null;             // falls noch ein Web-Audio-Strom dranhing
+  el.src = `/api/vortrag/${encodeURIComponent(stromKennung)}.wav?ab=${ab}`;
+  await el.play();
+}
+
+/** Satzweise vor/zurück (Kopfhörer- oder Lenkradtaste). Liegt die Stelle im
+ *  schon geladenen Teil, wird nur gespult; sonst startet der Strom dort neu. */
+async function stromSpringe(ziel) {
+  const el = $("stimme");
+  const anzahl = Math.max(stromStartzeiten.length, aktuellerIndex + 1);
+  ziel = Math.max(0, Math.min(ziel, anzahl - 1));
+  const kennung = stromKennung;
+  const start = stromStartzeiten[ziel];
+  let geladen = false;
+  if (ziel >= stromAb && start !== undefined) {
+    try {
+      for (let r = 0; r < el.buffered.length; r++) {
+        if (el.buffered.start(r) <= start && start <= el.buffered.end(r)) geladen = true;
+      }
+    } catch { /* dann eben neu anwerfen */ }
+  }
+  try {
+    if (geladen) {
+      el.currentTime = start;
+    } else {
+      await stromAnwerfen(el, ziel);
+    }
+    aktuellerIndex = ziel;
+  } catch {
+    if (stromKennung === kennung) stromZuEnde(true);
+  }
+}
+
+async function sprichStrom(text, knopf, stimmeName, sitzung) {
+  const { abgebrochen, lauf } = vortragBeginnen(knopf);
+  const el = stromElement();
+  aktuellerIndex = 0;
+  leisteAn();
+  try {
+    const anmeldung = await (await api("/vortrag", {
+      method: "POST",
+      body: JSON.stringify({
+        text,
+        ...(stimmeName ? { stimme: stimmeName } : {}),   // nur bei der Hörprobe
+        ...(sitzung ? { sitzung } : {}),                 // Folge-Modus
+      }),
+    })).json();
+    if (abgebrochen()) return;
+    stromKennung = anmeldung.id;
+    stromStartzeiten = [];
+    const warten = new Promise((r) => { stromFertig = r; });
+    await stromAnwerfen(el, 0);
+    if (abgebrochen()) return;
+
+    let tick = 0;
+    let tonUhrMerker = null;
+    dauerTakt = setInterval(() => {
+      if (!stromKennung) return;
+      // Läuft die Player-Uhr im Takt der Wand-Uhr? Wenn nicht, wird gerade
+      // gedrosselt oder es stockt — fürs Tagebuch, nur deutliche Scheren.
+      if (tonUhrMerker && !el.paused) {
+        const dWand = (Date.now() - tonUhrMerker.wand) / 1000;
+        const dTon = el.currentTime - tonUhrMerker.ton;
+        if (dWand > 0.4 && Math.abs(dTon - dWand) > 0.3) {
+          tonEreignis("ton-uhr-schere", {
+            wand_ms: Math.round(dWand * 1000), ton_ms: Math.round(dTon * 1000),
+          });
+        }
+      }
+      tonUhrMerker = { wand: Date.now(), ton: el.currentTime };
+      // Welcher Satz ist gerade zu hören? Die Startzeiten kennt der Server —
+      // alle paar Sekunden nachfragen, das reicht für Vor/Zurück.
+      if (tick++ % 8 === 0) {
+        const kennung = stromKennung;
+        api(`/vortrag/${encodeURIComponent(kennung)}/stand`)
+          .then((a) => a.json())
+          .then((stand) => { if (stromKennung === kennung) stromStartzeiten = stand.startzeiten || []; })
+          .catch(() => { /* dann beim nächsten Mal */ });
+      }
+      let hoerbar = aktuellerIndex ?? stromAb;
+      for (let k = stromAb; k < stromStartzeiten.length; k++) {
+        if (stromStartzeiten[k] <= el.currentTime) hoerbar = k;
+      }
+      aktuellerIndex = hoerbar;
+      if (zeitEl) zeitEl.textContent = zeitFormat(el.currentTime);
+    }, 500);
+
+    // Erst zurückkehren, wenn der Vortrag wirklich durch ist — daran hängt
+    // der Freisprech-Modus, der danach das Mikrofon aufmacht.
+    await warten;
+  } catch (err) {
+    if (lauf !== sprechLauf) return;
+    // Der Player springt nicht an: Autoplay-Sperre — oder der Server hat den
+    // Strom abgelehnt (Stimme kaputt, Text leer). Den Grund erfragen.
+    let grund = String((err && err.message) || err).slice(0, 120);
+    if (stromKennung) {
+      try {
+        const stand = await (await api(`/vortrag/${encodeURIComponent(stromKennung)}/stand`)).json();
+        if (stand.fehler) grund = stand.fehler;
+      } catch { /* dann der Fehler des Players */ }
+    }
+    tonEreignis("vortrag-fehler", { fehler: grund });
+    stille();
+    melde(/NotAllowed/.test(grund)
+      ? "Der Browser lässt den Ton erst nach einem Fingertipp zu."
+      : "Das Vorlesen hat nicht geklappt: " + grund);
+  }
+}
+
+// --- Die Häppchen über Web Audio (iPhone/iPad) --------------------------------
+
+async function sprichHaeppchen(text, knopf, stimmeName = null, nachschub = null) {
+  const { abgebrochen, lauf } = vortragBeginnen(knopf);
   let stuecke = haeppchen(text);   // wächst im Folge-Modus per Nachschub
   // Von der ersten Sekunde an wissen, wo wir stehen — falls gleich das Telefon
   // klingelt, bevor die Anzeige-Uhr das erste Mal getickt hat.
@@ -3540,8 +3766,6 @@ async function sprich(text, knopf, stimmeName = null, nachschub = null) {
       }
     }
   }
-
-  const abgebrochen = () => !spricht || lauf !== sprechLauf || sprecherKnopf !== meins;
 
   try {
     // Das erste Häppchen schon holen; das nächste läuft immer im Voraus mit.
@@ -3738,7 +3962,7 @@ $("knopf-vorlesen").addEventListener("click", async () => {
       return null;
     };
 
-    await sprich(text, knopf, null, nachschub);
+    await sprich(text, knopf, null, nachschub, vortragsSitzung);
   } catch (err) {
     stille();
     alert(err.message);
@@ -3750,7 +3974,23 @@ $("knopf-vorlesen").addEventListener("click", async () => {
 // spielt lückenlos weiter, ohne dass etwas neu geholt werden muss. Das Merken
 // als „von Hand pausiert" verhindert, dass der Anruf-Melder das als Anruf nimmt.
 async function pauseUmschalten() {
-  if (!hörCtx || (!spricht && !manuellPausiert)) return;
+  if (!spricht && !manuellPausiert) return;
+  if (stromKennung) {
+    const el = $("stimme");
+    if (manuellPausiert) {
+      manuellPausiert = false;
+      pauseSymbol(false);
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
+      try { await el.play(); } catch { /* dann bleibt's eben stehen */ }
+    } else {
+      manuellPausiert = true;
+      pauseSymbol(true);
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
+      try { el.pause(); } catch { /* dann eben nicht */ }
+    }
+    return;
+  }
+  if (!hörCtx) return;
   if (manuellPausiert) {
     manuellPausiert = false;              // erst freigeben, dann anwerfen
     pauseSymbol(false);
