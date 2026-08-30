@@ -3616,8 +3616,16 @@ function stromAus() {
 async function stromAnwerfen(el, ab) {
   stromAb = ab;
   el.srcObject = null;             // falls noch ein Web-Audio-Strom dranhing
-  el.src = `/api/vortrag/${encodeURIComponent(stromKennung)}.wav?ab=${ab}`;
-  await el.play();
+  el.src = `/api/vortrag/${encodeURIComponent(stromKennung)}.mp3?ab=${ab}`;
+  try {
+    await el.play();
+  } catch (err) {
+    // Pause gedrückt, bevor der erste Ton da war: Der Browser bricht das
+    // angefangene play() dann mit „AbortError" ab. Das ist kein Fehler,
+    // sondern genau die gewünschte Pause — „Weiter" wirft ihn wieder an.
+    if (manuellPausiert && err && err.name === "AbortError") return;
+    throw err;
+  }
 }
 
 /** Satzweise vor/zurück (Kopfhörer- oder Lenkradtaste). Liegt die Stelle im

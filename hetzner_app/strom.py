@@ -11,15 +11,16 @@ Ein Internet-Radio dagegen läuft in Chrome auf Android auch mit dunklem
 Bildschirm weiter, samt Pause-Knopf auf dem Sperrbildschirm. Der Grund: ein
 <audio>-Element mit einer ECHTEN Quelle (einer Adresse), aus der der Ton
 fortlaufend nachkommt. Genau so ein Radiosender ist dieses Modul: Ein Vortrag
-wird angemeldet, und unter seiner Adresse fließt eine einzige, endlos lange
-WAV-Datei — Satz für Satz, sobald die Stimme ihn fertig hat. Der Browser
-puffert voraus und spielt, was da ist.
+wird angemeldet, und unter seiner Adresse fließt ein einziger, endloser
+mp3-Strom — Satz für Satz, sobald die Stimme ihn fertig hat. Der Browser
+puffert voraus und spielt, was da ist (Anlaufzeit: Chrome will erst ein paar
+Sekunden Ton im Puffer haben, bei Piper sind das zwei bis drei Sekunden).
 
 Damit ALLE Stimmen in denselben Strom passen (Piper liefert WAV in
 verschiedenen Abtastraten, die Wolken-Stimmen mp3), wird jedes Stück auf ein
 gemeinsames Format gebracht: Mono, 16 Bit, 22.050 Hz. Was schon so ankommt
 (die üblichen Piper-Stimmen), wird nur ausgepackt; alles andere übersetzt
-ffmpeg.
+ffmpeg. Danach packt ffmpeg jedes Stück in mp3 (siehe unten, warum).
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ from . import tts
 log = logging.getLogger("hetzner_app.strom")
 
 RATE = 22050                 # Abtastrate des Stroms — die der Piper-„medium"-Stimmen
-_UNENDLICH = 0xFFFFFFFF      # „Länge unbekannt" im WAV-Kopf: der Strom hört nie auf
+_UNENDLICH = 0xFFFFFFFF      # „Länge unbekannt" in einem WAV-Kopf (Piper schreibt das gern)
 
 # Wie lange ein angemeldeter Vortrag abrufbar bleibt. Er wird beim Anmelden
 # erzeugt und Sekunden später abgespielt; alles Ältere ist Müll.
@@ -117,13 +118,6 @@ def neuer_teil(gelesen: str, voll: str) -> str | None:
 
 # --- Ton auf ein Format bringen -------------------------------------------------
 
-def wav_kopf(rate: int = RATE) -> bytes:
-    """Ein WAV-Kopf mit „Länge unbekannt" — der Browser spielt, was nachkommt."""
-    return b"RIFF" + struct.pack("<I", _UNENDLICH) + b"WAVE" + \
-        b"fmt " + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16) + \
-        b"data" + struct.pack("<I", _UNENDLICH)
-
-
 def _wav_zerlegen(audio: bytes) -> tuple[int, int, int, bytes] | None:
     """(Kanäle, Rate, Bits, Rohdaten) einer WAV-Datei — oder None, wenn es keine ist."""
     if len(audio) < 12 or audio[:4] != b"RIFF" or audio[8:12] != b"WAVE":
@@ -170,6 +164,30 @@ def pcm(audio: bytes) -> bytes:
     return _uebersetzen(audio)
 
 
+# Warum mp3 und nicht das nackte WAV? Chrome fängt bei einer endlosen WAV-Datei
+# erst an zu spielen, wenn der Strom zu Ende ist — bei einer Stimme, die
+# langsamer als Echtzeit liefert, also nie rechtzeitig (Test 30.08.). Bei mp3,
+# dem Format der Internet-Radios, spielt es los, sobald die ersten Rahmen da
+# sind. Also wird jedes Stück nach dem Vereinheitlichen noch in mp3 gepackt.
+# Ohne Xing-Kopf und ID3-Etikett: Die verwirren einen Spieler nur, der die
+# Gesamtlänge ohnehin nicht kennen kann.
+BITRATE = "64k"
+MEDIENTYP = "audio/mpeg"
+
+
+def mp3(roh: bytes) -> bytes:
+    lauf = subprocess.run(
+        ["ffmpeg", "-loglevel", "error",
+         "-f", "s16le", "-ar", str(RATE), "-ac", "1", "-i", "pipe:0",
+         "-codec:a", "libmp3lame", "-b:a", BITRATE,
+         "-write_xing", "0", "-id3v2_version", "0", "-f", "mp3", "pipe:1"],
+        input=roh, capture_output=True, timeout=60,
+    )
+    if lauf.returncode != 0 or not lauf.stdout:
+        raise tts.TTSError("Der Ton ließ sich nicht für den Strom packen.")
+    return lauf.stdout
+
+
 # --- Der Strom selbst ------------------------------------------------------------
 
 TextHolen = Callable[[str], Awaitable[str]]
@@ -214,12 +232,15 @@ async def _nachschub(v: Vortrag, text_holen: TextHolen, arbeitet: Arbeitet) -> s
     return None
 
 
-async def _stueck(v: Vortrag, i: int) -> bytes:
+async def _stueck(v: Vortrag, i: int) -> tuple[bytes, float]:
+    """Ein Stück sprechen und für den Strom packen: (mp3-Bytes, Sekunden)."""
     audio = await tts.synthesize(v.stuecke[i], v.stimme)
-    return await asyncio.to_thread(pcm, audio)
+    roh = await asyncio.to_thread(pcm, audio)
+    gepackt = await asyncio.to_thread(mp3, roh)
+    return gepackt, len(roh) / (RATE * 2)
 
 
-async def erstes_stueck(v: Vortrag, ab: int) -> bytes:
+async def erstes_stueck(v: Vortrag, ab: int) -> tuple[bytes, float]:
     """Das erste Stück VOR dem Strom holen — scheitert die Stimme, soll die
     App eine Meldung bekommen, keinen halb angefangenen Strom."""
     if ab >= len(v.stuecke):
@@ -227,17 +248,16 @@ async def erstes_stueck(v: Vortrag, ab: int) -> bytes:
     return await _stueck(v, ab)
 
 
-async def strom(v: Vortrag, ab: int, erstes: bytes,
+async def strom(v: Vortrag, ab: int, erstes: tuple[bytes, float],
                 text_holen: TextHolen, arbeitet: Arbeitet):
-    """Liefert den WAV-Strom Stück für Stück. Das jeweils nächste Stück wird
+    """Liefert den mp3-Strom Stück für Stück. Das jeweils nächste Stück wird
     schon gesprochen, während das aktuelle über die Leitung geht."""
     v.fertig = False
     v.fehler = ""
     v.startzeiten = v.startzeiten[:ab]
-    yield wav_kopf()
     sekunden = 0.0
     i = ab
-    daten: bytes | None = erstes
+    daten: tuple[bytes, float] | None = erstes
     naechstes: asyncio.Task | None = None
     try:
         while True:
@@ -260,8 +280,8 @@ async def strom(v: Vortrag, ab: int, erstes: bytes,
             while len(v.startzeiten) <= i:
                 v.startzeiten.append(sekunden)
             v.startzeiten[i] = sekunden
-            yield daten
-            sekunden += len(daten) / (RATE * 2)
+            yield daten[0]
+            sekunden += daten[1]
             daten = None
             i += 1
     except tts.TTSError as fehler:

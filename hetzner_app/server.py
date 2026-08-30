@@ -837,8 +837,8 @@ async def speak(body: Speak) -> Response:
 # --- Vorlesen als Strom (das Radio-Prinzip, siehe strom.py) ------------------
 #
 # Die App meldet einen Vortrag an und bekommt eine Kennung. Unter
-# /api/vortrag/<kennung>.wav fließt dann EINE endlose WAV-Datei, Satz für Satz,
-# die das <audio>-Element im Handy wie einen Radiosender abspielt — mit
+# /api/vortrag/<kennung>.mp3 fließt dann EIN endloser mp3-Strom, Satz für Satz,
+# den das <audio>-Element im Handy wie einen Radiosender abspielt — mit
 # Sperrbildschirm-Anzeige und Hosentaschen-Schutz, den Web Audio nie bekam.
 
 class VortragAnmeldung(BaseModel):
@@ -868,7 +868,7 @@ async def _arbeitet_async(name: str) -> bool:
     return (await asyncio.to_thread(state.detect, name)) == state.RUNNING
 
 
-@app.get("/api/vortrag/{kennung}.wav", dependencies=[Depends(require_auth)])
+@app.get("/api/vortrag/{kennung}.mp3", dependencies=[Depends(require_auth)])
 async def vortrag_strom(kennung: str, ab: int = 0) -> StreamingResponse:
     v = strom.holen(kennung)
     if v is None:
@@ -882,7 +882,7 @@ async def vortrag_strom(kennung: str, ab: int = 0) -> StreamingResponse:
         raise HTTPException(503, str(fehler))
     return StreamingResponse(
         strom.strom(v, max(0, ab), erstes, _vorlese_text_async, _arbeitet_async),
-        media_type="audio/wav",
+        media_type=strom.MEDIENTYP,
         headers={
             "Cache-Control": "no-store",
             "Accept-Ranges": "none",
