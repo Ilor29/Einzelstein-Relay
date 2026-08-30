@@ -1385,6 +1385,30 @@ html, body {
 }
 .eingabezeile .eingabe:focus { border: 0; outline: none; }
 
+/* Das Kreuz rechts oben im Feld: leert alles mit einem Tipp. Sitzt IM Feld
+   (nicht in der Knopfreihe), damit klar ist, worauf es sich bezieht — und
+   verschwindet, sobald nichts mehr drinsteht. Das Feld lässt rechts Platz,
+   sonst liefe der Text darunter durch. */
+.feld-rahmen { position: relative; }
+.feld-rahmen .eingabe { padding-right: 2.1rem; }
+.knopf-leeren {
+  position: absolute;
+  top: .25rem; right: .1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--erhoben-2);
+  color: var(--schrift-schwach);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.knopf-leeren[hidden] { display: none; }
+.knopf-leeren:active { background: var(--verwerfen); color: #fff; }
+.knopf-leeren svg { width: 14px; height: 14px; }
+
 .knopf-senden {
   display: flex;
   align-items: center;

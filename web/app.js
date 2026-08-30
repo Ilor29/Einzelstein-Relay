@@ -2304,7 +2304,22 @@ function feldAnpassen() {
   // zweites Mal festzuschreiben und beim nächsten Mal zu vergessen.
   const grenze = parseFloat(getComputedStyle(eingabeFeld).maxHeight) || 160;
   eingabeFeld.style.height = Math.min(eingabeFeld.scrollHeight, grenze) + "px";
+  // Das Lösch-Kreuz nur zeigen, wenn es etwas zu löschen gibt. Hier, weil
+  // jeder Weg, der das Feld füllt oder leert (Tippen, Diktat, Glätten,
+  // Senden, Entwurf), am Ende feldAnpassen() ruft.
+  const kreuz = $("knopf-leeren");
+  if (kreuz) kreuz.hidden = !eingabeFeld.value;
 }
+
+// Das Kreuz im Feld: alles weg — Text, Entwurf, und ein laufendes Diktat
+// gleich mit (sonst schriebe es den nächsten Satz wieder hinein).
+$("knopf-leeren")?.addEventListener("click", () => {
+  hoertStoppen?.();
+  eingabeFeld.value = "";
+  feldAnpassen();
+  entwurfMerken();
+  eingabeFeld.focus();
+});
 
 // --- Nicht vergessen, wo du warst ------------------------------------------
 //

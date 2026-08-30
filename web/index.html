@@ -516,9 +516,17 @@
     <!-- Vorschau der angehängten Fotos und Dateien. Leer bleibt der Streifen
          verborgen; sonst stünde über dem Feld eine leere Zeile herum. -->
     <div id="anhang-streifen" class="anhang-streifen" hidden></div>
-    <textarea id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
-              rows="1" autocomplete="off" autocapitalize="sentences"
-              enterkeyhint="send"></textarea>
+    <!-- Das Kreuz rechts im Feld leert es mit einem Tipp — samt Entwurf.
+         Erscheint nur, wenn etwas drinsteht: Ein langes Diktat Zeichen für
+         Zeichen zu löschen ist am Handy eine Strafe (Wunsch 30.08.). -->
+    <div class="feld-rahmen">
+      <textarea id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
+                rows="1" autocomplete="off" autocapitalize="sentences"
+                enterkeyhint="send"></textarea>
+      <button type="button" id="knopf-leeren" class="knopf-leeren" aria-label="Alles löschen" hidden>
+        <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+      </button>
+    </div>
     <div class="eingabe-knoepfe">
       <!-- Ein Knopf für alles zum Anhängen. Vier Symbole nebeneinander haben die
            Zeile gesprengt — der Senden-Knopf rutschte auf schmalen Handys aus
@@ -745,6 +753,10 @@
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-mikrofon"/></svg>
           <span>Diktieren — sprich, statt zu tippen.</span>
+        </div>
+        <div class="symbol-zeile">
+          <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+          <span>Das Kreuz im Eingabefeld — löscht alles, was drinsteht.</span>
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-glaetten"/></svg>
