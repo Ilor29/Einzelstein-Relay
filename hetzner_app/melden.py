@@ -181,6 +181,14 @@ def schicken(titel: str, text: str, sitzung: str = "") -> int:
     for endpoint in tot:
         austragen(endpoint)
 
+    # Auch das Gelingen ins Protokoll. Sonst steht man bei „bei mir kam nichts
+    # an" ohne jeden Anhaltspunkt da: Wurde überhaupt etwas verschickt, und an
+    # wie viele Geräte? (30.08.: Rolis Frage nach der fehlenden Meldung.)
+    print(
+        f"Benachrichtigung '{titel}': {zugestellt} zugestellt, "
+        f"{len(tot)} Geräte ausgetragen",
+        flush=True,
+    )
     return zugestellt
 
 
