@@ -199,7 +199,17 @@ def detect(name: str) -> str:
     fuss = "\n".join(screen.rstrip().splitlines()[-10:])
     if _ARBEITET.search(fuss) or _KREISEL.search(fuss):
         return RUNNING
-    if _FRAGT.search(screen):
+
+    # Fragen zählen nur ab Claudes letztem Block ("●" Antwort, "⏺" Werkzeug).
+    # Weiter oben steht womöglich eine ALTE Frage, die längst beantwortet ist —
+    # Rolis Fund 02.09.: Die Marketing-Karte klebte auf "wartet auf dich",
+    # weil ein "soll ich …?" von vorgestern noch im sichtbaren Bereich stand.
+    # Erlaubnis-Dialoge malt Claude Code immer unter seinen letzten Block,
+    # die bleiben also im Suchfenster. Ohne Block-Zeichen (frische Sitzung,
+    # Vertrauensfrage füllt den Schirm) gilt wie bisher der ganze Bildschirm.
+    letzte = max(screen.rfind("\n● "), screen.rfind("\n⏺ "))
+    bereich = screen[letzte:] if letzte != -1 else screen
+    if _FRAGT.search(bereich):
         return WAITING
     return IDLE
 
