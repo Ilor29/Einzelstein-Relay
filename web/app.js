@@ -790,6 +790,18 @@ function schreibe(ziel, text) {
   }
 }
 
+// Die Uhrzeit eines Beitrags, klein neben den Knöpfen. Ohne Zeit (Blöcke vom
+// Bildschirm) bleibt die Stelle leer.
+function zeitmarke(zeit) {
+  const el = document.createElement("span");
+  el.className = "zeitmarke";
+  const t = zeit ? new Date(zeit) : null;
+  if (t && !isNaN(t)) {
+    el.textContent = t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  }
+  return el;
+}
+
 function verlaufBlock(block) {
   const el = document.createElement("div");
 
@@ -824,7 +836,7 @@ function verlaufBlock(block) {
       }
     });
 
-    leiste.append(nochmal);
+    leiste.append(zeitmarke(block.zeit), nochmal);
     el.append(blase, leiste);
     return el;
   }
@@ -841,6 +853,15 @@ function verlaufBlock(block) {
     bild.loading = "lazy";
     // Antippen zeigt es groß.
     bild.addEventListener("click", () => window.open(bild.src, "_blank"));
+    // Alte Fotos räumt der Server nach zwei Wochen weg. Seit man bis zum
+    // Anfang zurückblättern kann, stößt man darauf — dann ein Wort statt
+    // eines kaputten Bildsymbols.
+    bild.addEventListener("error", () => {
+      const weg = document.createElement("div");
+      weg.className = "bildunterschrift";
+      weg.textContent = "Foto (inzwischen aufgeräumt)";
+      bild.replaceWith(weg);
+    });
     el.append(bild);
 
     if (block.text) {
@@ -911,7 +932,7 @@ function verlaufBlock(block) {
       }
     });
 
-    leiste.append(hoeren, kopieren, teilen);
+    leiste.append(hoeren, kopieren, teilen, zeitmarke(block.zeit));
     el.append(text, leiste);
     return el;
   }
@@ -959,6 +980,8 @@ let denktBis = 0;
 $("verlauf").addEventListener("scroll", () => {
   const el = $("verlauf");
   folgeUnten = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  // Nah am oberen Rand? Dann das nächste Häppchen Vergangenheit holen.
+  if (el.scrollTop < 400) aeltereNachladen();
 });
 
 // Aufeinanderfolgende Claude-Stücke zu EINER Antwort zusammenfassen. Eine
@@ -981,6 +1004,46 @@ function zusammenfassen(bloecke) {
   return raus;
 }
 
+// --- Der Verlauf im Speicher ---------------------------------------------------
+//
+// Beim Öffnen einer Karte kommt vom Server nur das jüngste Fenster (150 Blöcke),
+// jeder Block mit seiner Nummer aus der Gesprächsdatei. Alles, was wir je
+// gesehen haben, bleibt hier nach Nummer liegen — die Vergangenheit, die beim
+// Hochscrollen häppchenweise nachgeladen wird, genauso wie das Neue aus dem
+// Takt. Die Nummer macht die Naht dicht: Ein Block ist entweder da oder nicht,
+// doppelt nie. Vorher zeigte die Lese-Ansicht nur die letzten 400 Blöcke, und
+// bei einem langen Gespräch fehlte fast alles (Roli, 01.09., „Bestellung
+// Pachmayr", 13 MB Mitschrift).
+let verlaufBloecke = new Map();   // Nummer → Block
+let verlaufOhneNummern = null;    // Rückfall ohne Mitschrift: Blöcke vom Bildschirm
+let verlaufVor = Infinity;        // unterhalb dieser Nummer fehlt uns noch Vergangenheit
+let verlaufAnfang = false;        // der Anfang des Gesprächs ist geladen
+let verlaufLaedt = false;         // gerade wird ein Häppchen geholt
+
+function verlaufLeeren() {
+  verlaufBloecke = new Map();
+  verlaufOhneNummern = null;
+  verlaufVor = Infinity;
+  verlaufAnfang = false;
+  verlaufLaedt = false;
+  $("verlauf").replaceChildren($("verlauf-rand"));
+  randZeigen();
+}
+
+// Die Zeile ganz oben: „wird geholt" oder „Anfang des Gesprächs" — sonst nichts.
+function randZeigen() {
+  const rand = $("verlauf-rand");
+  if (verlaufLaedt) {
+    rand.textContent = "Älteres wird geholt …";
+    rand.hidden = false;
+  } else if (verlaufAnfang && verlaufBloecke.size) {
+    rand.textContent = "Anfang des Gesprächs";
+    rand.hidden = false;
+  } else {
+    rand.hidden = true;
+  }
+}
+
 async function ladeVerlauf() {
   if (!aktuelleSitzung || imTerminal) return;
 
@@ -998,11 +1061,8 @@ async function ladeVerlauf() {
     return;
   }
 
-  // Hat sich überhaupt etwas geändert?
-  //
-  // Sonst bauen wir den Verlauf alle drei Sekunden neu auf — und reißen dich
-  // dabei jedes Mal aus dem Text, den du gerade liest. Genau daran scheiterte
-  // das Scrollen: Nicht die Rolle fehlte, sie wurde nur ständig zurückgesetzt.
+  // Hat sich überhaupt etwas geändert? Sonst fassen wir den Verlauf gar nicht
+  // erst an — und reißen dich nicht aus dem Text, den du gerade liest.
   const abdruck = JSON.stringify(bloecke);
   if (abdruck === zuletztGesehen) return;
   zuletztGesehen = abdruck;
@@ -1010,37 +1070,190 @@ async function ladeVerlauf() {
   // Links aus den Antworten in die Sammlung legen — darf den Verlauf nie stören.
   try { linksSammeln(bloecke); } catch { /* dann eben ohne */ }
 
-  const behaelter = $("verlauf");
-  // Die Werkzeug-Kästen ("Bash(…)", "Read(…)") gehören ins Terminal, nicht ins
-  // Gespräch. Die Lese-Ansicht zeigt, was Claude *sagt* — wer sehen will, was es
-  // *tut*, schaltet oben aufs Terminal.
-  //
-  // Jeder Block einzeln im Fangnetz: Wirft das Rendern eines Blocks einen
-  // Fehler (ein kaputt kodierter Link hat genau so die ganze Ansicht
-  // eingefroren — zuletztGesehen war da schon gesetzt, es blieb leer), fällt
-  // NUR dieser Block auf schlichten Text zurück, der Rest lebt weiter.
-  behaelter.replaceChildren(...zusammenfassen(bloecke).map((block) => {
-    try {
-      return verlaufBlock(block);
-    } catch {
-      const notnagel = document.createElement("div");
-      notnagel.className = "antwort";
-      const blase = document.createElement("div");
-      blase.className = "blase claude";
-      blase.textContent = block?.text || "";
-      notnagel.append(blase);
-      return notnagel;
+  const nummeriert = bloecke.length > 0 && bloecke.every((b) => Number.isInteger(b.nr));
+  if (nummeriert) {
+    const bekannt = verlaufBloecke.size ? Math.max(...verlaufBloecke.keys()) : -1;
+    let kleinste = Infinity;
+    for (const b of bloecke) {
+      verlaufBloecke.set(b.nr, b);
+      if (b.nr < kleinste) kleinste = b.nr;
     }
-  }));
+    verlaufOhneNummern = null;
+    verlaufVor = Math.min(verlaufVor, kleinste);
+    if (kleinste === 0) verlaufAnfang = true;
+    // Eine Lücke zwischen dem, was wir hatten, und dem neuen Fenster? Passiert,
+    // wenn der Takt lange stand (dunkler Bildschirm), während Claude viel
+    // schrieb. Dann das Fehlende nachholen, statt es stumm zu verlieren.
+    if (bekannt >= 0 && kleinste > bekannt + 1) lueckeSchliessen(kleinste, bekannt);
+  } else {
+    // Ohne Mitschrift (Bildschirm-Rückfall, fremdes Terminal) gibt es keine
+    // Nummern und keine Vergangenheit — dann wie früher: das ist alles.
+    verlaufOhneNummern = bloecke;
+  }
 
-  // Der Verlauf wurde neu gebaut — die Lupe muss ihre Treffer neu setzen.
+  verlaufZeichnen();
+  bildschirmFuellen();
+}
+
+// Ein kurzes Gespräch füllt den Bildschirm nicht — dann kann man nicht
+// scrollen, und das Nachladen würde nie angestoßen. Also von selbst holen,
+// bis der Bildschirm voll ist oder der Anfang erreicht.
+function bildschirmFuellen() {
+  const el = $("verlauf");
+  if (el.clientHeight > 0 && el.scrollHeight <= el.clientHeight + 200) aeltereNachladen();
+}
+
+async function aeltereHolen(vor) {
+  try {
+    const antwort = await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf/aelter?vor=${vor}`,
+      taktOptionen()
+    );
+    return await antwort.json();
+  } catch {
+    return null;
+  }
+}
+
+// Das nächste Häppchen Vergangenheit — beim Hochscrollen.
+async function aeltereNachladen() {
+  if (verlaufLaedt || verlaufAnfang || verlaufOhneNummern || !aktuelleSitzung) return;
+  if (!Number.isFinite(verlaufVor) || verlaufVor <= 0) return;
+
+  const karte = verlaufBloecke;     // wechselt die Karte zwischendurch, gehört die Antwort ihr nicht
+  verlaufLaedt = true;
+  randZeigen();
+  const seite = await aeltereHolen(verlaufVor);
+  if (karte !== verlaufBloecke) return;
+  verlaufLaedt = false;
+  if (seite) {
+    for (const b of seite.bloecke) verlaufBloecke.set(b.nr, b);
+    verlaufVor = Math.min(verlaufVor, seite.von);
+    if (seite.anfang) verlaufAnfang = true;
+  }
+  randZeigen();
+  verlaufZeichnen();
+  if (seite) bildschirmFuellen();
+}
+
+async function lueckeSchliessen(vor, bekannt) {
+  const karte = verlaufBloecke;
+  for (let i = 0; i < 5 && vor > bekannt + 1; i++) {
+    const seite = await aeltereHolen(vor);
+    if (!seite || karte !== verlaufBloecke) return;
+    for (const b of seite.bloecke) verlaufBloecke.set(b.nr, b);
+    if (seite.anfang) { verlaufAnfang = true; break; }
+    vor = seite.von;
+  }
+  randZeigen();
+  verlaufZeichnen();
+}
+
+// Ein kurzer Fingerabdruck des Inhalts. Daran erkennen wir, ob eine
+// Sprechblase so bleiben darf, wie sie steht.
+function abdruckVon(block) {
+  const t = block.text || "";
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+  return `${block.typ}|${block.datei || ""}|${block.zeilen || 0}|${t.length}|${h}`;
+}
+
+// Tagestrenner einstreuen: Wo ein neuer Tag beginnt, steht sein Datum.
+function mitTagen(bloecke) {
+  const stuecke = [];
+  const dieses = new Date().getFullYear();
+  let tag = "";
+  bloecke.forEach((block, i) => {
+    const schluessel = Number.isInteger(block.nr) ? `b${block.nr}` : `i${i}`;
+    const zeit = block.zeit ? new Date(block.zeit) : null;
+    if (zeit && !isNaN(zeit)) {
+      let heutig = zeit.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+      if (zeit.getFullYear() !== dieses) heutig += zeit.getFullYear();
+      if (heutig !== tag) {
+        tag = heutig;
+        stuecke.push({ schluessel: `t${schluessel}`, abdruck: heutig, tag: heutig });
+      }
+    }
+    stuecke.push({ schluessel, abdruck: abdruckVon(block), block });
+  });
+  return stuecke;
+}
+
+function tagesTrenner(text) {
+  const el = document.createElement("div");
+  el.className = "tagestrenner";
+  el.textContent = text;
+  return el;
+}
+
+// Jeder Block einzeln im Fangnetz: Wirft das Rendern eines Blocks einen
+// Fehler (ein kaputt kodierter Link hat genau so die ganze Ansicht
+// eingefroren), fällt NUR dieser Block auf schlichten Text zurück.
+function verlaufBlockSicher(block) {
+  try {
+    return verlaufBlock(block);
+  } catch {
+    const notnagel = document.createElement("div");
+    notnagel.className = "antwort";
+    const blase = document.createElement("div");
+    blase.className = "blase claude";
+    blase.textContent = block?.text || "";
+    notnagel.append(blase);
+    return notnagel;
+  }
+}
+
+// Den Verlauf zeichnen — und dabei nur anfassen, was sich geändert hat.
+//
+// Jede Sprechblase trägt ihren Schlüssel und ihren Fingerabdruck. Was beides
+// noch hat, bleibt stehen; nur Neues wird gebaut. Vorher wurde bei jeder
+// Änderung alles neu gebaut — mit tausend Blöcken Vergangenheit wäre das
+// alle drei Sekunden ein Ruck. Die Werkzeug-Kästen ("Bash(…)", "Read(…)")
+// gehören ins Terminal, nicht ins Gespräch — zusammenfassen() wirft sie raus.
+function verlaufZeichnen() {
+  const el = $("verlauf");
+  const quelle = verlaufOhneNummern
+    ? verlaufOhneNummern
+    : [...verlaufBloecke.keys()].sort((a, b) => a - b).map((nr) => verlaufBloecke.get(nr));
+  const stuecke = mitTagen(zusammenfassen(quelle));
+
+  const vorhanden = new Map();
+  for (const kind of el.children) {
+    if (kind.dataset.schluessel) vorhanden.set(kind.dataset.schluessel, kind);
+  }
+
+  // Der Anker: die erste Blase, die bleibt. Kommt oben etwas dazu, halten wir
+  // sie an Ort und Stelle — sonst spränge der Text unter dem Finger weg.
+  let anker = null, ankerOben = 0;
+  for (const st of stuecke) {
+    const kind = vorhanden.get(st.schluessel);
+    if (kind && kind.dataset.abdruck === st.abdruck) {
+      anker = kind;
+      ankerOben = kind.getBoundingClientRect().top;
+      break;
+    }
+  }
+
+  const kinder = stuecke.map((st) => {
+    const alt = vorhanden.get(st.schluessel);
+    if (alt && alt.dataset.abdruck === st.abdruck) return alt;
+    const neu = st.tag ? tagesTrenner(st.tag) : verlaufBlockSicher(st.block);
+    neu.dataset.schluessel = st.schluessel;
+    neu.dataset.abdruck = st.abdruck;
+    return neu;
+  });
+  el.replaceChildren($("verlauf-rand"), ...kinder);
+
+  // Der Verlauf hat sich geändert — die Lupe muss ihre Treffer neu setzen.
   if (verlaufSuche) verlaufDurchsuchen(false);
 
   // Ans Ende ziehen, wenn wir mitlaufen sollen — aber erst in der nächsten
   // Bildwiederholung, wenn der neue Inhalt wirklich vermessen ist. Sofort wäre
   // scrollHeight noch der alte Wert, und wir landeten zu kurz.
   if (folgeUnten) {
-    requestAnimationFrame(() => { behaelter.scrollTop = behaelter.scrollHeight; });
+    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  } else if (anker) {
+    el.scrollTop += anker.getBoundingClientRect().top - ankerOben;
   }
 }
 
@@ -1526,7 +1739,7 @@ function oeffneSitzung(sitzung) {
   $("schnellbefehle").hidden = false;
   $("knopf-ansicht").querySelector("use").setAttribute("href", "#i-terminal");
 
-  $("verlauf").replaceChildren();
+  verlaufLeeren();
   $("frage").hidden = true;
   zeigeAnmeldeLink(null);
   feldAnpassen();          // beim Chat-Wechsel die Feldhöhe zurücksetzen — sonst

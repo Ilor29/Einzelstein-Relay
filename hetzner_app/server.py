@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 154
+VERSION = 155
 
 
 @app.get("/api/version")
@@ -461,7 +461,7 @@ async def create_session(body: NewSession) -> dict:
         )
 
     try:
-        tmux.create(name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
+        kennung = tmux.create(name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
@@ -475,11 +475,12 @@ async def create_session(body: NewSession) -> dict:
         cwd=str(cwd),
         ohne_rueckfragen=body.ohne_rueckfragen,
         schlaeft=False,
-        # Trägt eine alte (schlafende/abgestürzte) Karte denselben Namen,
-        # würde die neue Sitzung sonst deren Gesprächs-Bindung erben und
-        # dauerhaft den fremden Verlauf zeigen (Fund der Code-Durchsicht
-        # 20.08.). Frische Sitzung, frische Erkennung.
-        mitschrift="",
+        # Die Gesprächs-Kennung gibt die App seit V155 selbst vor
+        # (--session-id), statt sie hinterher an der Schreib-Spur zu erraten.
+        # Das Raten ging schief, sobald ein Nachbar im selben Ordner still
+        # wirkte (Rolis Fund 01.09.: „Jour Fix" bekam das Pachmayr-Gespräch).
+        # Ein alter Wert einer gleichnamigen Karte wird dabei überschrieben.
+        mitschrift=kennung,
     )
 
     if body.first_prompt:
@@ -582,11 +583,11 @@ async def brain_oeffnen() -> dict:
     # Kein Brain da — einen frischen anlegen, angeheftet und mit Begrüßung.
     name = "Brain"
     try:
-        tmux.create(name, ordner_str)
+        kennung = tmux.create(name, ordner_str)
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
     state.update(name, pinned=True, created_prompt=BRAIN_BEGRUESSUNG,
-                 cwd=ordner_str, schlaeft=False)
+                 cwd=ordner_str, schlaeft=False, mitschrift=kennung)
     asyncio.create_task(_ersten_auftrag_schicken(name, BRAIN_BEGRUESSUNG))
     return {"name": name, "neu": True}
 
@@ -1013,7 +1014,14 @@ def _mitschrift_zuordnen(s: tmux.TmuxSession) -> str:
         return frische[0]
 
 
-def _gespraechs_bloecke(s: tmux.TmuxSession) -> list[dict]:
+# So viele Blöcke bekommt das Handy beim Öffnen einer Karte — und so viele je
+# Häppchen beim Zurückblättern. Früher waren es 400 auf einmal, mehr nie: Bei
+# einem Gespräch von 13 MB fehlte damit fast alles (Roli, 01.09., Karte
+# „Bestellung Pachmayr"). Jetzt kommt der Rest nach, wenn man hochscrollt.
+VERLAUF_FENSTER = 150
+
+
+def _gespraechs_bloecke(s: tmux.TmuxSession, hoechstens: int = mitschrift._HOECHSTENS) -> list[dict]:
     """Die Mitschrift-Blöcke, die zu DIESEM Terminal gehören.
 
     Eigene Terminals sind je EIN Gespräch: erst über die gemerkte Kennung,
@@ -1025,12 +1033,12 @@ def _gespraechs_bloecke(s: tmux.TmuxSession) -> list[dict]:
     if s.eigen:
         datei = _mitschrift_zuordnen(s)
         if datei:
-            return mitschrift.lesen(s.cwd, datei=datei)
+            return mitschrift.lesen(s.cwd, hoechstens, datei=datei)
         # Übergang ohne Bindung: nur, was seit dem Start geschrieben wurde —
         # und nichts, was schon einer anderen Karte gehört.
-        return mitschrift.lesen(s.cwd, seit=s.created,
+        return mitschrift.lesen(s.cwd, hoechstens, seit=s.created,
                                 ausser=state.vergebene_mitschriften())
-    return mitschrift.lesen(s.cwd)
+    return mitschrift.lesen(s.cwd, hoechstens)
 
 
 def _vorlese_text(name: str) -> str:
@@ -1079,7 +1087,9 @@ def session_verlauf(name: str, request: Request) -> Response:
     if not treffer:
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
-    bloecke = _gespraechs_bloecke(treffer[0])
+    # Nur das jüngste Fenster; jeder Block trägt seine Nummer, damit die App
+    # beim Hochscrollen über /verlauf/aelter das Davor nachholen kann.
+    bloecke = _gespraechs_bloecke(treffer[0], VERLAUF_FENSTER)
 
     # Findet sich keine Mitschrift — etwa bei einem Ordner, in dem Claude Code
     # noch nie lief —, lesen wir notfalls doch den Bildschirm ab. Besser als
@@ -1095,6 +1105,25 @@ def session_verlauf(name: str, request: Request) -> Response:
         return Response(status_code=304, headers={"ETag": etag})
     return Response(koerper, media_type="application/json",
                     headers={"ETag": etag, "Cache-Control": "no-store"})
+
+
+@app.get("/api/sessions/{name}/verlauf/aelter", dependencies=[Depends(require_auth)])
+def session_verlauf_aelter(name: str, vor: int) -> dict:
+    """Ein Häppchen Vergangenheit: die Blöcke vor Block-Nummer `vor`.
+
+    Die App ruft das beim Hochscrollen, Häppchen für Häppchen bis zum Anfang
+    des Gesprächs. Gelesen wird nur die gebundene Mitschrift dieses Terminals
+    (Zeile für Zeile ab der nächsten Lesemarke, nie die ganze Datei auf
+    einmal); ohne Bindung gibt es keine Vergangenheit — dann ist der Anfang
+    eben schon da.
+    """
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if not treffer:
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    datei = state.get(name).mitschrift if treffer[0].eigen else ""
+    if not datei or vor <= 0:
+        return {"bloecke": [], "von": 0, "anfang": True}
+    return mitschrift.aelter(treffer[0].cwd, datei, vor, VERLAUF_FENSTER)
 
 
 # Was wir annehmen. Alles andere fliegt raus — hier landet nichts Ausführbares.

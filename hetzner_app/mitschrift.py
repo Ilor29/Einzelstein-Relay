@@ -94,6 +94,10 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
         # ist als isMeta markiert — das hast nicht du gesagt, es bleibt weg.
         if eintrag.get("isMeta") or eintrag.get("sourceToolUseID"):
             return []
+        # Wird ein langes Gespräch verdichtet, steht die Zusammenfassung als
+        # „user"-Eintrag drin — seitenlang und nicht von dir.
+        if eintrag.get("isCompactSummary"):
+            return []
         # Werkzeug-Ergebnisse kommen ebenfalls als "user" herein — das sind
         # aber keine Nachrichten von dir, sondern Rückmeldungen an Claude.
         if isinstance(inhalt, list) and any(
@@ -189,10 +193,25 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
 
 _gemerkt: dict[Path, dict] = {}
 
-# Mehr als so viele Blöcke zeigt das Handy ohnehin nie an. Was älter ist,
-# dürfen wir aus dem Gedächtnis werfen — nachlesen könnten wir es notfalls
-# wieder von der Platte.
+# So viele Blöcke behalten wir je Datei im Gedächtnis (das Handy bekommt beim
+# Öffnen ohnehin nur die letzten paar Dutzend). Was älter ist, holt aelter()
+# bei Bedarf wieder von der Platte — häppchenweise, beim Zurückblättern.
 _HOECHSTENS = 400
+
+# Jeder Block bekommt beim Lesen eine laufende Nummer (Feld "nr"), von 0 an
+# je Datei. Die Nummer ist stabil, weil Mitschriften nur hinten wachsen — die
+# App hält damit Vergangenheit und Gegenwart auseinander und weiß beim
+# Zurückblättern, wo sie steht.
+#
+# Alle so viele Blöcke merken wir uns eine Lesemarke (Block-Nr → Byte-Stelle
+# in der Datei). Wer die Blöcke 1800 bis 1950 einer 13-MB-Datei will, muss
+# dann nicht von vorn anfangen, sondern springt zur Marke davor.
+_MARKE_ALLE = 50
+
+
+def _leerer_stand() -> dict:
+    return {"gelesen": 0, "bloecke": [], "zaehler": 0,
+            "marken": [], "naechste_marke": 0}
 
 
 def _aus_datei(datei: Path) -> list[dict]:
@@ -202,12 +221,12 @@ def _aus_datei(datei: Path) -> list[dict]:
     except OSError:
         return []
 
-    stand = _gemerkt.get(datei, {"gelesen": 0, "bloecke": []})
+    stand = _gemerkt.get(datei) or _leerer_stand()
 
     # Ist die Datei kürzer als beim letzten Mal, ist sie nicht gewachsen,
     # sondern eine andere geworden. Dann fangen wir von vorne an.
     if groesse < stand["gelesen"]:
-        stand = {"gelesen": 0, "bloecke": []}
+        stand = _leerer_stand()
 
     if groesse > stand["gelesen"]:
         try:
@@ -221,12 +240,22 @@ def _aus_datei(datei: Path) -> list[dict]:
         # wir noch nicht — beim nächsten Mal ist sie fertig.
         schluss = neu.rfind(b"\n")
         if schluss >= 0:
-            for zeile in neu[: schluss + 1].decode(errors="replace").splitlines():
+            stelle = stand["gelesen"]
+            for zeile in neu[: schluss + 1].split(b"\n")[:-1]:
+                # Eine Lesemarke am Zeilenanfang, wenn wieder genug Blöcke
+                # seit der letzten vergangen sind.
+                if stand["zaehler"] >= stand["naechste_marke"]:
+                    stand["marken"].append((stand["zaehler"], stelle))
+                    stand["naechste_marke"] = stand["zaehler"] + _MARKE_ALLE
+                stelle += len(zeile) + 1
                 try:
-                    eintrag = json.loads(zeile)
+                    eintrag = json.loads(zeile.decode(errors="replace"))
                 except json.JSONDecodeError:
                     continue
-                stand["bloecke"].extend(_bloecke_aus(eintrag))
+                for block in _bloecke_aus(eintrag):
+                    block["nr"] = stand["zaehler"]
+                    stand["zaehler"] += 1
+                    stand["bloecke"].append(block)
 
             stand["gelesen"] += schluss + 1
             stand["bloecke"] = stand["bloecke"][-_HOECHSTENS:]
@@ -234,6 +263,54 @@ def _aus_datei(datei: Path) -> list[dict]:
         _gemerkt[datei] = stand
 
     return stand["bloecke"]
+
+
+def aelter(cwd: str, datei: str, vor: int, anzahl: int) -> dict:
+    """Die anzahl Blöcke VOR Block-Nummer vor — zum Zurückblättern.
+
+    Liest die Datei Zeile für Zeile von der nächstgelegenen Lesemarke an und
+    zählt mit, bis die gewünschten Nummern erreicht sind; nie mehr als eine
+    Zeile auf einmal im Speicher. Liefert die Blöcke, die erste gelieferte
+    Nummer (von) und ob damit der Anfang des Gesprächs erreicht ist.
+    """
+    pfad = PROJEKTE / _ordnername(cwd) / f"{datei}.jsonl"
+    von = max(0, vor - anzahl)
+    leer = {"bloecke": [], "von": von, "anfang": True}
+    if vor <= 0:
+        return leer
+
+    # Zur letzten Marke vor der gesuchten Stelle springen — wenn es eine gibt.
+    # Ohne Marken (Datei noch nie live gelesen) eben von vorn.
+    stelle, zaehler = 0, 0
+    stand = _gemerkt.get(pfad)
+    if stand:
+        for nr, s in stand["marken"]:
+            if nr > von:
+                break
+            stelle, zaehler = s, nr
+
+    bloecke: list[dict] = []
+    try:
+        with pfad.open("rb") as f:
+            f.seek(stelle)
+            for zeile in f:
+                if not zeile.endswith(b"\n"):
+                    break                       # angefangene Zeile — noch nicht fertig
+                try:
+                    eintrag = json.loads(zeile.decode(errors="replace"))
+                except json.JSONDecodeError:
+                    continue
+                for block in _bloecke_aus(eintrag):
+                    block["nr"] = zaehler
+                    if von <= zaehler < vor:
+                        bloecke.append(block)
+                    zaehler += 1
+                if zaehler >= vor:
+                    break
+    except OSError:
+        return leer
+
+    return {"bloecke": bloecke, "von": von, "anfang": von == 0}
 
 
 def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
@@ -306,5 +383,11 @@ def lesen(cwd: str, hoechstens: int = _HOECHSTENS,
             continue
         gesehen |= merkmale
         strang.append(block)
+
+    # Die Nummern gelten je Datei. In der verschmolzenen Zeitleiste mehrerer
+    # Dateien stießen sie zusammen — dort gibt es darum keine (und kein
+    # Zurückblättern), wie beim Bildschirm-Rückfall.
+    if not datei:
+        strang = [{k: v for k, v in b.items() if k != "nr"} for b in strang]
 
     return strang[-hoechstens:]

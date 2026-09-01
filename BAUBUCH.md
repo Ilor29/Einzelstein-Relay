@@ -1,6 +1,6 @@
 # Baubuch — so ist die Einzelstein-Fernbedienung gebaut
 
-Stand: 30.08.2026, Version 154. Dieses Buch beschreibt den technischen Aufbau
+Stand: 01.09.2026, Version 155. Dieses Buch beschreibt den technischen Aufbau
 und die Design-Entscheidungen. Es ist für den nächsten Menschen (oder die
 nächste Claude-Sitzung) gedacht, der verstehen will, warum die Dinge so sind,
 wie sie sind — nicht als Werbetext. Wenn sich am Aufbau etwas Grundsätzliches
@@ -54,7 +54,15 @@ Start und lädt sich selbst neu, wenn sie veraltet ist.
   wird der Verlauf nur bei Änderung (ETag/304), das spart unterwegs Daten.
 - **mitschrift.py** — die richtige Quelle für den Verlauf: Claude Codes eigene
   Mitschriften unter `~/.claude/projects/`, ein Strang je Gespräch, überlebt
-  jeden Neustart.
+  jeden Neustart. Jeder Block trägt eine laufende Nummer (`nr`, je Datei).
+  Beim Öffnen einer Karte kommen nur die letzten 150 Blöcke; beim Hochscrollen
+  holt die App über `/verlauf/aelter?vor=` häppchenweise Älteres bis zum
+  Anfang (seit V155). Dafür merkt sich der Leser alle 50 Blöcke eine
+  Lesemarke (Nummer → Byte-Stelle) und liest ab dort Zeile für Zeile — eine
+  13-MB-Datei liegt nie ganz im Speicher. Welche Datei zu welcher Karte
+  gehört, vergibt die App seit V155 beim Start selbst (`--session-id`, im
+  Meta-Feld `mitschrift`); die Erkennung an der Schreib-Spur
+  (`server._mitschrift_zuordnen`) bleibt nur noch für `/clear` und alte Karten.
 - **tts.py** — Vorlesen. Der schwierige Teil ist das Aussortieren: Fließtext
   wird gelesen, Code und Werkzeuge werden nur angesagt. Stimmen: Piper lokal
   (eigener Prozess auf Port 5005, Standard „Jonas" = de_DE-thorsten-medium),
@@ -89,7 +97,10 @@ Start und lädt sich selbst neu, wenn sie veraltet ist.
 Acht Ansichten in einer Seite (Anmeldung, Geräte, Liste, Sitzung, Neu,
 Einstellungen, Bibliothek, Routinen), umgeschaltet über `zeige()`. Die
 wichtigsten Stücke: Kartenliste mit Klappgruppen (angeheftet, zuletzt benutzt,
-schläft), der Verlauf mit Sprechblasen und Vorlese-Knöpfen je Antwort, das
+schläft), der Verlauf mit Sprechblasen, Uhrzeit und Tagestrennern und
+Vorlese-Knöpfen je Antwort (die App hält alle gesehenen Blöcke nach Nummer in
+einer Map und baut beim Takt nur neue Sprechblasen; Hochscrollen lädt die
+Vergangenheit nach, der Anker hält die Scroll-Position), das
 eingebettete Terminal (xterm.js über WebSocket), Diktat über die
 Browser-Spracherkennung (satzweise neu gestartet, Entwurf wird je Karte in
 localStorage gemerkt und übersteht das Wegwerfen der Seite), die
@@ -146,6 +157,11 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
 - **Zustands-Erkennung:** Claude Codes Fußzeile wird in schmalen Fenstern
   gekürzt; erkannt wird darum nur „esc to in", und nur in den letzten Zeilen
   (sonst hält ein Zitat im Verlauf die Sitzung ewig für beschäftigt).
+- **tmux und Aktivität:** `#{session_activity}` bleibt bei einer Sitzung ohne
+  angehängtes Fenster auf der Startzeit stehen, obwohl Claude drinnen
+  schreibt. Darum `#{window_activity}` mitnehmen. Mit dem eingefrorenen Wert
+  hielt die Gesprächs-Erkennung eine arbeitende Karte für still und hängte
+  ihre Mitschrift dem Nachbarn an (Pachmayr/Jour Fix, 01.09.).
 - **Vertrauensfrage neuer Projekte:** Escape ist dort eine Falle (bricht ab
   statt zu antworten); der Server wählt selbst „Ja" an.
 - **Tests:** Playwright liegt in `~/werkzeuge/browser/.venv`. Beim Testen die

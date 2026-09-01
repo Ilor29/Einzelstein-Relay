@@ -13,6 +13,7 @@ import shlex
 import subprocess
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -107,6 +108,12 @@ def list_sessions(auch_fremde: bool = True) -> list[TmuxSession]:
         "#{pane_current_path}",
         "#{session_created}",
         "#{session_activity}",
+        # session_activity bleibt bei einer Sitzung, an der kein Fenster
+        # hängt, auf der Startzeit stehen — obwohl Claude drinnen munter
+        # schreibt. window_activity zählt weiter. Wir nehmen das Jüngere von
+        # beiden (Rolis Fund 01.09.: Pachmayr galt als still, und die
+        # Gesprächs-Erkennung hängte seine Mitschrift dem Nachbarn an).
+        "#{window_activity}",
         "#{session_attached}",
     ])
 
@@ -123,9 +130,11 @@ def list_sessions(auch_fremde: bool = True) -> list[TmuxSession]:
             if not line.strip():
                 continue
             try:
-                name, path, created, activity, attached = line.split(SEP)
+                name, path, created, activity, fenster, attached = line.split(SEP)
             except ValueError:
                 continue
+            if fenster.isdigit():
+                activity = max(int(activity), int(fenster))
 
             eigen = socket == SOCKET and name.startswith(PREFIX)
             if eigen:
@@ -158,8 +167,13 @@ def create(
     ohne_rueckfragen: bool = False,
     fortsetzen: bool = False,
     gespraech: str = "",
-) -> None:
+) -> str:
     """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
+
+    Liefert die Gesprächs-Kennung, unter der Claude Code die Mitschrift
+    ablegt — bei einem frischen Start vergeben WIR sie (--session-id), damit
+    die App von der ersten Sekunde an weiß, welche Datei zu diesem Terminal
+    gehört. Beim Fortsetzen bleibt es die alte (leer, wenn unbekannt).
 
     Mit ohne_rueckfragen läuft Claude im Modus "fragt nie" — er führt auch
     Befehle ohne Rückfrage aus. Das lässt sich nur beim Start setzen, nicht
@@ -178,12 +192,17 @@ def create(
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
 
     befehl = "claude --dangerously-skip-permissions" if ohne_rueckfragen else "claude"
+    kennung = ""
+    if not fortsetzen:
+        kennung = str(uuid.uuid4())
+        befehl = f"{befehl} --session-id {kennung}"
     if fortsetzen:
         # shlex wäre hier Overkill: Die Kennung ist ein Dateiname aus Claude
         # Codes eigener Ablage (UUID) — zur Sicherheit trotzdem nur Erlaubtes.
         sicher = "".join(c for c in gespraech if c.isalnum() or c == "-")
         if sicher:
             befehl = f"{befehl} --resume {sicher} || {befehl} --continue || {befehl}"
+            kennung = sicher
         else:
             befehl = f"{befehl} --continue || {befehl}"
 
@@ -214,11 +233,9 @@ def create(
     # mehr nachlesen, was vorhin besprochen wurde.
     _run("set-option", "-t", PREFIX + name, "history-limit", "50000", socket=SOCKET)
 
-    if first_prompt:
-        # Claude Code braucht einen Moment, bis es Eingaben annimmt.
-        # Das erledigt der Aufrufer über send_text(), nicht wir hier —
-        # siehe server.py, wo darauf gewartet wird.
-        pass
+    # Den ersten Auftrag tippt der Aufrufer selbst über send_text(), sobald
+    # Claude Code Eingaben annimmt — siehe server.py, wo darauf gewartet wird.
+    return kennung
 
 
 def kill(name: str) -> None:

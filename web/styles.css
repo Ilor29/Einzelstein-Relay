@@ -1018,6 +1018,22 @@ html, body {
   margin-top: 1.1rem;
 }
 .verlauf > :first-child { margin-top: 0; }
+.verlauf > [hidden] + * { margin-top: 0; }
+
+/* Zeit und Tag: leise, damit sie das Gespräch nicht übertönen. Die Uhrzeit
+   steht klein in der Knopfleiste, das Datum als Trenner, wo ein neuer Tag
+   beginnt. Ganz oben: „Älteres wird geholt" bzw. „Anfang des Gesprächs". */
+.zeitmarke,
+.tagestrenner,
+.verlauf-rand {
+  font-size: .72rem;
+  color: var(--schrift-schwach);
+  font-variant-numeric: tabular-nums;
+}
+.zeitmarke { align-self: center; padding: 0 .4rem; }
+.tagestrenner { text-align: center; margin-top: .6rem; }
+.verlauf-rand { text-align: center; }
+.verlauf-rand[hidden] { display: none; }
 
 .blase {
   white-space: pre-wrap;      /* Absätze bleiben Absätze */
