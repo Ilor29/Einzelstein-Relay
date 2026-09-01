@@ -1213,6 +1213,34 @@ DOK_ENDUNGEN = {
 MAX_DATEI = 30 * 1024 * 1024      # 30 MB — Dokumente sind schwerer als Fotos
 
 
+def _endung_erraten(inhalt: bytes) -> str:
+    """Bei fehlender oder unbekannter Endung in die Datei selbst schauen.
+
+    Rolis Fund 02.09.: Eine Skill-Datei (SKILL.md heißt oft nur "SKILL", aus
+    Communities kommen Endungen wie ".skill") fiel an der Positivliste durch —
+    dabei ist so eine Datei schlicht Text. Deshalb: Sieht der Inhalt wie ein
+    ZIP aus, nehmen wir ihn als ZIP; ist er lesbarer Text (UTF-8, keine
+    Nullbytes), als Text. Alles Undurchsichtige bleibt weiter draußen, und die
+    Endung vergeben wir selbst — ausführbar wird hier nichts.
+    """
+    if inhalt.startswith(b"PK\x03\x04"):
+        return ".zip"
+    stueck = inhalt[:65536]
+    if len(inhalt) > len(stueck):
+        # Nicht mitten in einem Umlaut abschneiden — sonst gilt gültiger
+        # Text fälschlich als kaputt. UTF-8-Folgebytes beginnen mit 10xxxxxx.
+        while stueck and stueck[-1] & 0xC0 == 0x80:
+            stueck = stueck[:-1]
+        stueck = stueck[:-1]
+    try:
+        probe = stueck.decode("utf-8")
+    except UnicodeDecodeError:
+        return ""
+    if "\x00" in probe:
+        return ""
+    return ".txt"
+
+
 @app.post("/api/sessions/{name}/datei", dependencies=[Depends(require_auth)])
 async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
     """Ein Dokument an Claude schicken — PDF, Word, Markdown, Text, Tabellen.
