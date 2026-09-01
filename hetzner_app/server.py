@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 155
+VERSION = 156
 
 
 @app.get("/api/version")
@@ -1251,17 +1251,24 @@ async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
-    endung = Path(datei.filename or "").suffix.lower()
-    if endung not in DOK_ENDUNGEN:
-        raise HTTPException(
-            400,
-            "Diese Dateiart nehme ich nicht an. Erlaubt sind PDF, Word, "
-            "Markdown, Text, Tabellen, ZIP-Archive und ähnliche Dokumente.",
-        )
-
     inhalt = await datei.read()
     if len(inhalt) > MAX_DATEI:
         raise HTTPException(413, "Die Datei ist zu groß (mehr als 30 MB).")
+
+    endung = Path(datei.filename or "").suffix.lower()
+    if endung not in DOK_ENDUNGEN:
+        # Zweite Chance: in die Datei schauen. Text und ZIP nehmen wir auch
+        # mit fremder oder fehlender Endung an — Skill-Dateien zum Beispiel.
+        erraten = _endung_erraten(inhalt)
+        if not erraten:
+            was = f'Die Endung „{endung}"' if endung else "Eine Datei ohne Endung mit unlesbarem Inhalt"
+            raise HTTPException(
+                400,
+                f"{was} nehme ich nicht an. Erlaubt sind PDF, Word, Markdown, "
+                "Text, Tabellen, ZIP-Archive und ähnliche Dokumente — sowie "
+                "alles, was innen drin Text oder ein ZIP ist.",
+            )
+        endung = erraten
 
     sitzung = [s for s in tmux.list_sessions() if s.name == name][0]
     arbeitsordner = Path(sitzung.cwd)

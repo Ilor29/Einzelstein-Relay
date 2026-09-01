@@ -1936,10 +1936,9 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   e.preventDefault();
   const feld = $("eingabe");
   const text = feld.value.trim();
-  const pfade = anhaenge.map((a) => a.pfad);
   // Ein bloßer Anhang ohne ein Wort dazu darf raus — dann schaut Claude ihn
   // sich eben ohne weitere Anweisung an.
-  if ((!text && !pfade.length) || !aktuelleSitzung) return;
+  if ((!text && !anhaenge.length) || !aktuelleSitzung) return;
 
   // Solange Claude arbeitet, nehmen wir nichts Neues an — das Nachschieben
   // führte nur zu "ist das angekommen?"-Verwirrung. Text und Anhänge bleiben
@@ -1957,7 +1956,7 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
 
   // Feld und Streifen sofort leeren; klemmt das Senden, stellen wir beides
   // wieder her.
-  const gesamt = nachrichtMitAnhaengen(pfade, text);
+  const gesamt = nachrichtMitAnhaengen(anhaenge, text);
   const gemerkt = anhaenge;
   feld.value = "";
   feldAnpassen();           // sonst bleibt das Feld auf voller Höhe stehen
@@ -1994,8 +1993,7 @@ async function schnellbefehl(text) {
   // Hängen Fotos oder Dateien am Feld, gehen sie mit — genau wie beim Senden
   // über die Eingabezeile. Sonst tippt man "Los geht's" und die eben angehängten
   // Bilder bleiben unbemerkt liegen. Pfade zuerst, der Befehlssatz dahinter.
-  const pfade = anhaenge.map((a) => a.pfad);
-  const gesamt = nachrichtMitAnhaengen(pfade, text);
+  const gesamt = nachrichtMitAnhaengen(anhaenge, text);
   const gemerkt = anhaenge;
   anhaengeLeeren();
 
@@ -2379,9 +2377,17 @@ function anhaengeLeeren() {
 // wie man es am Rechner eintippte. Steckt ein ZIP-Archiv dabei, geht ein Satz
 // mit: Ein Archiv nur abzulegen bringt nichts, es soll auch geöffnet werden —
 // aber erst nach einem Blick hinein, nicht blind.
-function nachrichtMitAnhaengen(pfade, text) {
-  const teile = [...pfade, text].filter(Boolean);
-  if (pfade.some((p) => p.toLowerCase().endsWith(".zip"))) {
+function nachrichtMitAnhaengen(liste, text) {
+  const teile = [...liste.map((a) => a.pfad), text].filter(Boolean);
+  // Der Server benennt Dokumente um (Zeitstempel statt Name). Damit Claude
+  // trotzdem weiß, was er vor sich hat — etwa eine SKILL.md —, reist der
+  // Name vom Handy als Satz mit.
+  for (const a of liste) {
+    if (!a.istBild && a.name && !a.pfad.endsWith("/" + a.name)) {
+      teile.push(`(Die Datei ${a.pfad} hieß auf dem Handy „${a.name}".)`);
+    }
+  }
+  if (liste.some((a) => a.pfad.toLowerCase().endsWith(".zip"))) {
     teile.push("(Angehängt ist ein ZIP-Archiv. Schau zuerst hinein, was es enthält, und entpacke es dann an eine passende Stelle.)");
   }
   return teile.join(" ");

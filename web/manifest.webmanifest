@@ -43,9 +43,12 @@
             "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/zip",
+            "application/x-zip-compressed",
             ".md", ".markdown", ".txt", ".text", ".csv", ".tsv", ".log",
             ".json", ".yaml", ".yml", ".xml", ".html", ".rtf", ".odt",
-            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".zip", ".skill"
           ]
         }
       ]
