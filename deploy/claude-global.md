@@ -65,3 +65,12 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
   (`~/.bilder-aufraeumen.sh`, Protokoll in `~/logs/bilder-aufraeumen.log`).
   Was aus einem Bild wichtig ist, gehört deshalb in die Notiz, nicht im Bild
   liegen gelassen.
+
+## Compact Instructions
+
+Beim Zusammenfassen des Verlaufs unbedingt behalten: Rolis letzte Anweisung wörtlich und
+was davon noch offen ist; alle Beschlüsse dieser Sitzung mit Auslöser-Satz (was, wann,
+warum); Regeln aus Korrekturen; die Dateien, Dienste und Adressen, an denen gearbeitet
+wurde, mit Stand; offene Fragen an Roli; wo die Wahrheit liegt (Baubuch, Register,
+Konzeptnotiz, Archiv-Entwurf). Nach einer Zusammenfassung wird vor dem Weiterbauen dort
+nachgelesen, nicht aus der Zusammenfassung heraus gebaut.
