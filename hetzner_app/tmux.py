@@ -192,6 +192,10 @@ def create(
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
 
     befehl = "claude --dangerously-skip-permissions" if ohne_rueckfragen else "claude"
+    # Jede Karte trägt ihren Namen auch als Sitzungsnamen (--name). Erst damit sehen sich
+    # die Sitzungen gegenseitig (/list-agents) und das Brain kann einer Karte eine
+    # Nachricht schicken oder erfahren, wenn sie fertig ist (Doku-Auswertung 05.09.2026).
+    befehl = f"{befehl} --name {shlex.quote(name)}"
     kennung = ""
     if not fortsetzen:
         kennung = str(uuid.uuid4())

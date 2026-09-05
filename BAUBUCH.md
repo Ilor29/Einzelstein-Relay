@@ -178,3 +178,14 @@ Daten: `~/.hetzner-app/`. Deploy-Bausteine (Caddy, systemd-Einheiten,
 cloud-init, Selbst-Aktualisierung, Spiegel für Lorenz und Lea): `deploy/`.
 Produkt- und Verkaufsstand: `~/projekte/Brain/REGISTER.md`, Abschnitt
 Hetzner-App.
+
+## V158 (05.09.2026): Karten heißen auch als Sitzung so
+`tmux.create` gibt Claude Code beim Start `--name <Kartenname>` mit, bei frischen wie bei
+geweckten Karten. Grund: Seit Claude Code 2.1.224 können Sitzungen auf derselben Maschine
+einander sehen (`/list-agents`) und Nachrichten schicken (`SendMessage`, `@name`), aber nur
+benannte Sitzungen sind sauber ansprechbar. So kann das Brain einer Projekt-Karte einen
+Beschluss schicken und sich melden lassen, wenn sie fertig ist. Laufende Karten bekommen den
+Namen erst beim nächsten Schlafen und Wecken. Dazu in Rolis Nutzer-Einstellungen
+`crossSessionInbound: accept` (sonst hält eine Karte im „fragt nie"-Modus jede Nachricht zur
+Freigabe zurück) und eine Statuszeile (`~/.claude/statusline.sh`) mit Sitzungsname,
+Kontext-Füllstand und den beiden Abo-Balken; sie erscheint als eine Zeile unter der Eingabe.
