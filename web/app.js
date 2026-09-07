@@ -1519,9 +1519,9 @@ async function pruefeFrage() {
     return;
   }
 
-  // Der Anmelde-Link fährt in derselben Antwort huckepack mit (siehe
+  // Der Anmelde-Stand fährt in derselben Antwort huckepack mit (siehe
   // Server). Er hat seinen eigenen Kasten und stört die Rückfragen nicht.
-  zeigeAnmeldeLink(frage.anmeldeLink);
+  zeigeAnmeldung(frage);
 
   const kasten = $("frage");
   if (!frage.moeglichkeiten) {
@@ -1550,18 +1550,78 @@ async function pruefeFrage() {
   kasten.hidden = false;
 }
 
-// Der Anmelde-Kasten: erscheint, wenn Claude Code nach /login seine lange
-// OAuth-Adresse auf den Bildschirm gedruckt hat. Öffnen startet die Anmeldung
-// im Browser; den Code, den man dort bekommt, setzt man danach ganz normal
-// unten ins Eingabefeld. Kopieren als zweiter Weg, falls man den Link lieber
-// woanders öffnet.
+// Der Anmelde-Kasten: die ganze Claude-Anmeldung vom Handy aus, ohne SSH.
+// Drei Stufen, gesteuert vom Server (huckepack im /frage-Takt):
+//   "noetig" — Claude Code verlangt /login; der Kasten zeigt "Neu anmelden",
+//              das den Login serverseitig sauber im Terminal startet.
+//   "offen"  — der Login-Bildschirm liegt über der Eingabe; der Kasten zeigt
+//              Link-Knöpfe und das Code-Feld. Der Code geht über einen
+//              eigenen Endpunkt DIREKT in den Login-Bildschirm — der Weg
+//              übers normale Eingabefeld scheiterte am 07.09., weil der
+//              Dialog-Wächter den Login mit Escape wegdrückte.
 let anmeldeLink = "";
 
-function zeigeAnmeldeLink(url) {
+function zeigeAnmeldung(frage) {
   const kasten = $("anmelde-link");
-  anmeldeLink = url || "";
-  kasten.hidden = !anmeldeLink;
+  const stand = frage?.anmeldung || "";
+  anmeldeLink = frage?.anmeldeLink || "";
+  if (!stand && !anmeldeLink) {
+    kasten.hidden = true;
+    return;
+  }
+  $("anmelde-start").hidden = stand !== "noetig";
+  $("anmelde-oeffnen").hidden = !anmeldeLink;
+  $("anmelde-kopieren").hidden = !anmeldeLink;
+  $("anmelde-code-zeile").hidden = stand !== "offen";
+  $("anmelde-hinweis").textContent =
+    stand === "noetig"
+      ? "Die Claude-Anmeldung ist abgelaufen. „Neu anmelden" startet den Login hier in der Sitzung."
+      : "Claude Code braucht eine neue Anmeldung: Link öffnen, im Browser anmelden, den Code hier unten einfügen.";
+  kasten.hidden = false;
 }
+
+$("anmelde-start").addEventListener("click", async () => {
+  const knopf = $("anmelde-start");
+  knopf.disabled = true;
+  try {
+    const antwort = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/anmelden`,
+      { method: "POST" }
+    )).json();
+    // Nicht auf den nächsten Takt warten — Link und Code-Feld sofort zeigen.
+    zeigeAnmeldung({ anmeldung: "offen", anmeldeLink: antwort.link });
+  } catch (err) {
+    melde(err.message);
+  } finally {
+    knopf.disabled = false;
+  }
+});
+
+$("anmelde-code-senden").addEventListener("click", async () => {
+  const feld = $("anmelde-code");
+  const code = feld.value.trim();
+  if (!code) { feld.focus(); return; }
+  const knopf = $("anmelde-code-senden");
+  knopf.disabled = true;
+  melde("Code eingereicht — einen Moment …");
+  try {
+    const antwort = await (await api(
+      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/anmelde-code`,
+      { method: "POST", body: JSON.stringify({ code }) }
+    )).json();
+    if (antwort.erfolg) {
+      feld.value = "";
+      zeigeAnmeldung(null);
+      melde("Angemeldet — die Sitzung läuft weiter.");
+    } else {
+      melde("Die Anmeldung hat nicht geklappt — bitte im Terminal nachsehen.");
+    }
+  } catch (err) {
+    melde(err.message);
+  } finally {
+    knopf.disabled = false;
+  }
+});
 
 $("anmelde-oeffnen").addEventListener("click", () => {
   if (anmeldeLink) window.open(anmeldeLink, "_blank", "noopener");
@@ -1741,7 +1801,7 @@ function oeffneSitzung(sitzung) {
 
   verlaufLeeren();
   $("frage").hidden = true;
-  zeigeAnmeldeLink(null);
+  zeigeAnmeldung(null);
   feldAnpassen();          // beim Chat-Wechsel die Feldhöhe zurücksetzen — sonst
                            // stünde es riesig da, wenn vorher viel drin war
   offeneFrage = "";

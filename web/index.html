@@ -470,15 +470,23 @@
     <p id="frage-text" class="frage-text"></p>
     <div id="frage-knoepfe" class="frage-knoepfe"></div>
   </div>
-  <!-- Claude Code will neu angemeldet werden: /login druckt eine lange
-       OAuth-Adresse, die sich am Handy nicht aus dem Terminal kopieren lässt.
-       Die App fischt sie vom Bildschirm und macht Knöpfe daraus. -->
+  <!-- Claude Code will neu angemeldet werden. Der ganze Ablauf läuft hier,
+       ohne SSH: "Neu anmelden" tippt /login serverseitig ins Terminal, der
+       Link öffnet die Anmeldung im Browser, und der Code aus dem Browser
+       wird über das eigene Feld direkt in den Login-Bildschirm gereicht —
+       NICHT über das normale Eingabefeld (dort hat ihn der Dialog-Wächter
+       am 07.09. mit Escape abgeschossen). -->
   <div id="anmelde-link" class="frage" hidden>
-    <p class="frage-text">Claude Code braucht eine neue Anmeldung. Link öffnen,
-      anmelden — den Code danach einfach unten ins Eingabefeld setzen.</p>
+    <p id="anmelde-hinweis" class="frage-text"></p>
     <div class="frage-knoepfe">
-      <button type="button" id="anmelde-oeffnen" class="frage-knopf ja">Anmelde-Link öffnen</button>
-      <button type="button" id="anmelde-kopieren" class="frage-knopf">Link kopieren</button>
+      <button type="button" id="anmelde-start" class="frage-knopf ja" hidden>Neu anmelden</button>
+      <button type="button" id="anmelde-oeffnen" class="frage-knopf ja" hidden>Anmelde-Link öffnen</button>
+      <button type="button" id="anmelde-kopieren" class="frage-knopf" hidden>Link kopieren</button>
+    </div>
+    <div class="anmelde-code-zeile" id="anmelde-code-zeile" hidden>
+      <input type="text" id="anmelde-code" autocomplete="off" autocapitalize="off"
+             spellcheck="false" placeholder="Code aus dem Browser einfügen">
+      <button type="button" id="anmelde-code-senden" class="frage-knopf ja">Code senden</button>
     </div>
   </div>
   <!-- Zwei Zeilen, wie in der offiziellen App: oben der Text über die volle

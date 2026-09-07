@@ -282,6 +282,11 @@ def dialog_zustand(name: str) -> str:
       "blockiert"  — ein Dialog, bei dem Escape schaden könnte (die
                      Vertrauensfrage etwa beendet bei Escape gleich ganz
                      Claude). Den muss ein Mensch beantworten.
+      "anmeldung"  — der /login-Bildschirm. Auch er sagt "Esc to cancel",
+                     aber Escape hieße hier "Login interrupted". Genau so
+                     hat die App am 07.09. Rolis Anmeldeversuche vom Handy
+                     sabotiert: Wächter drückt Escape, der eingefügte Code
+                     landet danach als normale Chat-Nachricht.
     """
     try:
         schirm = capture(name, lines=None)
@@ -293,6 +298,12 @@ def dialog_zustand(name: str) -> str:
     fuss = "\n".join(schirm.rstrip().splitlines()[-12:]).lower()
     if "shift+tab to cycle" in fuss:
         return "frei"  # die normale Statuszeile — kein Dialog liegt davor
+    # Der Login-Bildschirm VOR dem Escape-Muster: Beide seiner Seiten (erst
+    # "Select login method:", dann die OAuth-Adresse mit "Paste code here
+    # if prompted >") enden mit "Esc to cancel" — wegdrücken bricht aber die
+    # Anmeldung ab.
+    if "select login method" in fuss or "paste code here" in fuss:
+        return "anmeldung"
     # Die Vertrauensfrage ZUERST: Ihre Fußzeile sagt zwar "Esc to cancel",
     # aber Escape beendet hier gleich ganz Claude. Genau das ist am 28.08.
     # passiert — die App drückte den vermeintlich harmlosen Dialog weg und

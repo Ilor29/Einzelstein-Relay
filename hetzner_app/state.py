@@ -390,6 +390,30 @@ def anmelde_link(name: str) -> str | None:
     return treffer
 
 
+# Woran man erkennt, dass die Anmeldung abgelaufen ist: Claude Code schreibt
+# "Login expired · Please run /login" auf den Schirm (Rolis Aussperrung vom
+# 07.09.). Nur der hintere Teil wird gesucht — die Formulierung davor hat
+# Claude Code schon mal geändert.
+_LOGIN_NOETIG = re.compile(r"please run /login", re.I)
+
+
+def anmeldung_status(name: str) -> str:
+    """Wo steht die Claude-Anmeldung dieser Sitzung gerade?
+
+      "offen"  — der /login-Bildschirm liegt über der Eingabe; die App kann
+                 jetzt den Link zeigen und den Code hineinreichen.
+      "noetig" — Claude Code verlangt sichtbar ein neues /login.
+      ""       — alles normal.
+    """
+    if tmux.dialog_zustand(name) == "anmeldung":
+        return "offen"
+    try:
+        screen = tmux.capture(name, lines=None)
+    except tmux.TmuxError:
+        return ""
+    return "noetig" if _LOGIN_NOETIG.search(screen) else ""
+
+
 # Claude Codes eigene Bestätigung nach einem Modellwechsel — "Set model to
 # Opus 5 and saved as your default for new sessions". Der einzige Ort, an dem
 # wir ehrlich erfahren, was ein Alias wie "opus" gerade wirklich trifft,

@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 158
+VERSION = 159
 
 
 @app.get("/api/version")
@@ -509,6 +509,10 @@ async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
     elif zustand == "abbrechbar":
         tmux.send_key(name, "Escape")
         await asyncio.sleep(0.8)
+    elif zustand == "anmeldung":
+        # Der Login-Bildschirm — den darf man weder wegdrücken noch
+        # betippen. Der Auftrag entfällt; die App zeigt den Anmelde-Kasten.
+        return
     tmux.send_text(name, prompt)
     # Kurz Luft lassen: Text und Enter im selben Atemzug verschluckt Claude
     # Code gelegentlich.
@@ -1540,7 +1544,98 @@ def session_frage(name: str) -> dict:
     link = state.anmelde_link(name)
     if link:
         antwort["anmeldeLink"] = link
+    # Ebenfalls huckepack: Steht die Claude-Anmeldung an? "noetig" heißt,
+    # Claude Code verlangt ein /login; "offen" heißt, der Login-Bildschirm
+    # liegt schon über der Eingabe. Die App zeigt dazu den passenden Kasten,
+    # statt dass man sich per SSH auf den Server setzen muss (07.09.).
+    anmeldung = state.anmeldung_status(name)
+    if anmeldung:
+        antwort["anmeldung"] = anmeldung
     return antwort
+
+
+# --- Die Claude-Anmeldung, geführt vom Handy aus ------------------------------
+#
+# Am 07.09. war Roli ausgesperrt: Anmeldung abgelaufen, und jeder Versuch über
+# die App endete mit "Login interrupted" — der Dialog-Wächter drückte den
+# Login-Bildschirm mit Escape weg, der eingefügte Code landete als normale
+# Nachricht. Die Reparatur brauchte SSH vom Windows-Rechner. Diese beiden
+# Endpunkte machen die Anmeldung komplett vom Handy aus möglich: einer tippt
+# /login serverseitig sauber ins Terminal, einer reicht den Code hinein.
+
+@app.post("/api/sessions/{name}/anmelden", dependencies=[Depends(require_auth)])
+async def session_anmelden(name: str) -> dict:
+    """Startet /login in der Sitzung und liefert die Anmelde-Adresse zurück."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "frei":
+        tmux.send_text(name, "/login")
+        await asyncio.sleep(0.3)
+        tmux.send_key(name, "Enter")
+        frist = time.monotonic() + 10
+        while zustand != "anmeldung" and time.monotonic() < frist:
+            await asyncio.sleep(0.5)
+            zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand != "anmeldung":
+        raise HTTPException(
+            409,
+            "Die Anmeldung ließ sich nicht starten — in der Sitzung liegt "
+            "etwas anderes über der Eingabe. Bitte im Terminal nachsehen.",
+        )
+
+    # Die erste Login-Seite fragt nach der Methode; vorgewählt ist "Claude
+    # account with subscription", und genau die nutzen hier alle (Roli, Lea,
+    # Lorenz). Also bestätigen, damit gleich die Adress-Seite kommt.
+    schirm = (await asyncio.to_thread(tmux.capture, name, None)).lower()
+    if "select login method" in schirm:
+        tmux.send_key(name, "Enter")
+
+    # Auf die OAuth-Adresse warten. Sie fährt ohnehin bei jedem /frage-Takt
+    # huckepack mit — hier nur, damit der Knopf sofort etwas zeigen kann.
+    frist = time.monotonic() + 10
+    link = None
+    while not link and time.monotonic() < frist:
+        await asyncio.sleep(0.5)
+        link = await asyncio.to_thread(state.anmelde_link, name)
+    return {"ok": True, "link": link}
+
+
+class AnmeldeCode(BaseModel):
+    code: str
+
+
+@app.post("/api/sessions/{name}/anmelde-code", dependencies=[Depends(require_auth)])
+async def session_anmelde_code(name: str, body: AnmeldeCode) -> dict:
+    """Reicht den Anmelde-Code direkt in den /login-Bildschirm hinein."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    code = body.code.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_#.-]{8,500}", code):
+        raise HTTPException(400, "Das sieht nicht wie ein Anmelde-Code aus — "
+                            "bitte den Code aus dem Browser unverändert einfügen.")
+
+    schirm = (await asyncio.to_thread(tmux.capture, name, None)).lower()
+    if "paste code here" not in schirm:
+        raise HTTPException(409, "In dieser Sitzung ist gerade kein "
+                            "Anmelde-Bildschirm offen, der einen Code erwartet.")
+
+    tmux.send_text(name, code)
+    await asyncio.sleep(0.3)
+    tmux.send_key(name, "Enter")
+
+    # Kurz dranbleiben: Meldet Claude Code den Erfolg, drücken wir auch das
+    # abschließende "Press Enter to continue" — erst dann läuft die Sitzung
+    # normal weiter. Ohne Erfolgs-Meldung ehrlich "hat nicht geklappt" sagen.
+    frist = time.monotonic() + 20
+    while time.monotonic() < frist:
+        await asyncio.sleep(1.0)
+        schirm = (await asyncio.to_thread(tmux.capture, name, None)).lower()
+        if "login successful" in schirm or "logged in as" in schirm:
+            tmux.send_key(name, "Enter")
+            return {"ok": True, "erfolg": True}
+    return {"ok": True, "erfolg": False}
 
 
 @app.post("/api/ton-tagebuch", dependencies=[Depends(require_auth)])
@@ -1822,6 +1917,23 @@ async def session_senden(name: str, body: Nachricht) -> dict:
     # Escape als Ausweg an, drücken wir ihn weg; wenn nicht, lieber ein
     # ehrlicher Fehler als eine stumm verlorene Nachricht.
     zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "anmeldung":
+        # Der /login-Bildschirm liegt über der Eingabe. Sieht der Text wie
+        # ein Anmelde-Code aus (langes Zeichenpaket ohne Leerzeichen, so
+        # schickt ihn auch der Client unverändert), reichen wir ihn direkt
+        # hinein — dann funktioniert auch der alte Weg „Code unten ins
+        # Eingabefeld". Alles andere würde im Login-Bildschirm versickern.
+        if re.fullmatch(r"[A-Za-z0-9_#.-]{25,}", body.text.strip()):
+            tmux.send_text(name, body.text.strip())
+            await asyncio.sleep(0.3)
+            tmux.send_key(name, "Enter")
+            return {"ok": True}
+        raise HTTPException(
+            409,
+            "Claude Code wartet in dieser Sitzung auf die Anmeldung. Erst "
+            "über den Anmelde-Kasten anmelden — normale Nachrichten kommen "
+            "so lange nicht durch.",
+        )
     if zustand == "vertrauensfrage":
         # Die Frage nach dem frischen Ordner — die App öffnet nur Ordner des
         # Nutzers, also Ja. Escape wäre hier das Ende der ganzen Sitzung.
