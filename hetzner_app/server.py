@@ -1617,6 +1617,24 @@ async def session_anmelde_code(name: str, body: AnmeldeCode) -> dict:
                             "bitte den Code aus dem Browser unverändert einfügen.")
 
     schirm = (await asyncio.to_thread(tmux.capture, name, None)).lower()
+    if "paste code here" not in schirm and (
+        ("oauth error" in schirm and "press enter to retry" in schirm)
+        or "select login method" in schirm
+    ):
+        # Noch (oder wieder) nicht auf der Code-Seite: Nach einem
+        # abgelehnten Code startet Enter den Anlauf neu und führt zurück
+        # zur Methoden-Auswahl; dort bestätigt ein weiteres Enter das
+        # vorgewählte Claude-Abo. Beides erledigen wir selbst, damit ein
+        # frischer Code ohne neuen Anmelde-Start eingefügt werden kann.
+        methode_bestaetigt = "select login method" in schirm
+        tmux.send_key(name, "Enter")
+        frist = time.monotonic() + 8
+        while "paste code here" not in schirm and time.monotonic() < frist:
+            await asyncio.sleep(0.5)
+            schirm = (await asyncio.to_thread(tmux.capture, name, None)).lower()
+            if "select login method" in schirm and not methode_bestaetigt:
+                methode_bestaetigt = True
+                tmux.send_key(name, "Enter")
     if "paste code here" not in schirm:
         raise HTTPException(409, "In dieser Sitzung ist gerade kein "
                             "Anmelde-Bildschirm offen, der einen Code erwartet.")
@@ -1635,6 +1653,10 @@ async def session_anmelde_code(name: str, body: AnmeldeCode) -> dict:
         if "login successful" in schirm or "logged in as" in schirm:
             tmux.send_key(name, "Enter")
             return {"ok": True, "erfolg": True}
+        if "oauth error" in schirm:
+            return {"ok": True, "erfolg": False,
+                    "fehler": "Der Code wurde abgelehnt — bitte im Browser "
+                              "einen frischen Code holen und noch einmal einfügen."}
     return {"ok": True, "erfolg": False}
 
 

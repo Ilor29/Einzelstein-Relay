@@ -539,6 +539,26 @@ html, body {
 }
 .frage-knopf:active { filter: brightness(.9); }
 
+/* Das Code-Feld der Claude-Anmeldung: Feld und Knopf untereinander, wie die
+   Frage-Knöpfe — im Auto und am Handy trifft man nichts Schmales. */
+.anmelde-code-zeile {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin-top: .45rem;
+}
+.anmelde-code-zeile[hidden] { display: none; }
+#anmelde-code {
+  width: 100%;
+  background: var(--erhoben-2);
+  border: 1px solid var(--linie);
+  border-radius: 11px;
+  padding: .75rem .9rem;
+  font-family: var(--mono, monospace);
+  font-size: .88rem;
+  color: var(--schrift);
+}
+
 /* --- Welches Modell gerade denkt --- */
 /* Die Pille sitzt in der Eingabezeile, neben dem Mikrofon — dort, wo sie in
    der offiziellen App auch sitzt. Antippen öffnet die Auswahl. */

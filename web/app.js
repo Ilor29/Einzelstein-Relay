@@ -1575,7 +1575,7 @@ function zeigeAnmeldung(frage) {
   $("anmelde-code-zeile").hidden = stand !== "offen";
   $("anmelde-hinweis").textContent =
     stand === "noetig"
-      ? "Die Claude-Anmeldung ist abgelaufen. „Neu anmelden" startet den Login hier in der Sitzung."
+      ? "Die Claude-Anmeldung ist abgelaufen. „Neu anmelden“ startet den Login hier in der Sitzung."
       : "Claude Code braucht eine neue Anmeldung: Link öffnen, im Browser anmelden, den Code hier unten einfügen.";
   kasten.hidden = false;
 }
@@ -1614,7 +1614,7 @@ $("anmelde-code-senden").addEventListener("click", async () => {
       zeigeAnmeldung(null);
       melde("Angemeldet — die Sitzung läuft weiter.");
     } else {
-      melde("Die Anmeldung hat nicht geklappt — bitte im Terminal nachsehen.");
+      melde(antwort.fehler || "Die Anmeldung hat nicht geklappt — bitte im Terminal nachsehen.");
     }
   } catch (err) {
     melde(err.message);
