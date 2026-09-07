@@ -171,6 +171,14 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
   den Zustand „anmeldung" (Methoden-Auswahl, Code-Seite, OAuth-Fehlerseite)
   und die App führt die Anmeldung selbst: Endpunkte `/anmelden` und
   `/anmelde-code` in server.py, Anmelde-Kasten mit Code-Feld in der App.
+- **Akku des Handys (V160, 07.09.):** Jeder Push weckt das Handy und macht den
+  Bildschirm an. 94 Stöße in anderthalb Tagen, 89 davon „ist fertig", die
+  Hälfte von einer einzigen Marketing-Karte. Seither klingelt es NUR bei
+  „wartet auf dich" (melden.py); ein offenes Mikrofon streamt pausenlos Ton
+  zur Google-Erkennung und schließt sich darum nach zwei Minuten ohne
+  verstandenes Wort von selbst. Ob das Ton-Tagebuch funkt, entscheidet
+  allein der Server (`HETZNER_APP_TON_TAGEBUCH=1`, in die Seite eingetragen)
+  — kein fest eingebautes true mehr im öffentlichen Repo.
 - **Tests:** Playwright liegt in `~/werkzeuge/browser/.venv`. Beim Testen die
   Tour-Schalter in localStorage vorbelegen, sonst liegt das Tour-Overlay über
   allen Knöpfen. Testserver auf Port 8799 mit ausgehängter Anmeldung; zum
