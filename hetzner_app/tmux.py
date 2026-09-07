@@ -302,7 +302,14 @@ def dialog_zustand(name: str) -> str:
     # "Select login method:", dann die OAuth-Adresse mit "Paste code here
     # if prompted >") enden mit "Esc to cancel" — wegdrücken bricht aber die
     # Anmeldung ab.
-    if "select login method" in fuss or "paste code here" in fuss:
+    if (
+        "select login method" in fuss
+        or "paste code here" in fuss
+        # Auch die Fehlerseite nach einem abgelehnten Code gehört dazu —
+        # sonst verschwände der Anmelde-Kasten der App genau dann, wenn
+        # man einen zweiten Versuch braucht.
+        or ("oauth error" in fuss and "press enter to retry" in fuss)
+    ):
         return "anmeldung"
     # Die Vertrauensfrage ZUERST: Ihre Fußzeile sagt zwar "Esc to cancel",
     # aber Escape beendet hier gleich ganz Claude. Genau das ist am 28.08.
