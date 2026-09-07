@@ -35,7 +35,9 @@ CRASHED = "crashed"    # Terminal weg, ohne dass wir es beendet haben — Gespr�
 @dataclass
 class Meta:
     pinned: bool = False
-    notify_when_done: bool = False
+    # Seit 07.09. klingelt es nur noch, wenn die Karte dich BRAUCHT (wartet
+    # auf dich), nicht bei jedem "fertig" — darum für neue Karten an.
+    notify_when_done: bool = True
     created_prompt: str = ""
     # Welches Modell wir zuletzt gewählt haben (der Alias, z. B. "opus").
     modell: str = ""

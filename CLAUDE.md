@@ -42,5 +42,7 @@ gesammelt im BAUBUCH.md unter „Teuer bezahlte Lektionen".
 
 ## Vor einer Weitergabe an Dritte
 
-- `TON_TAGEBUCH_AN` in `web/app.js` auf `false` (Diagnose-Telemetrie).
+- Das Ton-Tagebuch (Diagnose-Protokoll fürs Vorlesen) ist seit V160 nur an,
+  wenn der Server `HETZNER_APP_TON_TAGEBUCH=1` in seiner Umgebung hat
+  (`~/.hetzner-app/umgebung`); im Code muss nichts mehr umgestellt werden.
 - Offene 🔴/🟠-Punkte aus dem jüngsten CODE-GUARD-Bericht prüfen.

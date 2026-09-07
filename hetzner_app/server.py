@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 159
+VERSION = 160
 
 
 @app.get("/api/version")
@@ -368,7 +368,7 @@ class NewSession(BaseModel):
     cwd: str
     first_prompt: str = ""
     pinned: bool = False
-    notify_when_done: bool = False
+    notify_when_done: bool = True   # siehe state.Meta: klingelt nur bei "wartet auf dich"
     # "Fragt nie": Claude führt auch Befehle ohne Rückfrage aus. Nur beim Start
     # setzbar, nicht später umschaltbar.
     ohne_rueckfragen: bool = False
@@ -2074,6 +2074,7 @@ def index() -> Response:
 def _index_html() -> Response:
     html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
     html = html.replace("__VERSION__", str(VERSION))
+    html = html.replace("__TON_TAGEBUCH__", "1" if TON_TAGEBUCH_AN else "0")
     return Response(
         content=html,
         media_type="text/html; charset=utf-8",

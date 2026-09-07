@@ -2707,6 +2707,12 @@ $("knopf-diktat").addEventListener("click", () => {
   const vorher = feld.value ? feld.value.trimEnd() + " " : "";
   let fertig = "";        // die abgeschlossenen Sätze
   let willHoeren = true;  // erst ein zweiter Tipp beendet es
+  // Wann zuletzt etwas verstanden wurde. Ein offenes Mikrofon streamt
+  // pausenlos Ton zur Erkennung — im Freisprech-Modus blieb es nach jedem
+  // Vortrag offen, bis man es selbst ausschaltete, und fraß den Akku (Rolis
+  // Fund 07.09.). Nach zwei Minuten Stille geht es darum von selbst zu.
+  let zuletztGehoert = Date.now();
+  const STILLE_GRENZE = 120000;
 
   function lauschen() {
     const erkennung = new Spracherkennung();
@@ -2740,6 +2746,7 @@ $("knopf-diktat").addEventListener("click", () => {
       // Nur das jüngste Ergebnis zählt — alles davor ist schon in `fertig`.
       const letztes = e.results[e.results.length - 1];
       const stueck = letztes[0].transcript;
+      zuletztGehoert = Date.now();
 
       if (letztes.isFinal) {
         fertig += stueck.trim() + " ";
@@ -2765,6 +2772,12 @@ $("knopf-diktat").addEventListener("click", () => {
     };
 
     erkennung.onend = () => {
+      // Lange nichts gehört: Mikrofon zu, statt endlos weiterzustreamen.
+      if (willHoeren && Date.now() - zuletztGehoert > STILLE_GRENZE) {
+        hoertStoppen?.();
+        melde("Mikrofon aus — zwei Minuten nichts gehört.");
+        return;
+      }
       // Ein Satz ist durch. Weiter zuhören, bis du das Mikrofon ausschaltest.
       if (willHoeren) {
         lauschen();
@@ -3324,11 +3337,14 @@ function pauseSymbol(pausiert) {
 // sondern lassen die App selbst Protokoll führen. Jedes wichtige Ereignis geht
 // per sendBeacon zum Server — das funkt auch dann noch zuverlässig, wenn die
 // Seite gerade eingefroren oder auf dem Weg in den Hintergrund ist.
-// Standardmäßig AUS: In einer weitergegebenen Fassung wäre das ungefragte
-// Nutzungs-Telemetrie. Zum Debuggen des Vorlesens auf true setzen (und
-// serverseitig HETZNER_APP_TON_TAGEBUCH=1). Der Server verwirft es ohnehin,
-// solange er nicht ebenfalls eingeschaltet ist.
-const TON_TAGEBUCH_AN = true;   // 20.08. AN: Jagd auf den Ausknopf-Abbruch bei Roli
+// Ob es läuft, entscheidet allein der Server (HETZNER_APP_TON_TAGEBUCH=1 in
+// seiner Umgebung; er trägt es beim Ausliefern in die Seite ein). Eine
+// weitergegebene Fassung funkt damit von selbst nichts — vorher stand hier ein
+// fest eingebautes true, das man vor jeder Weitergabe hätte umstellen müssen
+// (und das Repo ist öffentlich, Rolis Sorge 07.09.). Der Server verwirft die
+// Ereignisse ohnehin, solange er nicht eingeschaltet ist.
+const TON_TAGEBUCH_AN =
+  document.querySelector('meta[name="ton-tagebuch"]')?.content === "1";
 function tonEreignis(art, mehr = {}) {
   if (!TON_TAGEBUCH_AN) return;
   try {

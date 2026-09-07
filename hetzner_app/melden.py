@@ -1,8 +1,9 @@
 """Benachrichtigungen — damit du nicht nachschauen musst.
 
 Der Server behält die Sitzungen im Auge. Sobald eine von "arbeitet" auf
-"wartet auf dich" oder "fertig" springt, klingelt dein Handy. Das geht auch,
-wenn die App geschlossen ist — dafür sorgt der Service Worker.
+"wartet auf dich" springt, klingelt dein Handy — nur dann, nicht bei jedem
+"fertig" (Akku-Beschluss 07.09.). Das geht auch, wenn die App geschlossen
+ist — dafür sorgt der Service Worker.
 
 Die Nachrichten laufen über den Push-Dienst des Browsers (bei Android also
 Google). Der sieht allerdings nichts: Der Inhalt ist verschlüsselt, und nur
@@ -214,16 +215,15 @@ def _pruefen() -> None:
         if not sitzung["notifyWhenDone"]:
             continue
 
+        # Nur, wenn die Karte dich BRAUCHT. Ein "ist fertig" nach jedem
+        # Arbeitsschritt weckte das Handy rund um die Uhr (07.09.: 94 Stöße in
+        # anderthalb Tagen, 89 davon "fertig", die Hälfte von einer einzigen
+        # Marketing-Karte) — jeder macht den Bildschirm an und kostet Akku.
+        # Ob etwas fertig ist, sieht man beim nächsten Blick in die App.
         if jetzt == state.WAITING:
             schicken(
                 f"{name} wartet auf dich",
                 sitzung["preview"] or "Claude hat eine Rückfrage.",
-                name,
-            )
-        elif jetzt == state.IDLE:
-            schicken(
-                f"{name} ist fertig",
-                sitzung["preview"] or "Claude ist durch.",
                 name,
             )
 

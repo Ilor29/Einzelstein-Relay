@@ -17,6 +17,10 @@
        kommt vom Server: Er ersetzt __VERSION__ beim Ausliefern durch seine
        eigene Version (siehe server.py:index und VERSION). So gibt es nur noch
        eine Stelle zum Hochzählen — hier nichts von Hand. -->
+  <!-- Ob das Ton-Tagebuch (Diagnose-Protokoll fürs Vorlesen) läuft, sagt
+       allein der Server: __TON_TAGEBUCH__ wird zu 1 oder 0. So bleibt eine
+       weitergegebene Fassung still, ohne dass jemand im Code schalten muss. -->
+  <meta name="ton-tagebuch" content="__TON_TAGEBUCH__">
   <link rel="stylesheet" href="/styles.css?v=__VERSION__">
 
   <script>
@@ -412,7 +416,7 @@
     <button id="knopf-freisprech" class="knopf-blank" aria-label="Freisprech-Modus: Antwort vorlesen und danach Mikrofon öffnen">
       <svg viewBox="0 0 24 24"><use href="#i-freisprech"/></svg>
     </button>
-    <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn fertig">
+    <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn die Karte dich braucht">
       <svg viewBox="0 0 24 24"><use href="#i-glocke"/></svg>
     </button>
     <button id="knopf-sichern" class="knopf-blank" aria-label="Stand sichern">
@@ -695,7 +699,7 @@
     </label>
 
     <label class="schalterzeile">
-      <span>Melden, wenn fertig</span>
+      <span>Melden, wenn die Karte dich braucht</span>
       <input type="checkbox" id="neu-melden" checked>
       <span class="schalter"></span>
     </label>
