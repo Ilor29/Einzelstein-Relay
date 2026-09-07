@@ -164,6 +164,13 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
   ihre Mitschrift dem Nachbarn an (Pachmayr/Jour Fix, 01.09.).
 - **Vertrauensfrage neuer Projekte:** Escape ist dort eine Falle (bricht ab
   statt zu antworten); der Server wählt selbst „Ja" an.
+- **Login-Bildschirm ist kein wegdrückbarer Dialog:** Auch /login sagt unten
+  „Esc to cancel" — der Dialog-Wächter drückte ihn deshalb weg, jede
+  Anmeldung vom Handy endete mit „Login interrupted", und Roli musste per
+  SSH auf den Server (Aussperrung 07.09.). Seit V159 kennt `dialog_zustand`
+  den Zustand „anmeldung" (Methoden-Auswahl, Code-Seite, OAuth-Fehlerseite)
+  und die App führt die Anmeldung selbst: Endpunkte `/anmelden` und
+  `/anmelde-code` in server.py, Anmelde-Kasten mit Code-Feld in der App.
 - **Tests:** Playwright liegt in `~/werkzeuge/browser/.venv`. Beim Testen die
   Tour-Schalter in localStorage vorbelegen, sonst liegt das Tour-Overlay über
   allen Knöpfen. Testserver auf Port 8799 mit ausgehängter Anmeldung; zum
