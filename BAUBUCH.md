@@ -179,6 +179,13 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
   verstandenes Wort von selbst. Ob das Ton-Tagebuch funkt, entscheidet
   allein der Server (`HETZNER_APP_TON_TAGEBUCH=1`, in die Seite eingetragen)
   — kein fest eingebautes true mehr im öffentlichen Repo.
+- **Fingerziele (V161, 08.09.):** Die Schnellbefehle waren 24 px hoch mit 6 px
+  Abstand — am Handy traf Roli regelmäßig den Nachbarn. Jetzt 44 px (Chips)
+  bzw. 48 px (Menü). Beim Vergrößern nicht `display: flex` auf einen Chip
+  setzen: Das macht ihn zum Block, und jeder Chip bricht in eine eigene Zeile
+  (`inline-flex` nehmen). Und die Hüll-Elemente `#chip-reihe-eigene` /
+  `#eigene-befehle` brauchen `display: contents`, sonst greift der Abstand der
+  Reihe nur um die Hülle herum, nicht zwischen den Chips darin.
 - **Tests:** Playwright liegt in `~/werkzeuge/browser/.venv`. Beim Testen die
   Tour-Schalter in localStorage vorbelegen, sonst liegt das Tour-Overlay über
   allen Knöpfen. Testserver auf Port 8799 mit ausgehängter Anmeldung; zum
