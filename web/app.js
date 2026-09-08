@@ -247,6 +247,16 @@ const ETIKETT = {
   crashed: "abgestürzt — antippen setzt fort",
 };
 
+// „Diese Karte habe ich gerade angesehen." Der Server merkt sich das für alle
+// Geräte; deshalb nicht in den Gerätespeicher. Ohne await und ohne Meldung:
+// Klappt es nicht, leuchtet die Karte eben noch einmal — kein Grund, dem
+// Nutzer dafür etwas anzuzeigen.
+function gesehenMelden(name) {
+  if (!name) return;
+  api(`/sessions/${encodeURIComponent(name)}/gesehen`, { method: "POST" })
+    .catch(() => { /* beim nächsten Öffnen wieder */ });
+}
+
 function alter(sekunden) {
   // Fehlt der Wert oder ist er keine Zahl, lieber gar nichts zeigen als
   // "vor NaN Min." auf der Karte.
@@ -310,6 +320,18 @@ function karte(sitzung) {
     el.querySelector(".etikett").classList.add(sitzung.state);
   }
   el.querySelector(".etikett").textContent = bekannt ? ETIKETT[sitzung.state] : "unbekannt";
+
+  // Eine fertige Antwort, die du noch nicht offen hattest: Punkt an der Karte
+  // und ein klares Etikett. Eine echte Rückfrage ("wartet auf dich") ist das
+  // Dringendere und behält ihr eigenes Etikett.
+  if (sitzung.ungelesen) {
+    el.classList.add("ungelesen");
+    if (sitzung.state === "idle") {
+      el.querySelector(".etikett").textContent = "fertig — noch nicht gesehen";
+      el.querySelector(".etikett").classList.add("frisch");
+      el.querySelector(".streifen").classList.add("frisch");
+    }
+  }
 
   // Über textContent gesetzt, nicht über innerHTML — ein Sitzungsname oder
   // eine Terminalzeile darf kein HTML in die Seite schmuggeln.
@@ -455,8 +477,12 @@ async function ladeListe() {
 
   // Wer auf dich wartet, kommt nach oben — egal ob angeheftet oder nicht.
   // Das ist die eine Sache, die du sofort sehen musst.
-  const wartend = aktive.filter((s) => s.state === "waiting");
-  const rest = aktive.filter((s) => s.state !== "waiting");
+  // Auch eine fertige, aber noch ungelesene Antwort wartet auf dich — genau
+  // dafür ist die Gruppe da (Rolis Wunsch 08.09.). Geklingelt wird deshalb
+  // NICHT: Das entscheidet allein der Zustand, siehe melden.py.
+  const brauchtDich = (s) => s.state === "waiting" || s.ungelesen;
+  const wartend = aktive.filter(brauchtDich);
+  const rest = aktive.filter((s) => !brauchtDich(s));
 
   const angeheftet = rest.filter((s) => s.pinned);
   // Die schlafen gelegten in ihre eigene Gruppe — zwischen den zuletzt
@@ -1770,6 +1796,7 @@ function baueTerminal() {
 function oeffneSitzung(sitzung) {
   stoppeListe();
   entwurfMerken();     // was in der vorigen Karte noch im Feld stand
+  gesehenMelden(sitzung.name);   // die Ungelesen-Markierung erlischt
   aktuelleSitzung = sitzung;
   offeneSitzungMerken(sitzung.name);
   sucheSchliessen();   // ein altes Suchwort gehört nicht zur neuen Karte
@@ -2945,6 +2972,9 @@ $("knopf-zurueck").addEventListener("click", () => {
   clearInterval(verlaufTakt);
   verlaufTakt = null;
   entwurfMerken();
+  // Auch beim Hinausgehen: Was während des Offenseins hereinkam, hast du
+  // gesehen. Ohne das leuchtete die Karte in der Liste sofort wieder auf.
+  gesehenMelden(aktuelleSitzung?.name);
   aktuelleSitzung = null;
   offeneSitzungMerken(null);
   starteListe();

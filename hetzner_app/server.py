@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 161
+VERSION = 162
 
 
 @app.get("/api/version")
@@ -909,6 +909,19 @@ def vortrag_stand(kennung: str) -> dict:
         "stuecke": len(v.stuecke),
         "startzeiten": [round(z, 2) for z in v.startzeiten],
     }
+
+
+@app.post("/api/sessions/{name}/gesehen", dependencies=[Depends(require_auth)])
+def session_gesehen(name: str) -> dict:
+    """„Diese Karte habe ich gerade offen gehabt."
+
+    Damit erlischt die Ungelesen-Markierung — auf allen Geräten, denn der
+    Stand liegt hier und nicht im einzelnen Browser. Die App meldet das beim
+    Öffnen einer Karte und beim Verlassen, nicht im Takt: Es soll nicht
+    alle paar Sekunden eine Anfrage kosten (Akku).
+    """
+    state.update(name, gesehen=int(time.time()))
+    return {"ok": True}
 
 
 # --- Die eigenen Schnellbefehle ----------------------------------------------

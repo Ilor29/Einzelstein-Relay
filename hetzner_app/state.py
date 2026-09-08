@@ -50,9 +50,19 @@ class Meta:
     # Der bleibt unangetastet — an ihm hängen tmux, der Ordner und die
     # Mitschrift. Wir benennen nur das Schild an der Tür um, nicht das Haus.
     anzeige: str = ""
-    # Zuletzt gesehener Zustand — damit wir merken, wenn RUNNING zu WAITING
-    # wird, und dann eine Benachrichtigung schicken können.
+    # Zuletzt gesehener Zustand — daran erkennen wir den Augenblick, in dem
+    # Claude mit Arbeiten fertig wird.
     last_state: str = IDLE
+    # Wann Claude zuletzt fertig geworden ist (Unix-Zeit), und wann du diese
+    # Karte zuletzt offen hattest. Ist das Fertigwerden jünger, liegt dort
+    # eine Antwort, die du noch nicht gesehen hast — die Liste zeigt das an
+    # (Rolis Wunsch 08.09.: „dann sehe ich, dass das da fertig ist").
+    #
+    # Bewusst auf dem Server und nicht im Browser: Roli arbeitet an mehreren
+    # Geräten, und was er am Handy gelesen hat, soll am Rechner nicht noch
+    # einmal als ungelesen leuchten.
+    fertig_seit: int = 0
+    gesehen: int = 0
     tags: list[str] = field(default_factory=list)
     # Schlafen gelegt: Das Terminal ist beendet (Speicher frei), aber die
     # Sitzung bleibt als Karte in der Liste und wacht auf Antippen wieder auf.
@@ -531,6 +541,19 @@ def overview() -> list[dict]:
             else IDLE
         )
 
+        # Der Augenblick, in dem Claude aufhört zu arbeiten: Was jetzt auf dem
+        # Schirm steht, ist eine fertige Antwort. Den Zeitpunkt halten wir
+        # fest, damit die Liste zeigen kann, wo etwas Ungelesenes liegt.
+        # Geschrieben wird nur beim WECHSEL, nicht bei jedem Abruf — sonst
+        # liefe die Metadaten-Datei bei jedem Listenaufruf neu durch.
+        if meta.last_state != zustand:
+            aenderung = {"last_state": zustand}
+            if meta.last_state == RUNNING:
+                aenderung["fertig_seit"] = now
+                meta.fertig_seit = now
+            update(fuehrend.name, **aenderung)
+            meta.last_state = zustand
+
         result.append({
             "name": fuehrend.name,
             "cwd": cwd,
@@ -538,6 +561,12 @@ def overview() -> list[dict]:
             "pinned": any(m.pinned for m in eigene_metas),
             "notifyWhenDone": any(m.notify_when_done for m in eigene_metas),
             "state": zustand,
+            # Liegt hier eine fertige Antwort, die du noch nicht offen
+            # hattest? Bewusst ein EIGENES Feld und nicht im "state"
+            # versteckt: Am state hängt die Benachrichtigung, und die soll
+            # weiterhin nur bei echten Rückfragen klingeln, nicht bei jeder
+            # fertigen Antwort (Rolis Gebimmel-Sorge, Beschluss 07.09.).
+            "ungelesen": bool(meta.fertig_seit and meta.fertig_seit > meta.gesehen),
             "preview": preview(fuehrend.name),
             "lastActivity": max(s.last_activity for s in sitzungen),
             "idleSeconds": now - max(s.last_activity for s in sitzungen),
@@ -584,6 +613,9 @@ def overview() -> list[dict]:
             "pinned": meta.pinned,
             "notifyWhenDone": meta.notify_when_done,
             "state": SLEEPING,
+            # Eine schlafende Karte arbeitet nicht mehr — dort liegt nichts
+            # Frisches, auf das man noch schauen müsste.
+            "ungelesen": False,
             "preview": meta.letzte_vorschau,
             "lastActivity": meta.schlaf_zeit,
             "idleSeconds": now - meta.schlaf_zeit if meta.schlaf_zeit else None,

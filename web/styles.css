@@ -926,6 +926,11 @@ html, body {
 .karte .streifen.idle    { background: transparent; }
 .karte .streifen.sleeping { background: #9AA8C7; }
 .karte .streifen.crashed  { background: #C4622E; }
+/* Eine fertige Antwort, die noch niemand angesehen hat. Bekommt den vollen
+   Akzent — sie steht ganz oben in „Wartet auf dich" und soll auch beim
+   Überfliegen auffallen (Rolis Wunsch 08.09.: „dann sehe ich, dass das da
+   fertig ist"). Der Streifen ist breiter als bei den übrigen Zuständen. */
+.karte .streifen.frisch { background: var(--akzent); width: 3px; }
 
 .karte .zeile-oben { display: flex; align-items: center; gap: .45rem; }
 .karte .name {
@@ -1020,6 +1025,21 @@ html, body {
 .etikett.sleeping { color: #9AA8C7; background: color-mix(in srgb, #9AA8C7 16%, transparent); }
 /* Abgestürzt: warmes Terrakotta — sichtbar anders als das sanfte Schlafblau. */
 .etikett.crashed { color: #C4622E; background: color-mix(in srgb, #C4622E 16%, transparent); }
+.etikett.frisch  { color: var(--akzent); background: color-mix(in srgb, var(--akzent) 16%, transparent); }
+
+/* Der Punkt vor dem Namen — dasselbe Zeichen, das jeder von ungelesenen
+   Nachrichten kennt. Er sitzt in der oberen Zeile vor dem Namen. */
+.karte.ungelesen .name::before {
+  content: "";
+  display: inline-block;
+  width: .5rem;
+  height: .5rem;
+  margin-right: .45rem;
+  border-radius: 50%;
+  background: var(--akzent);
+  vertical-align: middle;
+}
+.karte.ungelesen .name { font-weight: 600; }
 
 .leer {
   text-align: center;
