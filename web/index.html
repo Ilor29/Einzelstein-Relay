@@ -505,7 +505,7 @@
   <div id="schnellbefehle" data-tour="schnellbefehle" class="schnellbefehle">
     <!-- Die sichtbare Reihe ist komplett selbst bestimmt: Alle Befehle — auch
          die früher fest eingebauten „Los geht's/Weiter/Zusammenfassen" — kommen
-         jetzt aus dem Gerätespeicher und werden von der App hier eingefüllt (die
+         jetzt vom Server und werden von der App hier eingefüllt (die
          mit „Leiste"-Schalter). Beim allerersten Start legt die App die alten
          Sätze als Standard an; ändern, löschen, umsortieren geht über „Eigene
          Befehle". -->
@@ -517,8 +517,8 @@
          Seite scrollen zu müssen. -->
     <div class="befehle-wand-wrap">
       <div id="befehle-mehr" class="befehle-mehr" hidden>
-        <!-- Auch die Menü-Befehle („Kürzer", „Einfacher" …) kommen aus dem
-             Gerätespeicher und werden hier eingefüllt — alle frei änderbar. -->
+        <!-- Auch die Menü-Befehle („Kürzer", „Einfacher" …) kommen vom
+             Server und werden hier eingefüllt — alle frei änderbar. -->
         <div id="eigene-befehle"></div>
         <button type="button" id="knopf-befehle-verwalten" class="chip-menu chip-menu-aktion">＋ Eigene Befehle</button>
       </div>
@@ -1078,7 +1078,7 @@
       <h2>Eigene Schnellbefehle</h2>
     </div>
     <div class="skill-formular">
-      <p class="hinweis">Ein Knopf, ein fertiger Satz an Claude. Der Name steht auf dem Knopf, der Satz wird geschickt. Sie liegen auf diesem Gerät.</p>
+      <p class="hinweis">Ein Knopf, ein fertiger Satz an Claude. Der Name steht auf dem Knopf, der Satz wird geschickt. Sie liegen auf deinem Server — auf jedem Gerät findest du dieselben.</p>
       <label class="feld">
         <span class="marke">Name auf dem Knopf</span>
         <input type="text" id="befehl-label" class="eingabe" placeholder="z. B. Tests starten">
