@@ -204,21 +204,33 @@ html, body {
 }
 .chip-reihe {
   display: flex;
-  gap: .4rem;
+  /* Am Handy muss man diese Knöpfe im Gehen treffen. Bis V161 waren sie
+     24 px hoch mit 6 px Abstand — Roli traf regelmäßig den Nachbarn
+     (Fund 08.09.). Jetzt die übliche Mindestgröße für Fingerziele. */
+  gap: .55rem;
   overflow-x: auto;
   flex: 1;
   min-width: 0;
   scrollbar-width: none;
 }
 .chip-reihe::-webkit-scrollbar { display: none; }
+/* Die Chips liegen in einem Hüll-Element, das die App füllt. Ohne dieses
+   `contents` wäre die Hülle das einzige flex-Kind: Der Abstand der Reihe
+   griffe zwischen ihr und dem Nachbarn, aber nicht zwischen den Chips
+   darin — sie klebten aneinander. Dasselbe im Menü darunter. */
+#chip-reihe-eigene,
+#eigene-befehle { display: contents; }
 .chip {
   flex: none;
-  font-size: .82rem;
+  display: inline-flex;         /* inline, sonst bricht jeder Chip in eine eigene Zeile */
+  align-items: center;
+  min-height: 2.75rem;          /* 44 px — Fingerbreite, nicht Zeigerbreite */
+  font-size: .86rem;
   color: var(--schrift);
   background: var(--erhoben);
   border: 1px solid var(--linie);
-  border-radius: 1rem;
-  padding: .35rem .8rem;
+  border-radius: 1.4rem;
+  padding: .35rem .95rem;
   white-space: nowrap;
 }
 .chip:active { background: var(--erhoben-2); }
@@ -228,8 +240,8 @@ html, body {
 .chip-wand {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 999px;
   background: var(--erhoben);
   border: 1px solid var(--linie);
@@ -248,25 +260,32 @@ html, body {
   right: 0;
   display: flex;
   flex-direction: column;
-  gap: .2rem;
-  min-width: 11rem;
-  padding: .35rem;
+  gap: .35rem;
+  min-width: 12rem;
+  padding: .4rem;
   background: var(--erhoben);
   border: 1px solid var(--linie);
   border-radius: .8rem;
   box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
   z-index: 30;
+  /* Mit größeren Einträgen und vielen eigenen Befehlen wächst das Menü über
+     den Bildschirm hinaus — dann scrollt es lieber in sich. */
+  max-height: 60vh;
+  overflow-y: auto;
 }
 .chip-menu {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;             /* 48 px, wie die Zeilen einer Auswahlliste */
   text-align: left;
   white-space: nowrap;
   background: none;
   border: 0;
   color: var(--schrift);
-  padding: .55rem .6rem;
+  padding: .55rem .7rem;
   border-radius: .55rem;
   font-family: var(--sans);
-  font-size: .9rem;
+  font-size: .92rem;
 }
 .chip-menu:active { background: var(--erhoben-2); }
 
@@ -322,12 +341,15 @@ html, body {
 /* Umschalter „in der Leiste zeigen" — hervorgehoben, wenn an. */
 .befehl-leiste {
   flex: none;
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
   border: 1px solid var(--linie);
   background: none;
   color: var(--schrift-schwach);
   font-family: var(--sans);
-  font-size: .72rem;
-  padding: .3rem .5rem;
+  font-size: .78rem;
+  padding: .3rem .65rem;
   border-radius: .5rem;
   cursor: pointer;
 }
@@ -335,8 +357,8 @@ html, body {
 
 .befehl-weg {
   flex: none;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border: 0;
   border-radius: 50%;
   background: var(--erhoben-2);
@@ -352,8 +374,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border: 0;
   border-radius: 50%;
   background: var(--erhoben-2);

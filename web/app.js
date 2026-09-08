@@ -2165,8 +2165,12 @@ $("schnellbefehle").addEventListener("pointercancel", druckAbbrechen);
 // --- Eigene Schnellbefehle ---------------------------------------------------
 //
 // Zu den fest eingebauten Sätzen darfst du dir eigene anlegen: ein Name auf dem
-// Knopf, ein fertiger Satz dahinter. Sie liegen im Gerätespeicher — also auf
-// diesem Gerät, nicht in der Wolke; ein zweites Handy sähe sie (noch) nicht.
+// Knopf, ein fertiger Satz dahinter. Sie liegen auf DEINEM SERVER (seit V161),
+// also auf jedem Gerät dieselben — vorher lagen sie im Gerätespeicher, und wer
+// am Handy einen Befehl anlegte, fand am Rechner eine leere Leiste vor (Rolis
+// Fund 08.09.). Der Gerätespeicher bleibt als Puffer: Damit steht die Leiste
+// sofort beim Öffnen da, auch bevor der Server geantwortet hat, und sie
+// überlebt einen Ausflug ohne Netz.
 const BEFEHLE_SPEICHER = "eigene-schnellbefehle";
 // Merker, dass die Erstbefüllung mit den Standard-Sätzen schon lief. Ohne den
 // würde ein gelöschter Standard bei jedem Laden wiederkommen.
@@ -2209,16 +2213,52 @@ function eigeneBefehleLesen() {
     // Erstmalige Umstellung: die Standard-Sätze VOR die evtl. schon vorhandenen
     // eigenen stellen, dann als erledigt merken.
     eigeneBefehle = [...STANDARD_BEFEHLE, ...(gespeichert || [])];
-    eigeneBefehleSchreiben(eigeneBefehle);
+    // Noch nicht zum Server: Der sagt beim Start selbst, ob er schon eine
+    // Liste hat (befehleVomServerHolen) — sonst überschriebe die Startaus-
+    // stattung eines frischen Geräts die echte Liste des Servers.
+    eigeneBefehleSchreiben(eigeneBefehle, false);
     try { localStorage.setItem(BEFEHLE_INIT, "1"); } catch { /* dann eben diese Sitzung */ }
   }
   return eigeneBefehle;
 }
 
-function eigeneBefehleSchreiben(liste) {
+function eigeneBefehleSchreiben(liste, zumServer = true) {
   eigeneBefehle = liste;      // immer im Arbeitsspeicher halten
   try { localStorage.setItem(BEFEHLE_SPEICHER, JSON.stringify(liste)); }
   catch { /* nicht merkbar — dann gelten sie eben nur für diese Sitzung */ }
+  if (zumServer) befehleHochschicken(liste);
+}
+
+// Die Liste zum Server bringen, damit die anderen Geräte sie sehen. Ohne
+// await: Der Knopf soll sofort reagieren. Geht es schief (kein Netz), bleibt
+// der Gerätespeicher — und beim nächsten Ändern mit Netz geht die ganze Liste
+// erneut hoch, es fehlt also nichts.
+async function befehleHochschicken(liste) {
+  try {
+    await api("/befehle", { method: "PUT", body: JSON.stringify({ befehle: liste }) });
+  } catch {
+    melde("Die Befehle sind auf diesem Gerät gespeichert, aber noch nicht auf dem Server.");
+  }
+}
+
+// Beim Start die Befehle des Servers holen — die gelten. Kennt der Server noch
+// keine (frisch umgestellt), schicken wir ihm, was auf diesem Gerät liegt;
+// so geht bei der Umstellung nichts verloren.
+async function befehleVomServerHolen() {
+  let antwort;
+  try {
+    antwort = await (await api("/befehle")).json();
+  } catch {
+    return;               // kein Netz: der Gerätespeicher tut es auch
+  }
+  if (antwort.bekannt) {
+    // Auch eine leere Liste gilt: dann hat jemand bewusst alles gelöscht.
+    eigeneBefehleSchreiben(antwort.befehle, false);
+  } else {
+    eigeneBefehleSchreiben(eigeneBefehleLesen(), true);
+  }
+  eigeneBefehleZeichnen();
+  if (!$("ansicht-einstellungen").hidden) befehleListeZeichnen();
 }
 
 // Die eigenen Befehle als Chips: die mit "leiste" in die sichtbare Reihe neben
@@ -5621,6 +5661,7 @@ $("teilen-neu").addEventListener("click", () => {
 
 function nachAnmeldung(sitzungen) {
   starteListe();
+  befehleVomServerHolen();     // die Leiste auf allen Geräten gleich
   // Stand die App vorher in einer Karte, geht sie dort wieder auf — bevor ein
   // Kurzbefehl oder Geteiltes womöglich etwas anderes aufmachen.
   sitzungWiederOeffnen(sitzungen).then(() => {

@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import bibliothek, geraete, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
+from . import befehle, bibliothek, geraete, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 160
+VERSION = 161
 
 
 @app.get("/api/version")
@@ -909,6 +909,28 @@ def vortrag_stand(kennung: str) -> dict:
         "stuecke": len(v.stuecke),
         "startzeiten": [round(z, 2) for z in v.startzeiten],
     }
+
+
+# --- Die eigenen Schnellbefehle ----------------------------------------------
+#
+# Seit V161 auf dem Server statt im einzelnen Handy: Wer am Handy einen Befehl
+# anlegte, fand am Rechner eine leere Leiste vor (Rolis Fund 08.09.).
+
+@app.get("/api/befehle", dependencies=[Depends(require_auth)])
+def befehle_lesen() -> dict:
+    """Die eigenen Schnellbefehle. `bekannt` sagt, ob hier schon je etwas lag —
+    daran erkennt die App, ob sie ihre örtlichen Befehle heraufschicken soll."""
+    liste = befehle.lesen()
+    return {"bekannt": liste is not None, "befehle": liste or []}
+
+
+class Befehle(BaseModel):
+    befehle: list = Field(default_factory=list)
+
+
+@app.put("/api/befehle", dependencies=[Depends(require_auth)])
+def befehle_schreiben(body: Befehle) -> dict:
+    return {"bekannt": True, "befehle": befehle.schreiben(body.befehle)}
 
 
 @app.get("/api/stimmen", dependencies=[Depends(require_auth)])
