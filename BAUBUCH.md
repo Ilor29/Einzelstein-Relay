@@ -179,6 +179,14 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
   verstandenes Wort von selbst. Ob das Ton-Tagebuch funkt, entscheidet
   allein der Server (`HETZNER_APP_TON_TAGEBUCH=1`, in die Seite eingetragen)
   — kein fest eingebautes true mehr im öffentlichen Repo.
+- **Anzeige und Klingeln sind zweierlei (V162, 08.09.):** Eine fertige, aber
+  ungelesene Antwort steht als eigenes Feld `ungelesen` in der Kartenliste —
+  NICHT als neuer `state`. Am `state` hängt `melden.py`, und das klingelt seit
+  V160 nur noch bei echten Rückfragen. Wer "ungelesen" in den Zustand hineinbaut,
+  holt das abgeschaffte Dauergebimmel zurück. `fertig_seit` setzt `overview()`
+  beim Zustandswechsel weg von RUNNING, `gesehen` der Endpunkt
+  `POST /sessions/{name}/gesehen` — beides in den Metadaten, damit mehrere
+  Geräte denselben Stand sehen.
 - **Fingerziele (V161, 08.09.):** Die Schnellbefehle waren 24 px hoch mit 6 px
   Abstand — am Handy traf Roli regelmäßig den Nachbarn. Jetzt 44 px (Chips)
   bzw. 48 px (Menü). Beim Vergrößern nicht `display: flex` auf einen Chip
