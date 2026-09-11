@@ -293,6 +293,9 @@ function karte(sitzung) {
       <button class="nadel" aria-label="Anheften">
         <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
       </button>
+      <button class="ungelesen-knopf" aria-label="Wieder als ungelesen markieren">
+        <svg viewBox="0 0 24 24"><use href="#i-ungelesen"/></svg>
+      </button>
       <button class="mond" aria-label="Sitzung schlafen legen — Speicher freigeben">
         <svg viewBox="0 0 24 24"><use href="#i-mond"/></svg>
       </button>
@@ -365,6 +368,24 @@ function karte(sitzung) {
     }
     oeffneSitzung({ ...sitzung, state: "idle" });
     ladeListe();
+  });
+
+  // Zurück auf ungelesen — wie bei E-Mail. Nur sinnvoll, wenn die Karte
+  // gerade NICHT leuchtet und auch nicht schläft; sonst steht der Knopf
+  // bloß im Weg (Rolis Wunsch 11.09.).
+  const wiederUngelesen = el.querySelector(".ungelesen-knopf");
+  if (sitzung.ungelesen || weckbar) {
+    wiederUngelesen.hidden = true;
+  }
+  wiederUngelesen.addEventListener("click", async (e) => {
+    e.stopPropagation();   // sonst öffnet sich gleichzeitig die Sitzung
+    try {
+      await api(`/sessions/${encodeURIComponent(sitzung.name)}/ungelesen`, { method: "POST" });
+      melde("Wieder als ungelesen markiert.");
+      ladeListe();
+    } catch (err) {
+      melde(err.message);
+    }
   });
 
   // Der Mond legt die Sitzung schlafen: Terminal weg, Speicher frei, Karte

@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 162
+VERSION = 163
 
 
 @app.get("/api/version")
@@ -909,6 +909,24 @@ def vortrag_stand(kennung: str) -> dict:
         "stuecke": len(v.stuecke),
         "startzeiten": [round(z, 2) for z in v.startzeiten],
     }
+
+
+@app.post("/api/sessions/{name}/ungelesen", dependencies=[Depends(require_auth)])
+def session_ungelesen(name: str) -> dict:
+    """„Diese Karte will ich mir nochmal vornehmen."
+
+    Das Gegenstück zu /gesehen, wie das Als-ungelesen-Markieren bei E-Mail
+    (Rolis Wunsch 11.09.: reingeschaut, aber ich muss nochmal zurück).
+    Wir setzen den Gesehen-Stand zurück; hat die Karte noch nie ein
+    Fertigwerden erlebt, gilt ab jetzt dieser Augenblick — sonst hätte die
+    Markierung nichts, worauf sie sich beziehen könnte.
+    """
+    meta = state.get(name)
+    aenderung = {"gesehen": 0}
+    if not meta.fertig_seit:
+        aenderung["fertig_seit"] = int(time.time())
+    state.update(name, **aenderung)
+    return {"ok": True}
 
 
 @app.post("/api/sessions/{name}/gesehen", dependencies=[Depends(require_auth)])

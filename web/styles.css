@@ -955,6 +955,20 @@ html, body {
 .karte .nadel svg { width: 16px; height: 16px; }
 .karte.angeheftet .nadel { color: var(--akzent); }
 
+/* Zurück auf ungelesen — stilles Grau wie Nadel und Mond, in derselben
+   Reihe rechts. */
+.karte .ungelesen-knopf {
+  flex: none;
+  background: none;
+  border: 0;
+  padding: .2rem;
+  color: var(--schrift-schwach);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.karte .ungelesen-knopf svg { width: 16px; height: 16px; }
+.karte .ungelesen-knopf[hidden] { display: none; }
+
 /* Der Mond legt die Sitzung schlafen — gleiches stilles Grau wie die Nadel,
    rechts außen. */
 .karte .mond {
