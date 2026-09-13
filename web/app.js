@@ -5540,6 +5540,30 @@ window.addEventListener("resize", () => {
   steckdose?.send(`\x00resize:${term.cols}:${term.rows}`);
 });
 
+// --- Die Tastatur darf die Eingabezeile nicht verdecken ---------------------
+//
+// Eine Ansicht mit "position: fixed" hängt am LAYOUT-Fenster, und das bleibt
+// beim Aufgehen der Tastatur gleich groß. Die Eingabezeile lag dann unter der
+// Tastatur, mal schob das System auch die ganze Seite hoch (Rolis Screenshots
+// 14.09.). Darum messen wir das wirklich sichtbare Fenster und geben seine
+// Höhe und Lage als CSS-Werte weiter. Kennt ein Browser visualViewport nicht,
+// bleibt alles wie vorher.
+function sichtAnpassen() {
+  const sicht = window.visualViewport;
+  if (!sicht) return;
+  const wurzel = document.documentElement.style;
+  wurzel.setProperty("--sicht-hoehe", `${Math.round(sicht.height)}px`);
+  // offsetTop: Wie weit das System den sichtbaren Ausschnitt schon nach oben
+  // geschoben hat. Ohne das säße die Ansicht doppelt versetzt.
+  wurzel.setProperty("--sicht-oben", `${Math.round(sicht.offsetTop)}px`);
+}
+
+if (window.visualViewport) {
+  sichtAnpassen();
+  window.visualViewport.addEventListener("resize", sichtAnpassen);
+  window.visualViewport.addEventListener("scroll", sichtAnpassen);
+}
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
