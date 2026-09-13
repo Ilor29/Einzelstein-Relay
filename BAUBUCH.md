@@ -187,6 +187,15 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
   beim Zustandswechsel weg von RUNNING, `gesehen` der Endpunkt
   `POST /sessions/{name}/gesehen` — beides in den Metadaten, damit mehrere
   Geräte denselben Stand sehen.
+- **Tastatur und „position: fixed" (V166, 14.09.):** Ein `fixed`-Element hängt am
+  LAYOUT-Fenster, und das bleibt gleich groß, wenn die Handy-Tastatur aufgeht.
+  Die Eingabezeile lag darum unter der Tastatur, mal wurde stattdessen alles nach
+  oben geschoben — dasselbe Problem, zwei Erscheinungsformen. Lösung: `app.js`
+  schreibt aus `visualViewport` die Werte `--sicht-hoehe` und `--sicht-oben`, und
+  `.ansicht` hängt daran statt an `inset: 0`. Nicht mit Playwright prüfbar (ein
+  Fenster-Resize ist keine Tastatur) — am echten Handy nachsehen. Läuft die App in
+  einem fremden iframe, reicht das nicht: Dort bekommt das innere Dokument die
+  Verkleinerung nicht mit, das äußere Dokument müsste mitziehen.
 - **Fingerziele (V161, 08.09.):** Die Schnellbefehle waren 24 px hoch mit 6 px
   Abstand — am Handy traf Roli regelmäßig den Nachbarn. Jetzt 44 px (Chips)
   bzw. 48 px (Menü). Beim Vergrößern nicht `display: flex` auf einen Chip
