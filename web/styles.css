@@ -409,6 +409,22 @@ html, body {
 .symbol-zeile span { font-size: .88rem; line-height: 1.35; }
 /* Mini-Darstellungen für Elemente, die kein Icon sind: die Modus-Pille und
    der Kontext-Balken. So erklärt die Legende auch sie, statt sie auszulassen. */
+/* Der Ungelesen-Punkt in der Legende — so groß wie ein Symbol, damit die
+   Zeile nicht verrutscht, mit dem Punkt mittig darin. */
+.symbol-punkt {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+.symbol-punkt::before {
+  content: "";
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: var(--akzent);
+}
 .symbol-pille {
   flex: none;
   min-width: 22px;
