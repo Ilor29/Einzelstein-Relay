@@ -1827,7 +1827,7 @@ function oeffneSitzung(sitzung) {
 
   $("sitzung-name").textContent = benannt(sitzung);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
-  $("knopf-melden").classList.toggle("an", sitzung.notifyWhenDone);
+  glockeZeigen(sitzung.notifyWhenDone);
   freisprechAnzeigen();
   // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
   // Öffnen "Modell wählen", obwohl längst eines gesetzt ist.
@@ -3361,7 +3361,7 @@ $("knopf-melden").addEventListener("click", async () => {
       body: JSON.stringify({ notify_when_done: neu }),
     });
     aktuelleSitzung.notifyWhenDone = neu;
-    $("knopf-melden").classList.toggle("an", neu);
+    glockeZeigen(neu);
   } catch (err) {
     // Nicht durchgegangen: Der Knopf bleibt aus, damit du nicht auf eine
     // Benachrichtigung wartest, die der Server gar nicht kennt.
@@ -3721,6 +3721,20 @@ function dekodiere(bytes) {
     const p = tonKontext().decodeAudioData(bytes, fertig, fehler);
     if (p && p.then) p.then(fertig, fehler);
   });
+}
+
+// Die Glocke zeigt ihren Zustand nicht nur in der Farbe, sondern auch in der
+// Form: ausgeschaltet trägt sie einen Strich. Roli hat eine Rot-Grün-Schwäche,
+// und das eingeschaltete Orange war vom ruhenden Grau kaum zu unterscheiden
+// (14.09.). Die Beschriftung für den Vorleser wandert gleich mit.
+function glockeZeigen(an) {
+  const knopf = $("knopf-melden");
+  if (!knopf) return;
+  knopf.classList.toggle("an", !!an);
+  zeichen(knopf, an ? "#i-glocke" : "#i-glocke-aus");
+  knopf.setAttribute("aria-label", an
+    ? "Benachrichtigungen an — melden, wenn die Karte dich braucht"
+    : "Benachrichtigungen aus — antippen schaltet sie ein");
 }
 
 function zeichen(knopf, name) {

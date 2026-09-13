@@ -797,7 +797,15 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 .knopf-blank:active { background: var(--erhoben-2); }
-.knopf-blank.an { color: var(--akzent); }
+/* Eingeschaltet: deutlich HELLER als der Ruhezustand, nicht bloß in einer
+   anderen Farbe. Vorher war das eingeschaltete Orange sogar dunkler als das
+   ruhende Grau — bei Rot-Grün-Schwäche waren beide praktisch gleich (Rolis
+   Fund 14.09.: „Kann die Glocke heller sein?"). Die Fläche gibt dem Zustand
+   zusätzlich eine Form, die ganz ohne Farbsehen erkennbar ist. */
+.knopf-blank.an {
+  color: #F6B49C;
+  background: color-mix(in srgb, var(--akzent) 26%, transparent);
+}
 .knopf-blank.spricht { color: var(--laeuft); }
 .knopf-blank.laeuft { color: var(--akzent); animation: pochen 1.2s ease-in-out infinite; }
 /* Der Brain-Knopf im Akzent — er soll auffallen, er ist der Einstieg. */
