@@ -187,15 +187,20 @@ in öffentlichen Texten nicht auf; das Produkt heißt Einzelstein.
   beim Zustandswechsel weg von RUNNING, `gesehen` der Endpunkt
   `POST /sessions/{name}/gesehen` — beides in den Metadaten, damit mehrere
   Geräte denselben Stand sehen.
-- **Tastatur und „position: fixed" (V166, 14.09.):** Ein `fixed`-Element hängt am
-  LAYOUT-Fenster, und das bleibt gleich groß, wenn die Handy-Tastatur aufgeht.
-  Die Eingabezeile lag darum unter der Tastatur, mal wurde stattdessen alles nach
-  oben geschoben — dasselbe Problem, zwei Erscheinungsformen. Lösung: `app.js`
-  schreibt aus `visualViewport` die Werte `--sicht-hoehe` und `--sicht-oben`, und
-  `.ansicht` hängt daran statt an `inset: 0`. Nicht mit Playwright prüfbar (ein
-  Fenster-Resize ist keine Tastatur) — am echten Handy nachsehen. Läuft die App in
-  einem fremden iframe, reicht das nicht: Dort bekommt das innere Dokument die
-  Verkleinerung nicht mit, das äußere Dokument müsste mitziehen.
+- **Tastatur am Handy (V166 verworfen, V167, 14.09.):** Ein `position: fixed`-Element
+  hängt am LAYOUT-Fenster, und das bleibt in Chrome für Android beim Aufgehen der
+  Tastatur standardmäßig gleich groß (`interactive-widget=resizes-visual`). Die
+  Eingabezeile lag darum unter der Tastatur. Der erste Versuch (V166 und ein
+  Dashboard-Skript) rechnete per `visualViewport` nach und schob mit
+  `scrollTo`/`offsetTop` — am echten Handy wurde es dadurch schlimmer (Eingabe halb
+  verdeckt, darunter ein leeres Loch), weil Skript und System gegeneinander
+  schoben. Richtig ist die dokumentierte Einstellung im Viewport-Tag:
+  `interactive-widget=resizes-content` (Chrome ab 108,
+  https://developer.chrome.com/blog/viewport-resize-behavior). Dann schrumpft das
+  Layout selbst, `inset: 0` rückt mit, kein Skript nötig. Sie gilt nur im obersten
+  Dokument — darum steht sie in der Relay UND im LEIT//PULS-Dashboard, dessen
+  Rahmen die Relay umschließt. Mit Playwright nicht prüfbar (keine Tastatur);
+  der Beweis kommt vom Handy.
 - **Fingerziele (V161, 08.09.):** Die Schnellbefehle waren 24 px hoch mit 6 px
   Abstand — am Handy traf Roli regelmäßig den Nachbarn. Jetzt 44 px (Chips)
   bzw. 48 px (Menü). Beim Vergrößern nicht `display: flex` auf einen Chip

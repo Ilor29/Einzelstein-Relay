@@ -5,7 +5,10 @@
   <!-- Ohne maximum-scale: Zoom bleibt erlaubt. Wer schlecht sieht, muss die
        Antworten vergrößern können — das ist mehr wert als ein iOS-Formularfeld,
        das beim Antippen kurz mitzoomt. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- interactive-widget=resizes-content: Die Handy-Tastatur verkleinert das
+       Layout selbst, "position: fixed" rückt mit (Chrome ab 108, siehe
+       Baubuch V167). Ersetzt den visualViewport-Behelf aus V166. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#1F1E1D">
   <title>Einzelstein Relay</title>
   <link rel="manifest" href="/manifest.webmanifest">
