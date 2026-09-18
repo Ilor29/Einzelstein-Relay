@@ -1270,6 +1270,31 @@ DOK_ENDUNGEN = {
 MAX_DATEI = 30 * 1024 * 1024      # 30 MB — Dokumente sind schwerer als Fotos
 
 
+# Bilder an ihrer Signatur erkennen, nicht an der Endung. Roli am 18.09.2026: „wir können hier in
+# der App keine PNG-Dateien einfügen." Der Grund lag nicht am Foto-Weg, der nimmt PNG längst,
+# sondern am Dokument-Weg: Wer einen Bildschirmausschnitt über „Dateien" statt über „Fotos"
+# auswählt — und am Handy liegt der Screenshot nun einmal im Dateimanager —, bekam 400 mit
+# „Die Endung .png nehme ich nicht an".
+BILD_SIGNATUREN = (
+    (b"\x89PNG\r\n\x1a\n", ".png"),
+    (b"\xff\xd8\xff", ".jpg"),
+    (b"GIF87a", ".gif"),
+    (b"GIF89a", ".gif"),
+)
+
+
+def _bild_erkannt(inhalt: bytes) -> str:
+    """Endung, wenn der Inhalt ein Bild ist — sonst leer. Prüft den Anfang der Datei."""
+    for zeichen, endung in BILD_SIGNATUREN:
+        if inhalt.startswith(zeichen):
+            return endung
+    if inhalt[:4] == b"RIFF" and inhalt[8:12] == b"WEBP":
+        return ".webp"
+    if inhalt[4:12] in (b"ftypheic", b"ftypheix", b"ftypmif1"):
+        return ".heic"
+    return ""
+
+
 def _endung_erraten(inhalt: bytes) -> str:
     """Bei fehlender oder unbekannter Endung in die Datei selbst schauen.
 
@@ -1316,7 +1341,9 @@ async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
     if endung not in DOK_ENDUNGEN:
         # Zweite Chance: in die Datei schauen. Text und ZIP nehmen wir auch
         # mit fremder oder fehlender Endung an — Skill-Dateien zum Beispiel.
-        erraten = _endung_erraten(inhalt)
+        erraten = _bild_erkannt(inhalt) or _endung_erraten(inhalt)
+        if erraten and erraten in {e for _, e in BILD_SIGNATUREN} | {".webp", ".heic"} and len(inhalt) > MAX_BILD:
+            raise HTTPException(413, "Das Bild ist zu groß (mehr als 20 MB).")
         if not erraten:
             was = f'Die Endung „{endung}"' if endung else "Eine Datei ohne Endung mit unlesbarem Inhalt"
             raise HTTPException(

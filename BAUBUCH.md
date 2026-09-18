@@ -233,3 +233,36 @@ Namen erst beim nächsten Schlafen und Wecken. Dazu in Rolis Nutzer-Einstellunge
 `crossSessionInbound: accept` (sonst hält eine Karte im „fragt nie"-Modus jede Nachricht zur
 Freigabe zurück) und eine Statuszeile (`~/.claude/statusline.sh`) mit Sitzungsname,
 Kontext-Füllstand und den beiden Abo-Balken; sie erscheint als eine Zeile unter der Eingabe.
+
+## 18.09.2026: PNG über den Dokument-Weg wurde abgewiesen
+
+**Auslöser, Roli am 18.09. um 08:51 an die Medienwerk-Karte:** „das eine ist tatsächlich, dass wir
+hier in der App keine PNG-Dateien einfügen können, aber das müssen wir an die jeweilige Stelle
+weiterleiten, dass das gefixt wird." Die Karte hat es ans Brain weitergegeben, weil hier gerade
+keine Sitzung läuft.
+
+**Gesucht, nicht geraten.** Der Foto-Weg nimmt PNG längst an, das steht so in `BILDARTEN`. Im
+Protokoll des Dienstes stand die Antwort: Um 08:47 ging ein PNG über `/api/sessions/…/bild` mit 200
+durch, um 08:48 scheiterte `/api/sessions/…/datei` mit 400. Roli hatte den Bildschirmausschnitt also
+über „Dateien" ausgewählt statt über „Fotos", und am Handy liegt ein Screenshot nun einmal im
+Dateimanager. Der Dokument-Weg prüft die Endung gegen eine Positivliste, in der `.png` nichts zu
+suchen hat, und die zweite Chance erkannte nur Text und ZIP. Ein Bild ist beides nicht.
+
+**Gebaut:** `_bild_erkannt()` sieht in die Datei und erkennt PNG, JPEG, GIF, WEBP und HEIC an ihrer
+Signatur, nicht an der Endung. Der Dokument-Weg nimmt solche Dateien jetzt an und vergibt die
+Endung selbst; für Bilder gilt dabei die Bild-Obergrenze von 20 MB statt der 30 MB für Dokumente.
+An der Positivliste für Dokumente ändert sich nichts, und ausführbar wird hier weiterhin nichts:
+Wir prüfen den Inhalt und schreiben die Endung selbst.
+
+**Geprüft** an sechs echten Dateien aus dem Bilderordner und aus /tmp: PNG, JPEG und WEBP richtig
+erkannt, eine Markdown-Datei wird nicht fälschlich als Bild gelesen. Dienst neu gestartet, antwortet
+mit 200, keine Fehlerzeilen beim Start.
+
+**Was bewusst offen bleibt:** Ein über den Dokument-Weg geschicktes Bild erscheint in der Oberfläche
+als Dokument-Kachel, nicht als Bildvorschau, weil das Frontend die Art am Endpunkt festmacht
+(`istBild = endpunkt === "bild"`). Der Anhang kommt an und Claude liest ihn; nur die Kachel sieht
+anders aus. Wer das aufräumt, sollte die Art aus der Serverantwort übernehmen.
+
+**Und ein Hinweis für die nächste Sitzung dieser Karte:** Es gibt fünf Sitzungen namens
+„Hetzner-App", alle über Remote Control und seit über elf Tagen still. Meldungen an diese Karte
+kommen derzeit nirgends an; sie laufen über das Brain.
