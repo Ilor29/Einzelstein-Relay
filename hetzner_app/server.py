@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 167
+VERSION = 168
 
 
 @app.get("/api/version")
@@ -730,18 +730,41 @@ def session_wecken(name: str) -> dict:
 def list_dirs() -> list[str]:
     """Ordnervorschläge fürs Neue-Sitzung-Formular.
 
-    Auf dem Handy will niemand einen Pfad tippen — man tippt ihn an.
+    Auf dem Handy will niemand einen Pfad tippen — man tippt ihn an. Alle
+    Projektordner, die zuletzt bearbeiteten zuerst. „Zuletzt bearbeitet"
+    heißt: der Ordner selbst, der Git-Index (jede Sicherung) oder die jüngste
+    Claude-Mitschrift dazu. Früher zählte nur die Änderungszeit des Ordners
+    und die Liste war bei 20 abgeschnitten — bei über 40 Projekten fehlte dann
+    ausgerechnet Skillsradar, weil dort nur Unterordner angefasst wurden
+    (Roli 20.09.2026: „hier gibt's kein Skillradar").
     """
     root = Path(os.environ.get("HETZNER_APP_PROJECTS", Path.home() / "projekte"))
     if not root.is_dir():
         return [str(Path.home())]
 
+    mitschriften = Path.home() / ".claude" / "projects"
+
+    def aktivitaet(d: Path) -> float:
+        zeiten = [d.stat().st_mtime]
+        for extra in (d / ".git" / "index", d / ".git" / "HEAD"):
+            try:
+                zeiten.append(extra.stat().st_mtime)
+            except OSError:
+                pass
+        try:
+            kuerzel = re.sub(r"[^A-Za-z0-9]", "-", str(d))
+            with os.scandir(mitschriften / kuerzel) as es:
+                zeiten.extend(e.stat().st_mtime for e in es if e.name.endswith(".jsonl"))
+        except OSError:
+            pass
+        return max(zeiten)
+
     dirs = sorted(
         (d for d in root.iterdir() if d.is_dir() and not d.name.startswith(".")),
-        key=lambda d: d.stat().st_mtime,
+        key=aktivitaet,
         reverse=True,
     )
-    return [str(d) for d in dirs[:20]]
+    return [str(d) for d in dirs]
 
 
 # --- Benachrichtigungen ------------------------------------------------------

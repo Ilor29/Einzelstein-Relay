@@ -266,3 +266,17 @@ anders aus. Wer das aufräumt, sollte die Art aus der Serverantwort übernehmen.
 **Und ein Hinweis für die nächste Sitzung dieser Karte:** Es gibt fünf Sitzungen namens
 „Hetzner-App", alle über Remote Control und seit über elf Tagen still. Meldungen an diese Karte
 kommen derzeit nirgends an; sie laufen über das Brain.
+
+## V168 (20.09.2026, nachts): Ordner-Wähler zeigt alle Projekte, nach echter Aktivität
+
+Auslöser Roli, 00:29, zwei Screenshots vom Neue-Sitzung-Formular: „hier gibt's kein Skillradar".
+Ursache: `/api/dirs` gab nur die 20 zuletzt geänderten Ordner zurück, gemessen an der Änderungszeit
+des Ordners selbst. Die ändert sich nur, wenn direkt darin eine Datei entsteht oder verschwindet,
+nicht bei Arbeit in Unterordnern. Skillsradar stand deshalb auf dem 6.09., und bei 42 Projekten fiel
+es aus der Liste.
+
+Lösung: Alle Ordner werden gezeigt, sortiert nach dem jüngsten von drei Zeitstempeln: Ordner,
+Git-Index (jede Sicherung) und jüngste Claude-Mitschrift unter `~/.claude/projects/<kuerzel>`.
+Geprüft mit dem Python des Dienstes: 42 Ordner, Skillsradar an dritter Stelle hinter Brain und
+Koffer. Neustart über systemctl, `/api/version` zeigt 168. Lea und Lorenz bekommen den Stand über
+ihre Aktualisierungs-Timer.
