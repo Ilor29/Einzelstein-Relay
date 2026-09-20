@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 173
+VERSION = 174
 
 
 @app.get("/api/version")
@@ -365,7 +365,7 @@ def geraet_aussperren(name: str) -> dict:
 
 class NewSession(BaseModel):
     # Leer erlaubt: Dann heißt die Karte wie ihr Ordner (siehe _standardname).
-    name: str = Field(default="", max_length=60, pattern=r"^[A-Za-z0-9._ -]*$")
+    name: str = Field(default="", max_length=60, pattern=r"^[\p{L}\p{N}._ -]*$")
     cwd: str
     first_prompt: str = ""
     pinned: bool = False
@@ -437,7 +437,7 @@ def _standardname(ordner: Path) -> str:
     20.09.2026, V172). Ist der Name schon vergeben, auch von einer
     schlafenden Karte, hängt die Zahl 2, 3 … dran.
     """
-    basis = _sicherer_sitzungsname(re.sub(r"[^A-Za-z0-9._ -]", "", ordner.name)).strip() or "Karte"
+    basis = _sicherer_sitzungsname(re.sub(r"[^\w._ -]", "", ordner.name)).strip() or "Karte"
     basis = basis[:50]
     belegt = {s.name for s in tmux.list_sessions()} | state.vergebene_namen()
     name, n = basis, 2
