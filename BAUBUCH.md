@@ -347,3 +347,25 @@ auf „sonnet“ gesetzt (das tut jeder Modellwechsel, auch der aus der App). De
 mehr feststellen; die vorigen Brain-Karten liefen laut Mitschrift ebenfalls auf Sonnet 5. Künftige
 Proben also ohne Modellwechsel machen oder den Wert danach zurücksetzen.
 Nicht geprüft: der Weg über die echte Bedienung am Handy (nur der Server-Teil direkt aufgerufen).
+
+## V172 (20.09.2026): Titel bei neuen Karten ist freiwillig
+
+Auslöser Roli, 20.09. 17:25: „wenn ich eine neue Karte öffnen muss ich immer den Titel eingeben, das
+nervt ein wenig“. Das Feld „Name“ war Pflicht, und Roli legt am Handy oft Karten an.
+
+Lösung: Der Name ist freiwillig. Bleibt er leer, heißt die Karte wie ihr Ordner; ist der Name schon
+vergeben (auch von einer schlafenden oder archivierten Karte), hängt die App eine 2, 3 … an.
+Server: `NewSession.name` darf leer sein, neue Funktion `_standardname` in `server.py`, neue Funktion
+`state.vergebene_namen`. Formular: `required` entfernt, das Platzhalter-Wort zeigt vorher, welcher Name
+es wird („Leer lassen: „Brain““), und zieht mit, wenn man den Ordner wechselt oder ein neues Projekt
+eintippt. Ein eingetippter Titel gilt wie bisher. VERSION 172. Keine Legende nötig, kein neuer Knopf.
+
+Geprüft im echten Browser gegen einen Testserver auf Port 8799: Formular ohne Titel zweimal mit dem
+Feld „Neues Projekt“ abgeschickt, es entstanden „v172probe“ und „v172probe 2“, beide Karten lebten
+und zeigten keinen offenen Dialog (die Vertrauensfrage aus V171 wurde ohne ersten Auftrag beantwortet,
+das ist damit auch über den echten Bedienweg belegt). Keine Konsolenfehler, keine Fehlerzeile.
+Probe-Karten und Probe-Ordner danach gelöscht. Dienst neu gestartet, `/api/version` = 172.
+Unterwegs: Zwei Aufräum-Befehle mit `pkill -f` und `awk` auf den eigenen Skriptnamen haben sich selbst
+mitbeendet, weil der Skriptname in der eigenen Befehlszeile stand; Testserver künftig über den Port
+finden.
+Nicht geprüft: Anlegen am echten Handy.

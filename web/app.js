@@ -4828,6 +4828,15 @@ $("knopf-einst-zurueck").addEventListener("click", () => {
 
 let gewaehlterOrdner = null;
 
+// Der Titel ist freiwillig: Bleibt das Feld leer, heißt die Karte wie ihr
+// Ordner (V172). Das Platzhalter-Wort zeigt schon vorher, welcher Name es wird.
+function zeigeNamensvorschlag() {
+  const neuesProjekt = $("neu-projekt").value.trim();
+  const ordner = neuesProjekt || (gewaehlterOrdner ? gewaehlterOrdner.split("/").filter(Boolean).pop() : "");
+  $("neu-name").placeholder = ordner ? `Leer lassen: „${ordner}“` : "Leer lassen: wie der Ordner heißt";
+}
+$("neu-projekt").addEventListener("input", zeigeNamensvorschlag);
+
 $("knopf-neu").addEventListener("click", async () => {
   stoppeListe();
   zeige("neu");
@@ -4856,9 +4865,11 @@ $("knopf-neu").addEventListener("click", async () => {
       behaelter.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
       el.classList.add("gewaehlt");
       gewaehlterOrdner = pfad;
+      zeigeNamensvorschlag();
     });
     behaelter.append(el);
   });
+  zeigeNamensvorschlag();
 });
 
 $("knopf-abbrechen").addEventListener("click", starteListe);

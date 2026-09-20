@@ -146,6 +146,11 @@ def update(name: str, **changes) -> Meta:
     return meta
 
 
+def vergebene_namen() -> set[str]:
+    """Alle Kartennamen, die im Zustand stehen (auch schlafende und archivierte)."""
+    return set(_load())
+
+
 def vergebene_mitschriften() -> set[str]:
     """Alle Gesprächs-Kennungen, die schon einem Terminal gehören."""
     return {m.mitschrift for m in _load().values() if m.mitschrift}
