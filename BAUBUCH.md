@@ -369,3 +369,23 @@ Unterwegs: Zwei Aufräum-Befehle mit `pkill -f` und `awk` auf den eigenen Skript
 mitbeendet, weil der Skriptname in der eigenen Befehlszeile stand; Testserver künftig über den Port
 finden.
 Nicht geprüft: Anlegen am echten Handy.
+
+## V173 (20.09.2026): Warnung am Modell-Knopf, wenn die Karte schon groß ist
+
+Auslöser Roli, 20.09. 17:56, „ja und warnung“ (auf die Frage, ob der Modell-Knopf vor dem Wechsel bei
+großen Karten warnen soll). Hintergrund aus der Skool-Lektion zu den Nutzungslimits: Der Zwischenspeicher
+hängt am Modell, ein Modellwechsel mitten im Verlauf verarbeitet also den ganzen Verlauf neu.
+
+Lösung: Das Modell-Blatt zeigt oben einen Hinweis mit Warnzeichen und Text („⚠ Achtung: Diese Karte ist
+schon groß (128k benutzt) … Besser: eine neue Karte mit dem anderen Modell anfangen“), sobald die Karte
+100.000 Token oder mehr benutzt (Konstante `MODELLWECHSEL_WARNUNG_AB` in `app.js`). Die Schwelle liegt
+bewusst unter der 150.000er Grenze für „neue Karte“, weil das Neurechnen schon vorher teuer wird; sie ist
+eine Setzung, kein Messwert. Die Zahl kommt vom Kontext-Balken (`kontextGroesse`, mit Kartenname, damit
+nie die Zahl einer anderen Karte warnt). Der Wechsel bleibt möglich, es ist nur ein Hinweis. Symbol und
+Text, nie nur eine Farbe (Rot-Grün-Schwäche). Neuer Absatz `#modell-warnung` in `index.html`, Stil in
+`styles.css`. VERSION 173. Keine Legende nötig, kein neuer Knopf.
+
+Geprüft im echten Browser gegen einen Testserver auf Port 8799 mit nachgestelltem `/kontext`: bei 128k
+steht die Warnung im Blatt (Screenshot angesehen, Text passt auf 400 Pixel), bei 60k fehlt sie. Keine
+Konsolenfehler. Testserver beendet, Dienst neu gestartet, `/api/version` = 173.
+Nicht geprüft: am echten Handy und an einer echten Karte über 100k.

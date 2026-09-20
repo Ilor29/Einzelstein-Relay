@@ -3208,6 +3208,14 @@ $("kontext-balken").addEventListener("click", oeffneVerbrauchsBlatt);
 // Die Daueranzeige im Kopf: wie voll die Unterhaltung ist. Quelle ist der
 // schlanke /kontext-Endpunkt (nur der Füllstand, ohne den Abo-Abruf), damit
 // der Balken auch bei einer Anthropic-Störung weiterläuft.
+// Wie groß die Karte zuletzt war (Token) und für welche: das Modell-Blatt
+// warnt daraus vor dem Wechsel. Der Name verhindert, dass die Zahl einer
+// anderen Karte warnt.
+let kontextGroesse = { name: "", benutzt: 0 };
+// Ab hier rechnet ein Modellwechsel so viel neu, dass es die Warnung wert ist.
+// Der Zwischenspeicher hängt am Modell (Skool-Lektion, 20.09.2026).
+const MODELLWECHSEL_WARNUNG_AB = 100000;
+
 async function aktualisiereKontextBalken() {
   const balken = $("kontext-balken");
   if (!aktuelleSitzung) { balken.hidden = true; return; }
@@ -3232,6 +3240,7 @@ async function aktualisiereKontextBalken() {
   // Dazu die 150.000-Token-Regel (Beschluss 20.09.2026): Jeder Zug schickt den
   // ganzen Verlauf mit, also wird die Karte ab dort teuer und ein neues Fenster
   // fällig — auch wenn der Balken bei einer Million Kontext noch fast leer ist.
+  kontextGroesse = { name: fuer, benutzt: typeof k.benutzt === "number" ? k.benutzt : 0 };
   const neueKarte = typeof k.benutzt === "number" && k.benutzt >= 150000;
   fuellung.classList.toggle("knapp", (voll >= 70 && voll < 90) || (neueKarte && voll < 90));
   fuellung.classList.toggle("voll", voll >= 90);
@@ -3286,6 +3295,16 @@ $("knopf-modell").addEventListener("click", async () => {
     kinder.push(zeile);
   }
   $("modell-liste").replaceChildren(...kinder);
+  const warnung = $("modell-warnung");
+  const gross = kontextGroesse.name === aktuelleSitzung.name
+    && kontextGroesse.benutzt >= MODELLWECHSEL_WARNUNG_AB;
+  warnung.hidden = !gross;
+  if (gross) {
+    warnung.textContent =
+      `⚠ Achtung: Diese Karte ist schon groß (${tokenKurz(kontextGroesse.benutzt)} benutzt). ` +
+      "Ein Modellwechsel mitten im Verlauf rechnet alles neu und kostet viele Token. " +
+      "Besser: eine neue Karte mit dem anderen Modell anfangen.";
+  }
   $("modell-blatt").hidden = false;
 });
 

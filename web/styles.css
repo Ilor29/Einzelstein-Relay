@@ -719,6 +719,18 @@ html, body {
 .blatt-zeile-titel { font-size: .95rem; font-weight: 600; }
 .blatt-zeile-art { font-size: .8rem; color: var(--schrift-leise); }
 
+/* Warnung im Modell-Blatt, wenn die Karte schon groß ist: Symbol und Text,
+   nie nur eine Farbe (Rot-Grün-Schwäche). */
+.modell-warnung {
+  margin: 0 0 .75rem;
+  padding: .7rem .9rem;
+  border-radius: 12px;
+  border-left: 4px solid var(--wartet);
+  background: var(--erhoben-2);
+  font-size: .85rem;
+  line-height: 1.4;
+  color: var(--schrift);
+}
 .modell-liste {
   display: flex;
   flex-direction: column;
