@@ -298,3 +298,16 @@ Geprüft im echten Browser gegen den Testserver auf Port 8799, mit nachgestellte
 84k zeigt „92 % frei · 84k“ grün, 160k zeigt „84 % frei · 160k · neue Karte“ gelb, 1,3M zeigt rot.
 Keine Konsolenfehler, Text passt auf 400 Pixel Breite. Dienst neu gestartet, `/api/version` = 169.
 Nicht geprüft: die Anzeige an einer echten Sitzung über 150k, nur mit nachgestellten Werten.
+
+## V170 (20.09.2026): Kontext-Balken sagt „benutzt“
+
+Auslöser Roli, 20.09. 11:02: „habe ich jetzt noch 63.000 Token oder wurden 63.000 verbraucht?“
+Die Anzeige stand als „Kontext 84 % frei · 160k“, vorne die freie Menge, hinten die benutzte, ohne
+Wort dazu. Er las die Zahl falsch herum. Jetzt steht „Kontext 84 % frei · 160k benutzt · neue Karte“.
+Die Legende sagt ausdrücklich, dass es die benutzten Token sind und nicht die übrigen. Nur Frontend
+und VERSION 170.
+
+Geprüft im echten Browser gegen den Testserver auf Port 8799 (Anmeldung per
+`dependency_overrides` ausgehängt, Startskript wegwerfbar in /tmp): 84k, 160k und 1,3M passen auf 400
+Pixel Breite in eine Zeile, keine Konsolenfehler.
+

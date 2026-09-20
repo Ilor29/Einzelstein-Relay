@@ -3229,7 +3229,7 @@ async function aktualisiereKontextBalken() {
   const neueKarte = typeof k.benutzt === "number" && k.benutzt >= 150000;
   fuellung.classList.toggle("knapp", (voll >= 70 && voll < 90) || (neueKarte && voll < 90));
   fuellung.classList.toggle("voll", voll >= 90);
-  const tokens = typeof k.benutzt === "number" ? ` · ${tokenKurz(k.benutzt)}` : "";
+  const tokens = typeof k.benutzt === "number" ? ` · ${tokenKurz(k.benutzt)} benutzt` : "";
   $("kontext-text").textContent =
     `Kontext ${frei}% frei${tokens}${neueKarte ? " · neue Karte" : ""}`;
   balken.hidden = false;
