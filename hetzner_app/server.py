@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 170
+VERSION = 171
 
 
 @app.get("/api/version")
@@ -489,8 +489,42 @@ async def create_session(body: NewSession) -> dict:
         # dürfen wir das Handy nicht hängen lassen. Also: Sitzung sofort
         # melden, Auftrag im Hintergrund nachschieben.
         asyncio.create_task(_ersten_auftrag_schicken(name, body.first_prompt))
+    else:
+        # Ohne ersten Auftrag wartete früher niemand auf die Vertrauensfrage
+        # eines frischen Ordners. Sie steht auf „No, exit"; das erste Enter,
+        # das die App danach tippte (Modellwechsel, erste Nachricht), beendete
+        # Claude und riss die Karte ab (Fund 20.09., Ordner Schmiede, V171).
+        asyncio.create_task(_eingabe_bereit(name))
 
     return {"ok": True, "name": name}
+
+
+async def _eingabe_bereit(name: str) -> str:
+    """Wartet, bis Claude zuhört, und räumt einen Start-Dialog weg.
+
+    Jeder Aufruf, der gleich etwas in die Sitzung tippt, geht zuerst hier
+    durch. Antwort: "frei" (tippen ist sicher), "startet" (Claude zeigt nach
+    20 Sekunden noch keine Eingabezeile), "anmeldung" oder "blockiert" (eine
+    Frage, die ein Mensch beantworten muss). Ein Dialog, in den man tippt,
+    verschluckt den Text, und ein Enter darin kann Claude beenden.
+    """
+    zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "anmeldung":
+        return zustand
+    if not await asyncio.to_thread(tmux.warte_bis_bereit, name, 20):
+        return "startet"
+    zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "vertrauensfrage":
+        # Die App öffnet nur Ordner des Nutzers, also Ja. Escape wäre hier
+        # das Ende der ganzen Sitzung.
+        await asyncio.to_thread(tmux.vertrauensfrage_beantworten, name)
+        await asyncio.to_thread(tmux.warte_bis_bereit, name, 15)
+        zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "abbrechbar":
+        tmux.send_key(name, "Escape")
+        await asyncio.sleep(0.8)
+        zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    return zustand
 
 
 async def _ersten_auftrag_schicken(name: str, prompt: str) -> None:
@@ -1552,6 +1586,19 @@ async def modell_wechseln(name: str, body: Modell) -> dict:
     if body.name not in MODELLE:
         raise HTTPException(400, "Dieses Modell kenne ich nicht.")
 
+    # Nie in einen offenen Dialog tippen: Direkt nach dem Anlegen steht bei
+    # einem frischen Ordner die Vertrauensfrage auf „No, exit", und das Enter
+    # hinter /model hat Claude beendet (V171).
+    zustand = await _eingabe_bereit(name)
+    if zustand == "startet":
+        raise HTTPException(409, "Claude startet gerade noch. Gleich nochmal versuchen.")
+    if zustand != "frei":
+        raise HTTPException(
+            409,
+            "Claude zeigt in dieser Sitzung gerade eine Frage an. Bitte "
+            "einmal das Terminal öffnen und sie beantworten.",
+        )
+
     tmux.send_text(name, f"/model {body.name}")
     await asyncio.sleep(0.4)
     tmux.send_key(name, "Enter")
@@ -2059,16 +2106,13 @@ async def session_senden(name: str, body: Nachricht) -> dict:
             "über den Anmelde-Kasten anmelden — normale Nachrichten kommen "
             "so lange nicht durch.",
         )
-    if zustand == "vertrauensfrage":
-        # Die Frage nach dem frischen Ordner — die App öffnet nur Ordner des
-        # Nutzers, also Ja. Escape wäre hier das Ende der ganzen Sitzung.
-        await asyncio.to_thread(tmux.vertrauensfrage_beantworten, name)
-        await asyncio.to_thread(tmux.warte_bis_bereit, name, 15)
-        zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
-    elif zustand == "abbrechbar":
-        tmux.send_key(name, "Escape")
-        await asyncio.sleep(0.8)
-        zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    else:
+        # Vertrauensfrage, Escape-Dialoge und „Claude startet noch" (leerer
+        # Bildschirm, den dialog_zustand für frei hält) klärt die gemeinsame
+        # Prüfung; erst danach wird getippt (V171).
+        zustand = await _eingabe_bereit(name)
+        if zustand == "startet":
+            raise HTTPException(409, "Claude startet gerade noch. Gleich nochmal versuchen.")
     if zustand != "frei":
         raise HTTPException(
             409,

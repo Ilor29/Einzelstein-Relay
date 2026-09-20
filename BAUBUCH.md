@@ -311,3 +311,39 @@ Geprüft im echten Browser gegen den Testserver auf Port 8799 (Anmeldung per
 `dependency_overrides` ausgehängt, Startskript wegwerfbar in /tmp): 84k, 160k und 1,3M passen auf 400
 Pixel Breite in eine Zeile, keine Konsolenfehler.
 
+
+## V171 (20.09.2026): Vertrauensfrage immer beantworten, nie in offene Dialoge tippen, Balken nach Kartenwechsel
+
+Auslöser Roli, 20.09. 16:43 und 16:58: Zwei Karten im Ordner Schmiede „existieren nicht“. Ursache
+(Brain-Karte, 17:05): Der Ordner hatte nie eine Sitzung, Claude fragt beim ersten Start „Diesem
+Ordner vertrauen?“, vorgewählt ist „No, exit“. Die App beantwortete die Frage nur, wenn beim Anlegen ein
+erster Auftrag mitkam. Roli legte ohne Auftrag an und wechselte sofort das Modell; das Enter hinter
+`/model` bestätigte „No, exit“, Claude beendete sich, die tmux-Sitzung war weg. Um 17:11 nahm Roli die
+Empfehlung an, V171 zu bauen.
+
+Lösung, Server: Neue Prüfung `_eingabe_bereit` in `server.py`. Sie wartet, bis Claude eine Eingabezeile
+zeigt (bis 20 Sekunden), beantwortet die Vertrauensfrage mit Ja, drückt Escape-Dialoge weg und meldet
+„frei“, „startet“, „anmeldung“ oder „blockiert“. Sie läuft (1) beim Anlegen ohne ersten Auftrag im
+Hintergrund, (2) vor dem Modellwechsel, (3) vor dem Senden einer Nachricht. Bei „startet“ und
+„blockiert“ gibt es eine ehrliche 409-Meldung statt eines verschluckten Textes. Die alten
+Einzelzweige in `session_senden` gingen in die gemeinsame Prüfung auf.
+
+Lösung, Frontend: Der Kontext-Balken hatte eine Zwölf-Sekunden-Sperre für alle Karten zusammen. Wer
+innerhalb von zwölf Sekunden die Karte wechselte, sah keinen Balken (die Liste blendet ihn aus). Jetzt
+merkt sich `kontextFuer` die Karte des letzten Abrufs, ein Kartenwechsel löst sofort einen neuen aus.
+Dazu: Kommt die Antwort für eine Karte an, die inzwischen nicht mehr offen ist, wird sie verworfen.
+VERSION 171.
+
+Geprüft: (1) Echt in tmux, frischer Ordner ohne Vertrauens-Eintrag: `_eingabe_bereit` beantwortete die
+Vertrauensfrage in 1,6 Sekunden, danach lief `modell_wechseln` durch („Set model to Sonnet 5“), die
+Sitzung lebte. (2) Zweiter frischer Ordner: `session_senden` direkt nach dem Anlegen brauchte 3,2
+Sekunden, die Nachricht kam bei Claude an, keine Sitzung starb. (3) Balken im echten Browser gegen
+Testserver auf 8799 mit nachgestelltem `/kontext`, drei Karten hintereinander in unter zwei Sekunden:
+alter Code zeigt ab der zweiten Karte keinen Balken (Fehler nachgestellt), neuer Code zeigt bei jeder
+Karte den richtigen Wert; keine Konsolenfehler. Dienst neu gestartet, `/api/version` = 171.
+
+Fehler unterwegs: Die Probe mit `/model sonnet` hat Claudes Standardmodell in `~/.claude/settings.json`
+auf „sonnet“ gesetzt (das tut jeder Modellwechsel, auch der aus der App). Der Wert davor ließ sich nicht
+mehr feststellen; die vorigen Brain-Karten liefen laut Mitschrift ebenfalls auf Sonnet 5. Künftige
+Proben also ohne Modellwechsel machen oder den Wert danach zurücksetzen.
+Nicht geprüft: der Weg über die echte Bedienung am Handy (nur der Server-Teil direkt aufgerufen).

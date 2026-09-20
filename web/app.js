@@ -1873,6 +1873,7 @@ function oeffneSitzung(sitzung) {
 // ohnehin sofort an. Bei dunklem Bildschirm steht er ganz still; beim
 // Aufwachen geht es sofort weiter (siehe visibilitychange).
 let kontextZuletzt = 0;
+let kontextFuer = "";         // für welche Karte der letzte Abruf war: ein Kartenwechsel hebelt die Sperre aus
 let taktLauf = 0;             // jeder Anstoß zählt hoch; ein alter Lauf plant nichts mehr
 async function sitzungsTakt() {
   const lauf = ++taktLauf;
@@ -1881,7 +1882,8 @@ async function sitzungsTakt() {
   if (!aktuelleSitzung || imTerminal || ruht()) return;
   ladeVerlauf();
   pruefeFrage();
-  if (Date.now() - kontextZuletzt > 12000) {
+  if (kontextFuer !== aktuelleSitzung.name || Date.now() - kontextZuletzt > 12000) {
+    kontextFuer = aktuelleSitzung.name;
     kontextZuletzt = Date.now();
     aktualisiereKontextBalken();
   }
@@ -3209,14 +3211,18 @@ $("kontext-balken").addEventListener("click", oeffneVerbrauchsBlatt);
 async function aktualisiereKontextBalken() {
   const balken = $("kontext-balken");
   if (!aktuelleSitzung) { balken.hidden = true; return; }
+  const fuer = aktuelleSitzung.name;
   let k;
   try {
     k = (await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/kontext`, taktOptionen()
+      `/sessions/${encodeURIComponent(fuer)}/kontext`, taktOptionen()
     )).json()).kontext;
   } catch {
     return;   // Netzhänger oder Sitzung weg: die alte Anzeige stehen lassen
   }
+  // Wurde inzwischen eine andere Karte geöffnet, gehört die Antwort nicht
+  // mehr hierher (sonst stünde kurz der Füllstand der vorigen Karte da).
+  if (!aktuelleSitzung || aktuelleSitzung.name !== fuer) return;
   if (!k || typeof k.prozent !== "number") { balken.hidden = true; return; }
   const voll = Math.max(0, Math.min(100, k.prozent));   // Prozent BENUTZT
   const frei = 100 - voll;
