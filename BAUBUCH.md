@@ -389,3 +389,28 @@ Geprüft im echten Browser gegen einen Testserver auf Port 8799 mit nachgestellt
 steht die Warnung im Blatt (Screenshot angesehen, Text passt auf 400 Pixel), bei 60k fehlt sie. Keine
 Konsolenfehler. Testserver beendet, Dienst neu gestartet, `/api/version` = 173.
 Nicht geprüft: am echten Handy und an einer echten Karte über 100k.
+
+## V174 (20.09.2026): Kartenname darf Umlaute enthalten
+
+Auslöser Roli, 20.09. 18:17, Foto vom Laptop (LEIT//PULS, Neue Sitzung, Name „Skills-Prüfung“, Browser-Meldung
+„Deine Eingabe muss mit dem geforderten Format übereinstimmen“): „Ja, einbauen und sagen wieso das nicht geht“.
+
+Ursache: Das Namensfeld erlaubte nur A–Z, a–z, 0–9, Punkt, Unterstrich, Bindestrich und Leerzeichen, im Formular
+(`pattern` in `index.html`) und noch einmal im Server (`NewSession.name`, `server.py`). Das ü fiel durch. Die
+Regel stammt aus der Anfangszeit und war eine vorsichtige Vorsichtsmaßnahme, kein technischer Zwang: Geprüft mit
+tmux 3.6 auf einem eigenen Testsocket, ein Sitzungsname mit ü bleibt unverändert, auch mit LANG=C; der
+Dienst läuft mit en_US.UTF-8. Die Namen gehen nirgends durch eine Shell (tmux-Aufrufe als Liste, Zustandsdatei
+als JSON, Adressen mit encodeURIComponent).
+
+Lösung: Erlaubt sind jetzt Buchstaben und Ziffern aller Schriften (`\p{L}`, `\p{N}`), dazu Punkt, Unterstrich,
+Bindestrich und Leerzeichen. Weiter gesperrt: Schrägstrich, Semikolon, Dollarzeichen, Zeilenumbruch und alle
+anderen Sonderzeichen. Der Standardname aus dem Ordner (V172) behält jetzt auch Umlaute (`\w` statt A–Z).
+Das Feld „NEUES Projekt“ (Ordnername) bleibt bewusst nur ASCII, das ist eine andere Entscheidung (Ordner auf
+der Platte). VERSION 174.
+
+Geprüft im echten Browser gegen einen Testserver auf Port 8799: „Skills-Prüfung“ ist gültig, „Skills/Prüfung“
+bleibt ungültig, Karte wurde angelegt (tmux-Sitzung „hz-Skills-Prüfung“, Zustand idle), Kontext- und
+Verlauf-Abruf liefern 200, keine Konsolenfehler. Pydantic-Muster einzeln geprüft (ü, ß, chinesische Zeichen ok;
+Schrägstrich, Semikolon, Dollar, Zeilenumbruch abgelehnt). Probe-Karte und Probe-Ordner gelöscht,
+Testserver beendet, Dienst neu gestartet, `/api/version` = 174.
+Nicht geprüft: am echten Handy und Laptop; Karten mit Umlaut über Schlafen und Aufwecken.
