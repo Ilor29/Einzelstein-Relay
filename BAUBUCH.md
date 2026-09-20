@@ -280,3 +280,21 @@ Git-Index (jede Sicherung) und jüngste Claude-Mitschrift unter `~/.claude/proje
 Geprüft mit dem Python des Dienstes: 42 Ordner, Skillsradar an dritter Stelle hinter Brain und
 Koffer. Neustart über systemctl, `/api/version` zeigt 168. Lea und Lorenz bekommen den Stand über
 ihre Aktualisierungs-Timer.
+
+## V169 (20.09.2026): Token-Zahl im Kontext-Balken, Hinweis „neue Karte“ ab 150.000
+
+Auslöser Roli, 20.09. 09:24 (Übergabe der Brain-Karte) und 09:40: Im Kopf soll nicht nur
+„Kontext 15 %“ stehen, sondern auch, wie viele Token schon drinstecken, damit er VOR einer neuen
+Aufgabe sieht, ob eine neue Karte fällig ist. Auf die Rückfrage „Kontext oder verbrauchte Last?“
+nahm er meine Empfehlung: Kontext in Tausend Token.
+
+Lösung: Nur Frontend, der Server lieferte `benutzt` schon. Der Balken zeigt jetzt zum Beispiel
+„Kontext 84 % frei · 160k · neue Karte“. Ab 150.000 Token färbt sich die Füllung gelb und der Zusatz
+„neue Karte“ erscheint, passend zur Token-Sparen-Regel vom 20.09. Der Grund: Der Balken misst gegen
+eine Million Kontext und wäre bei 150k noch fast leer und grün, obwohl die Karte dann schon teuer
+wird. Über 90 % bleibt es rot. Die Legende (Symbol-Erklärung) ist mitgezogen. VERSION 169.
+
+Geprüft im echten Browser gegen den Testserver auf Port 8799, mit nachgestelltem `/kontext`:
+84k zeigt „92 % frei · 84k“ grün, 160k zeigt „84 % frei · 160k · neue Karte“ gelb, 1,3M zeigt rot.
+Keine Konsolenfehler, Text passt auf 400 Pixel Breite. Dienst neu gestartet, `/api/version` = 169.
+Nicht geprüft: die Anzeige an einer echten Sitzung über 150k, nur mit nachgestellten Werten.
