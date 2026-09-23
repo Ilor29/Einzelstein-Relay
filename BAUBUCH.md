@@ -414,3 +414,32 @@ Verlauf-Abruf liefern 200, keine Konsolenfehler. Pydantic-Muster einzeln geprüf
 Schrägstrich, Semikolon, Dollar, Zeilenumbruch abgelehnt). Probe-Karte und Probe-Ordner gelöscht,
 Testserver beendet, Dienst neu gestartet, `/api/version` = 174.
 Nicht geprüft: am echten Handy und Laptop; Karten mit Umlaut über Schlafen und Aufwecken.
+
+## V175 (23.09.2026): Verbrauch je Karte wird beim Archivieren dauerhaft festgehalten
+
+Auslöser Roli, 23.09. 08:47–09:13: Er wollte Modell und Token-Verbrauch je Karte über
+die Zeit vergleichen können (Opus 5.5 gegen die anderen), um am Ende zu entscheiden, ob
+sich die „neue Karte"-Schwelle anheben lässt. Beim Nachsehen stellte sich heraus: Das
+Verbrauchs-Blatt (`verbrauch.py`) zeigt nur den Live-Stand, nichts wird gespeichert —
+ein früherer Beschluss zum Vergleichen wäre also ins Leere gelaufen. Roli deutlich
+verärgert darüber, dass das erst jetzt auffiel: „bitte auf jeden Fall speichern […] das
+war damals ja der Beschluss".
+
+Lösung: Neue Funktion `verbrauch.protokolliere(karte, cwd)` liest den aktuellen
+Kontext-Stand (Modell, benutzte Token, Limit) und hängt ihn als eine Zeile an
+`~/.hetzner-app/verbrauch-verlauf.jsonl` an (JSON Lines, reine Anhänge-Datei, wie
+`speicher.py` es für die Speicher-Ampel vormacht). Aufgerufen wird sie in
+`patch_session` (`server.py`), genau in dem Moment, in dem `archiviert` erstmals auf
+`true` wechselt — das ist der Punkt, an dem der Verbrauch einer Karte feststeht und sich
+mit anderen vergleichen lässt. Erneutes Archivieren derselben Karte schreibt keinen
+zweiten Datenpunkt (Bedingung `not vorher.archiviert`). Scheitert das Schreiben (Platte
+voll o. ä.), bricht das Archivieren trotzdem nicht ab — der Verlauf ist ein Bonus, kein
+Pflichtteil. VERSION 175.
+
+Geprüft: `verbrauch.protokolliere()` direkt gegen den echten Ordner dieser Brain-Karte
+aufgerufen, lieferte einen korrekten Eintrag (Modell, Token, Limit), danach wieder
+entfernt. `py_compile` über beide geänderten Dateien fehlerfrei. Dienst neu gestartet,
+`/api/version` = 175, läuft.
+Nicht geprüft: eine echte Karte über die App-Oberfläche archiviert und die Datei danach
+angesehen; Auswertung/Anzeige der gesammelten Daten (noch kein eigenes Werkzeug dafür,
+nur die Ablage).

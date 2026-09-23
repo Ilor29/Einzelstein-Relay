@@ -117,6 +117,39 @@ def _kontext_lesen(datei: Path, happen: int = 262_144) -> dict | None:
     return None
 
 
+# --- Verlauf --------------------------------------------------------------
+
+# Ein Datenpunkt je archivierter Karte: Modell und Token-Endstand. Reine
+# Anhänge-Datei (JSON Lines), damit sich Opus 5 gegen Opus 5.5 & Co. später
+# wirklich vergleichen lässt — ohne das wäre jeder frühere Beschluss dazu
+# hinfällig, sobald die App neu startet (Rolis Ärger 23.09.2026).
+_VERLAUF_DATEI = Path.home() / ".hetzner-app" / "verbrauch-verlauf.jsonl"
+
+
+def protokolliere(karte: str, cwd: str) -> None:
+    """Einen Datenpunkt für den Modell-Vergleich anhängen.
+
+    Aufgerufen beim Archivieren einer Karte — dem Augenblick, in dem ihr
+    Kontext-Verbrauch feststeht. Ohne bekannten Verbrauch passiert nichts.
+    """
+    wert = kontext(cwd)
+    if wert is None:
+        return
+    zeile = json.dumps({
+        "zeit": int(time.time()),
+        "karte": karte,
+        "modell": wert["modell"],
+        "benutzt": wert["benutzt"],
+        "limit": wert["limit"],
+    }, ensure_ascii=False)
+    try:
+        _VERLAUF_DATEI.parent.mkdir(parents=True, exist_ok=True)
+        with open(_VERLAUF_DATEI, "a") as f:
+            f.write(zeile + "\n")
+    except OSError:
+        pass    # Verlauf ist ein Bonus — darf das Archivieren nie verhindern.
+
+
 # --- Plan-Limits --------------------------------------------------------------
 
 _ANMELDUNG = Path.home() / ".claude" / ".credentials.json"

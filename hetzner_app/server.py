@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 174
+VERSION = 175
 
 
 @app.get("/api/version")
@@ -665,6 +665,13 @@ def patch_session(name: str, body: Patch) -> dict:
         changes["anzeige"] = body.anzeige.strip()[:60]
     if body.archiviert is not None:
         changes["archiviert"] = body.archiviert
+
+    # Vor dem Archivieren den Verbrauch dieser Karte festhalten — nur beim
+    # ersten Mal, sonst würde jedes erneute Antippen einen weiteren
+    # Datenpunkt für dieselbe Karte anhängen.
+    vorher = state.get(name)
+    if body.archiviert and not vorher.archiviert and vorher.cwd:
+        verbrauch.protokolliere(name, vorher.cwd)
 
     meta = state.update(name, **changes)
     return {
