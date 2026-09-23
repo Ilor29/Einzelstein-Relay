@@ -1827,6 +1827,8 @@ function oeffneSitzung(sitzung) {
 
   $("sitzung-name").textContent = benannt(sitzung);
   $("knopf-anheften").classList.toggle("an", sitzung.pinned);
+  // Fremde Sitzungen räumt die App nicht weg, also auch keine Kiste.
+  $("knopf-archivieren").hidden = sitzung.eigen === false;
   glockeZeigen(sitzung.notifyWhenDone);
   freisprechAnzeigen();
   // Erst die Liste holen, dann den Namen zeigen — sonst stünde beim ersten
@@ -3001,6 +3003,22 @@ $("knopf-zurueck").addEventListener("click", () => {
   aktuelleSitzung = null;
   offeneSitzungMerken(null);
   starteListe();
+});
+
+// Die Kiste an der Eingabezeile: Karte direkt ins Archiv. Der Server legt
+// sie dafür selbst schlafen und hält vorher den Verbrauch fest — der frühere
+// Umweg über den Mond entfällt (Roli 23.09.2026).
+$("knopf-archivieren").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  if (!confirm(`Die Karte „${benannt(aktuelleSitzung)}" ins Archiv stellen?`)) return;
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/archivieren`, { method: "POST" });
+  } catch (err) {
+    melde(err.message || "Das Archivieren ging gerade nicht.");
+    return;
+  }
+  $("knopf-zurueck").click();
+  melde("Ins Archiv gestellt — ganz unten zu finden.");
 });
 
 $("knopf-anheften").addEventListener("click", async () => {

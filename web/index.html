@@ -593,6 +593,13 @@
       <button type="button" id="knopf-modell" class="modell-knopf">
         <span id="modell-name">Modell</span>
       </button>
+      <!-- Die Kiste: diese Karte gleich ins Archiv, ohne sie vorher schlafen
+           zu legen (Roli 23.09.2026). Steht hier an der Eingabezeile, weil man
+           genau hier merkt, dass die Karte voll ist; mit Rückfrage. -->
+      <button type="button" id="knopf-archivieren" class="knopf-diktat"
+              aria-label="Diese Karte ins Archiv stellen">
+        <svg viewBox="0 0 24 24"><use href="#i-archiv"/></svg>
+      </button>
       <span class="fueller"></span>
       <button type="submit" id="knopf-senden" class="knopf-senden" aria-label="Senden">
         <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
@@ -922,7 +929,7 @@
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-archiv"/></svg>
-          <span>Ins Archiv — alte Karten wegräumen statt löschen.</span>
+          <span>Ins Archiv — alte Karten wegräumen statt löschen. In der geöffneten Karte steht die Kiste an der Eingabezeile und legt die Karte in einem Schritt schlafen und ins Archiv.</span>
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-muell"/></svg>

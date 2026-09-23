@@ -443,3 +443,29 @@ entfernt. `py_compile` über beide geänderten Dateien fehlerfrei. Dienst neu ge
 Nicht geprüft: eine echte Karte über die App-Oberfläche archiviert und die Datei danach
 angesehen; Auswertung/Anzeige der gesammelten Daten (noch kein eigenes Werkzeug dafür,
 nur die Ablage).
+
+## V176 (23.09.2026): Karte direkt aus der Eingabezeile ins Archiv
+
+Auslöser Roli, 23.09. 08:11: „ich hätte gern die Möglichkeit, dass ich das gleich ins
+Archiv lege, ohne es vorher schlafen zu legen, wenn das technisch geht", dazu der Wunsch,
+den Archiv-Knopf nicht zwischen die anderen Knöpfe zu setzen, sondern „direkt neben der
+Textzeile". Um 19:00 bestätigt: gemeint ist die Eingabezeile in der geöffneten Karte.
+
+Lösung: Neuer Endpunkt `POST /api/sessions/{name}/archivieren` in `server.py`. Ist die
+Karte wach, legt er sie selbst schlafen (der Schlaf-Teil steckt jetzt in der gemeinsamen
+Hilfsfunktion `_einschlafen`, die auch `/schlafen` nutzt, samt Sperre „Claude arbeitet
+gerade"), hält dann wie beim Kisten-Knopf den Verbrauch fest (`verbrauch.protokolliere`,
+nur beim ersten Archivieren) und setzt `archiviert`. Fremde Sitzungen bekommen 403. In der
+Oberfläche sitzt eine Kiste (`#knopf-archivieren`) in der Eingabezeile rechts neben dem
+Modell-Knopf, mit Rückfrage; danach geht es zurück zur Liste. Bei fremden Sitzungen ist
+sie ausgeblendet. Die Kiste auf den Karten der Liste bleibt wie bisher für schlafende und
+abgestürzte Karten und zum Zurückholen. Legende ergänzt. VERSION 176.
+
+Geprüft im echten Browser (Chromium, 360 Pixel breit, Testanmeldung danach wieder
+entwertet): Probe-Karte in /tmp/probe-archiv angelegt, geöffnet, Kiste sichtbar und
+84 Pixel links vom Senden-Knopf, Rückfrage erscheint, danach Zustand „sleeping" und
+archiviert, tmux-Sitzung weg, keine Konsolenfehler. Probe-Karte gelöscht.
+Unterwegs: Die Einführungs-Tour lag im frischen Testbrowser über allem; im Test per
+localStorage als gesehen markiert.
+Nicht geprüft: am echten Handy; Verbrauchseintrag über diesen Weg (die Probe-Karte hatte
+kein Gespräch, daher kein Datenpunkt).
