@@ -469,3 +469,23 @@ Unterwegs: Die Einführungs-Tour lag im frischen Testbrowser über allem; im Tes
 localStorage als gesehen markiert.
 Nicht geprüft: am echten Handy; Verbrauchseintrag über diesen Weg (die Probe-Karte hatte
 kein Gespräch, daher kein Datenpunkt).
+
+## Sicherung (23.09.2026): Wächter erinnert täglich, solange GitHub klemmt
+
+Anlass: Roli fragte, ob alles bei GitHub liegt. Es lag nicht: Brain wurde seit 13.09. bei
+jedem Lauf abgewiesen, Einzelstein-Webseite seit rund 27 Tagen, Diktatwerk Windows & Chrome,
+KI WIKI, KRUGMEISTER_MARKETING und Klartext- seit rund fünf Wochen (Zähler in
+`~/.hetzner-app/sicherung-fehler/`). Ursache jeweils: auf GitHub liegt ein Stand, den der
+Server nicht hat, der Push wird als nicht vorspulbar abgelehnt. Der Wächter in
+`scripts/auto-sichern.sh` hat nur ein einziges Mal gewarnt, beim dritten Fehlschlag, und
+danach geschwiegen.
+
+Geändert: Nach der ersten Warnung erinnert er alle 144 Läufe erneut (bei zehn Minuten Takt
+einmal am Tag), mit Anzahl der Läufe und ungefähren Tagen. Zusätzlich schreibt er eine
+Warnzeile ins gemeinsame Ereignis-Log (`~/.ereignis.sh`, Stufe warn), damit es auch im
+Leitstand sichtbar ist und nicht nur als Push, der untergehen kann.
+
+Geprüft: `bash -n` sauber; Bedingung mit Beispielzahlen durchgerechnet (warnt bei 3, 147,
+291, nicht bei 2, 4, 146, 148). Nicht geprüft: echte Push-Zustellung (würde Roli eine
+Probe-Nachricht schicken). Die sechs klemmenden Projekte werden getrennt zusammengeführt.
+Weiterhin nicht abgedeckt: Projekte ganz ohne GitHub-Anbindung meldet der Wächter nicht.

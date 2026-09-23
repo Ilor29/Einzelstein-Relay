@@ -22,6 +22,11 @@ LAGER="${HOME}/git"
 # klemmen. Der Zähler je Projekt liegt außerhalb von ~/projekte (kein Git).
 FEHLER_DIR="${HOME}/.hetzner-app/sicherung-fehler"
 FEHLER_SCHWELLE=3
+# Danach erinnert er alle 144 Läufe (bei zehn Minuten Takt einmal am Tag) erneut.
+# Bis 23.09.2026 kam nur die eine Nachricht beim dritten Lauf; sie ging unter,
+# und Brain klemmte zehn Tage, vier andere Projekte fünf Wochen, ohne dass es
+# jemand merkte.
+FEHLER_ERINNERUNG=144
 HIER="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Eine Warnung aufs Handy schicken — über das App-Modul. Darf den Lauf nie stören.
@@ -99,10 +104,15 @@ sichere() {
         local n=$(( $(cat "$zaehler" 2>/dev/null || echo 0) + 1 ))
         echo "$n" > "$zaehler"
         echo "  → GitHub übersprungen (${n}. Lauf; kein Netz oder Stand divergiert)." >&2
-        # Genau EINMAL warnen, wenn die Schwelle erreicht ist — nicht bei jedem Lauf.
-        if [ "$n" -eq "$FEHLER_SCHWELLE" ]; then
+        # Beim Erreichen der Schwelle warnen, danach einmal am Tag erinnern,
+        # solange es klemmt. Nicht bei jedem Lauf, das wäre Lärm.
+        if [ "$n" -eq "$FEHLER_SCHWELLE" ] || \
+           { [ "$n" -gt "$FEHLER_SCHWELLE" ] && [ $(( (n - FEHLER_SCHWELLE) % FEHLER_ERINNERUNG )) -eq 0 ]; }; then
+          local tage=$(( n / 144 ))
           push_warnen "Sicherung außer Haus klemmt" \
-            "Das Projekt ${projekt} wird seit mehreren Läufen nicht mehr zu GitHub gesichert. Bitte nachsehen — kein Netz oder der Stand ist auseinandergelaufen."
+            "Das Projekt ${projekt} wird seit ${n} Läufen (rund ${tage} Tagen) nicht mehr zu GitHub gesichert. Meist ist der Stand auseinandergelaufen und muss zusammengeführt werden."
+          "${HOME}/.ereignis.sh" "sicherung" "GitHub-Sicherung klemmt: ${projekt}" \
+            "seit ${n} Läufen, rund ${tage} Tage" "warn" >/dev/null 2>&1 || true
         fi
       fi
     else
