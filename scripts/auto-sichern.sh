@@ -99,6 +99,14 @@ sichere() {
       if git -C "$arbeit" push --quiet github HEAD 2>/dev/null; then
         echo "  → auch zu GitHub gesichert."
         rm -f "$zaehler"                     # Fehlschlag-Serie beendet
+      elif git -C "$arbeit" fetch --quiet github 2>/dev/null && \
+           git -C "$arbeit" merge-base --is-ancestor HEAD "github/${zweig}" 2>/dev/null; then
+        # Harmloser Fall: GitHub ist nur weiter, weil am Laptop gearbeitet wurde.
+        # Hier liegt nichts, was dort fehlt, also kein Alarm. Nachgezogen wird
+        # bewusst nicht automatisch, sonst ändern sich Dateien unter einer
+        # laufenden Karte.
+        echo "  → GitHub ist weiter als der Server, hier ist nichts ungesichert."
+        rm -f "$zaehler"
       else
         mkdir -p "$FEHLER_DIR"
         local n=$(( $(cat "$zaehler" 2>/dev/null || echo 0) + 1 ))
