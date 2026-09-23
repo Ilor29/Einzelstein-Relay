@@ -489,3 +489,14 @@ Geprüft: `bash -n` sauber; Bedingung mit Beispielzahlen durchgerechnet (warnt b
 291, nicht bei 2, 4, 146, 148). Nicht geprüft: echte Push-Zustellung (würde Roli eine
 Probe-Nachricht schicken). Die sechs klemmenden Projekte werden getrennt zusammengeführt.
 Weiterhin nicht abgedeckt: Projekte ganz ohne GitHub-Anbindung meldet der Wächter nicht.
+
+Nachtrag am selben Abend: Vier der sechs Projekte (Diktatwerk Windows & Chrome, KI WIKI,
+KRUGMEISTER_MARKETING, Klartext-) waren gar nicht gefährdet. GitHub war nur weiter, weil am
+Laptop gearbeitet wurde; der Server hatte nichts, was dort fehlte. Der Push wird trotzdem
+abgelehnt, und der Wächter zählte das als Fehlschlag. Jetzt holt er nach einem abgelehnten
+Push den GitHub-Stand und prüft, ob der Server-Stand darin schon enthalten ist. Dann meldet
+er „GitHub ist weiter als der Server" und setzt den Zähler zurück. Nachgezogen wird bewusst
+nicht automatisch, damit sich keine Dateien unter einer laufenden Karte ändern.
+Geprüft mit einem echten Lauf: GOOGLE ADS-PULS fiel in den harmlosen Fall, Zähler weg;
+übrig bleibt nur Einzelstein-Webseite, die wirklich auseinandergelaufen ist (Server-Stand
+liegt vorläufig als Zweig `server-stand` bei GitHub).
