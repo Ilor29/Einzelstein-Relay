@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 175
+VERSION = 176
 
 
 @app.get("/api/version")
@@ -720,6 +720,12 @@ def session_schlafen(name: str) -> dict:
     if not treffer[0].eigen:
         raise HTTPException(403, "Diese Sitzung gehört nicht der App — sie bleibt.")
 
+    _einschlafen(name, treffer[0].cwd)
+    return {"ok": True}
+
+
+def _einschlafen(name: str, cwd: str) -> None:
+    """Terminal beenden und festhalten, was zum Aufwecken gebraucht wird."""
     # Mitten in der Arbeit wird nicht geschlafen: Ein Abriss jetzt hieße, dass
     # Claude einen halb ausgeführten Auftrag liegen lässt.
     if state.detect(name) == state.RUNNING:
@@ -730,13 +736,38 @@ def session_schlafen(name: str) -> dict:
     state.update(
         name,
         schlaeft=True,
-        cwd=treffer[0].cwd,
+        cwd=cwd,
         schlaf_zeit=int(time.time()),
         letzte_vorschau=state.preview(name),
         # Vor dem Abriss messen: So viel Speicher gibt das Schlafen frei.
         gespart_mb=speicher.chat_mb(name),
     )
     tmux.kill(name)
+
+
+@app.post("/api/sessions/{name}/archivieren", dependencies=[Depends(require_auth)])
+def session_archivieren(name: str) -> dict:
+    """Eine Karte direkt ins Archiv stellen, auch wenn sie noch wach ist.
+
+    Früher ging das nur über zwei Schritte: erst schlafen legen, dann
+    archivieren. Roli 23.09.2026: „gleich ins Archiv legen, ohne es vorher
+    schlafen zu legen". Die App legt die Sitzung dafür selbst schlafen, das
+    Archiv bleibt so frei von Lebendigem. Der Verbrauch wird vorher
+    festgehalten, genau wie beim Archivieren über die Kiste.
+    """
+    treffer = [s for s in tmux.list_sessions() if s.name == name]
+    if treffer and not treffer[0].eigen:
+        raise HTTPException(403, "Diese Sitzung gehört nicht der App — sie bleibt.")
+    if not treffer and not state.get(name).cwd:
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    if treffer:
+        _einschlafen(name, treffer[0].cwd)
+
+    vorher = state.get(name)
+    if not vorher.archiviert and vorher.cwd:
+        verbrauch.protokolliere(name, vorher.cwd)
+    state.update(name, archiviert=True)
     return {"ok": True}
 
 
