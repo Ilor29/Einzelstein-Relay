@@ -500,3 +500,19 @@ nicht automatisch, damit sich keine Dateien unter einer laufenden Karte ändern.
 Geprüft mit einem echten Lauf: GOOGLE ADS-PULS fiel in den harmlosen Fall, Zähler weg;
 übrig bleibt nur Einzelstein-Webseite, die wirklich auseinandergelaufen ist (Server-Stand
 liegt vorläufig als Zweig `server-stand` bei GitHub).
+
+## 27.09.2026: Befehle mit / und ! kommen ohne Uhrzeit an (Version 177)
+
+**Auslöser:** Roli schickte „/doctor" aus der Lese-Ansicht, Claude bekam „[27.09. 08:46] /doctor" als
+normalen Text. Roli, 08:48: „wäre da nicht auch sinnig, dass ich sowas in der Relay-App eintragen kann".
+Ursache: `sendeInSitzung` in `web/app.js` stellt jeder Nachricht still die Uhrzeit voran; Claude Code
+erkennt Befehle aber nur, wenn Schrägstrich oder Ausrufezeichen ganz vorne stehen. Seit 27.08. zweimal
+beobachtet (Gedächtnis „schraegstrich-befehle-kommen-als-text").
+
+**Wie gelöst:** Neben der Ausnahme für Anmelde-Codes eine zweite: `istBefehl = /^\s*(\/[a-z]|!\s*\S)/i`.
+Trifft sie, geht der Text ohne Uhrzeit (und ohne führende Leerzeichen) raus. Absichtlich nicht erfasst:
+„/ doctor", „/12 Uhr", ein einzelnes „!". Befehle mit Auswahlmenü (/doctor, /model) zeigen ihr Menü nur in
+der Terminal-Ansicht vollständig.
+
+**Geprüft:** Testserver 8799, Senden per Playwright abgefangen: „/doctor" und „! ls -la" unverändert,
+„Ganz normaler Satz" mit Uhrzeit, keine Konsolenfehler. Ausgerollt, `/api/version` = 177.

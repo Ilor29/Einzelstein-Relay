@@ -2018,10 +2018,15 @@ async function sendeInSitzung(text) {
   // Code ist leicht zu erkennen: ein langes Zeichenpaket ohne Leerzeichen,
   // wie es kein Mensch als Nachricht diktiert.
   const istCode = /^[A-Za-z0-9_#.-]{25,}$/.test(text);
+  // Befehle an Claude Code (/doctor, /compact, ! ls …) erkennt es nur, wenn
+  // Schrägstrich oder Ausrufezeichen ganz vorne stehen. Mit der Uhrzeit davor
+  // kamen sie als normaler Text an (Roli 27.09.2026: „wäre da nicht auch sinnig,
+  // dass ich sowas in der Relay-App eintragen kann").
+  const istBefehl = /^\s*(\/[a-z]|!\s*\S)/i.test(text);
   await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
     method: "POST",
     // Die Uhrzeit still vorangestellt, damit Claude immer weiß, wann jetzt ist.
-    body: JSON.stringify({ text: istCode ? text : `[${jetztStempel()}] ${text}` }),
+    body: JSON.stringify({ text: istCode ? text : istBefehl ? text.trim() : `[${jetztStempel()}] ${text}` }),
   });
   // Du hast gerade abgeschickt — jetzt willst du die Antwort sehen. Also wieder
   // ans Ende mitlaufen, egal wo du vorher standest.
