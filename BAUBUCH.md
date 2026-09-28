@@ -516,3 +516,23 @@ der Terminal-Ansicht vollständig.
 
 **Geprüft:** Testserver 8799, Senden per Playwright abgefangen: „/doctor" und „! ls -la" unverändert,
 „Ganz normaler Satz" mit Uhrzeit, keine Konsolenfehler. Ausgerollt, `/api/version` = 177.
+
+### 28.09.2026 11:26 — Speicher-Ampel: voller Swap allein ist kein Rot mehr (Brain 12)
+Auslöser (Roli): „ich hatte ja vorher gar nichts im Swap … wieso taucht es rot auf also bitte noch mal kontrollieren überprüfen"
+und vorher „die saugt sehr am speichern" über die Pachmayr-Karte.
+
+Befund: Laut sar war der Swap bis 10:40 leer. Zwischen 10:42 und 10:53 hat die Pachmayr-Karte für die Sortier-Probe
+zwei Sprachmodelle (Qwen3.5 4B und 9B, llama.cpp auf der CPU) geladen, das hat rund 3,9 GB in den Swap verdrängt.
+Die Modelle waren danach beendet, der Swap blieb aber voll, und die Ampel stand bei 22 GB verfügbarem Speicher auf Rot.
+Die Zeile „am dicksten: PACHMAYR (337 MB)" nannte nur die größte Karte, nicht den Verursacher, und hielt so die
+Pachmayr-Karte für schuld, obwohl sie nur ein paar MB größer war als die anderen.
+
+Lösung: Swap per `sudo swapoff -a && sudo swapon -a` zurück in den Arbeitsspeicher geholt (danach 0 MB Swap, 18 GB
+verfügbar). In `hetzner_app/speicher.py` zählt der Swap-Anteil jetzt nur, wenn zugleich wenig Speicher verfügbar
+ist (Rot: Swap über 85 % und unter 2000 MB verfügbar; Gelb: über 60 % und unter 4000 MB). Neu `groesstes_programm()`:
+das größte Programm auf dem ganzen Server, mit Projektname statt „python". Push-Text und Anzeige (`web/app.js`)
+nennen bei Rot zuerst das größte Programm, dann die größte Karte.
+
+Geprüft: ampel() mit den Zahlen vom Bild (22 GB frei, 86 % Swap) ergibt grün, 1,5 GB frei mit vollem Swap rot,
+300 MB frei rot; lauf() schreibt grün. Die app.js-Änderung wirkt erst nach dem nächsten Neustart des App-Dienstes
+(Versionsnummer), bewusst nicht neu gestartet, um laufende Karten nicht zu stören.

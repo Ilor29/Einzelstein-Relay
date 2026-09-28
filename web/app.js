@@ -591,8 +591,13 @@ async function ladeSpeicher() {
   zeile.classList.add(stand.ampel);
   let text = `Speicher: ${stand.verfuegbarMb} MB verfügbar · `
     + `Swap ${stand.swapBenutztMb}/${stand.swapGesamtMb} MB`;
+  // Größtes Programm zuerst: Die dickste Karte allein führte in die Irre
+  // (28.09.2026), weil Docker-Dienste oder Modelle weit mehr brauchen.
+  if (stand.ampel === "rot" && stand.groesstesProgramm) {
+    text += ` — größtes Programm: ${stand.groesstesProgramm.name} (${stand.groesstesProgramm.mb} MB)`;
+  }
   if (stand.ampel === "rot" && stand.dicksterChat) {
-    text += ` — am dicksten: ${stand.dicksterChat.name} (${stand.dicksterChat.mb} MB)`;
+    text += ` · größte Karte: ${stand.dicksterChat.name} (${stand.dicksterChat.mb} MB)`;
   }
   $("speicher-text").textContent = text;
   zeile.hidden = false;

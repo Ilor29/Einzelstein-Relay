@@ -36,10 +36,17 @@ GRUEN, GELB, ROT = "gruen", "gelb", "rot"
 # Ein Claude braucht 200-500 MB, also wird es unter 400 MB verfügbar ernst.
 # Beim Swap zählt der VERBRAUCH: Ist er zu großen Teilen voll, hat der Kernel
 # schon alles Faule ausgelagert und es bleibt kein Ausweichraum mehr.
+#
+# Aber nur, wenn zugleich der Arbeitsspeicher knapp ist. Ausgelagertes bleibt
+# im Swap liegen, auch wenn längst wieder genug frei ist (28.09.2026: eine
+# Modell-Probe hat kurz 4 GB verdrängt, danach 22 GB verfügbar und trotzdem
+# Dauer-Rot). Ein voller Swap bei viel freiem Speicher ist kein Alarm.
 ROT_VERFUEGBAR_MB = 400
 ROT_SWAP_ANTEIL = 0.85
+ROT_SWAP_NUR_UNTER_MB = 2000
 GELB_VERFUEGBAR_MB = 800
 GELB_SWAP_ANTEIL = 0.60
+GELB_SWAP_NUR_UNTER_MB = 4000
 
 
 def messen() -> dict:
@@ -63,9 +70,14 @@ def ampel(m: dict) -> str:
     swap_anteil = (
         m["swapBenutztMb"] / m["swapGesamtMb"] if m["swapGesamtMb"] else 0
     )
-    if m["verfuegbarMb"] < ROT_VERFUEGBAR_MB or swap_anteil > ROT_SWAP_ANTEIL:
+    frei = m["verfuegbarMb"]
+    if frei < ROT_VERFUEGBAR_MB or (
+        swap_anteil > ROT_SWAP_ANTEIL and frei < ROT_SWAP_NUR_UNTER_MB
+    ):
         return ROT
-    if m["verfuegbarMb"] < GELB_VERFUEGBAR_MB or swap_anteil > GELB_SWAP_ANTEIL:
+    if frei < GELB_VERFUEGBAR_MB or (
+        swap_anteil > GELB_SWAP_ANTEIL and frei < GELB_SWAP_NUR_UNTER_MB
+    ):
         return GELB
     return GRUEN
 
@@ -155,6 +167,38 @@ def dickster_chat() -> dict | None:
     return schwerster
 
 
+def groesstes_programm() -> dict | None:
+    """Welches Programm auf dem ganzen Server am meisten Speicher hält.
+
+    Der dickste Chat allein führt in die Irre: Er ist oft nur ein paar MB
+    größer als die anderen Karten, während Docker-Dienste oder ein lokales
+    Modell ein Vielfaches brauchen. Deshalb steht beides in der Anzeige.
+    """
+    try:
+        aus = subprocess.run(
+            ["ps", "-eo", "rss=,args=", "--sort=-rss"],
+            capture_output=True, text=True, timeout=10,
+        ).stdout
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    for zeile in aus.splitlines():
+        kb, _, befehl = zeile.strip().partition(" ")
+        if not befehl:
+            continue
+        teile = befehl.split()
+        name = Path(teile[0]).name
+        # Ein Projektordner im Befehl sagt mehr als "python" oder "node".
+        for t in teile:
+            if "/projekte/" in t:
+                name = t.split("/projekte/")[1].split("/")[0]
+                break
+            if "elasticsearch" in t:
+                name = "elasticsearch"
+                break
+        return {"name": name, "mb": int(kb) // 1024}
+    return None
+
+
 def lesen() -> dict | None:
     """Der letzte Messstand — für die App-Anzeige."""
     try:
@@ -193,6 +237,7 @@ def lauf() -> dict:
 
     if farbe == ROT:
         stand["dicksterChat"] = dickster_chat()
+        stand["groesstesProgramm"] = groesstes_programm()
 
     # Nur der UMSCHLAG auf Rot klingelt. Rot bleibt Rot: still. Erst ein
     # Wechsel weg von Rot spannt die Feder für die nächste Meldung neu.
@@ -201,9 +246,12 @@ def lauf() -> dict:
             f"Nur noch {m['verfuegbarMb']} MB verfügbar, "
             f"Swap {m['swapBenutztMb']} von {m['swapGesamtMb']} MB voll."
         )
+        if stand.get("groesstesProgramm"):
+            g = stand["groesstesProgramm"]
+            text += f" Größtes Programm: {g['name']} ({g['mb']} MB)."
         if stand["dicksterChat"]:
             d = stand["dicksterChat"]
-            text += f" Am dicksten: {d['name']} ({d['mb']} MB)."
+            text += f" Größte Karte: {d['name']} ({d['mb']} MB)."
         try:
             from . import melden
             melden.schicken("Speicher wird knapp", text)
