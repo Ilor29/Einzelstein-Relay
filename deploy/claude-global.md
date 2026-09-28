@@ -44,7 +44,7 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
 - **Entwürfe zeigt man direkt, nicht über Umwege.** Für Webseiten und HTML-Entwürfe
   gibt es einen eigenen Webspace: Was in `~/seiten/` liegt, ist sofort unter
   `https://seiten-roli.65-21-246-222.sslip.io/<ordner>/` erreichbar (Dienst
-  `seiten-roli.service`, Port 8803, kein Passwort, auf noindex gesetzt). Roli
+  `seiten-roli.service`, Port 8803, auf noindex gesetzt; Links sind frei, nur das Inhaltsverzeichnis ohne index.html verlangt seit 28.09.2026 ein Passwort). Roli
   arbeitet viel vom Handy, er braucht einen Link. Dasselbe gibt es für Lorenz
   (`seiten-lorenz`) und Lea (`seiten-lea`).
 - **Seiten vor dem Zeigen selbst im Browser aufmachen.** Playwright liegt in
