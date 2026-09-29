@@ -24,6 +24,11 @@ Bevor eine Runde startet, einmal die Angriffsfläche aufschreiben (kurz, für de
 
 Kleines Projekt (eine Datei, unter ca. 500 Zeilen, kein Server): Landkarte in drei Sätzen reicht.
 
+Liegt ein Teil der Angriffsfläche außerhalb des Projekts und braucht Sonderrechte zum Lesen
+(Proxy-Konfiguration wie /etc/caddy/Caddyfile, Firewall, systemd-Units), liest die Hauptprüfung ihn
+selbst und gibt den **Auszug wörtlich** in die Landkarte. Unteragenten haben diese Rechte oft nicht
+und würden sonst raten (Lehre aus dem Probelauf an CONTO, 29.09.2026).
+
 ## 2. Die Runden
 
 Jede Runde sucht **nur ihre Angriffsart**. Runden, die im Projekt keinen Eingang oder keine
@@ -95,6 +100,9 @@ Auswertung:
   mit einem Satz, warum. So sieht der Leser, dass daran gedacht wurde.
 - Widersprechen sich Runde und Gegenprüfer und ist es nicht klar entscheidbar: Fund bleibt,
   mit Vermerk „strittig" und beiden Sichtweisen. Lieber strittig melden als still streichen.
+
+Widersprechen sich zwei Runden in einer Tatsache (etwa „ist gegen fremde Formulare geschützt"
+gegen „ist es nicht"), geht genau diese Frage mit in die Gegenprüfung.
 
 **Ohne Unteragenten:** Gegenprüfung selbst in einem getrennten Durchgang, mit genau den Fragen
 aus der Vorlage, und im Bericht vermerken: „Gegenprüfung ohne unabhängigen Prüfer durchgeführt".

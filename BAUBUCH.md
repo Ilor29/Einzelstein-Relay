@@ -536,3 +536,27 @@ nennen bei Rot zuerst das größte Programm, dann die größte Karte.
 Geprüft: ampel() mit den Zahlen vom Bild (22 GB frei, 86 % Swap) ergibt grün, 1,5 GB frei mit vollem Swap rot,
 300 MB frei rot; lauf() schreibt grün. Die app.js-Änderung wirkt erst nach dem nächsten Neustart des App-Dienstes
 (Versionsnummer), bewusst nicht neu gestartet, um laufende Karten nicht zu stören.
+
+## 29.09.2026 · CODE//GUARD 1.3: Prüfrunden je Angriffsart und Gegenprüfung (Brain-Karte 16)
+
+Auslöser: Roli 29.09. 10:00 „Code upgrade ja, bitte skillradar karte mitgeben damit es auf der webseite upgeradet
+werden kann“, 15:17 „Ja, loslegen“. Idee aus dem Cloudflare-Beitrag „Build your own vulnerability harness“
+(Code dort nicht veröffentlicht, nur das Vorgehen übernommen).
+
+Lösung: Stammfassung `deploy/skills/code-guard` auf Version 1.3. Neue Referenz `references/angriffsrunden.md`:
+erst eine Landkarte (Eingänge, Senken, Vertrauensgrenzen, Geheimnisse), dann sieben Runden R1–R7 (Injection,
+Zugriff, Geheimnisse, Uploads, Anfragen nach außen, KI-Anbindung, Logik), bei mittleren Projekten als parallele
+Unteragenten. Jeder Fund braucht einen Angriffsweg mit Datei:Zeile, sonst kein Rot oder Orange. Jeder rote und
+orange Verdacht geht vor dem Bericht an einen unabhängigen Gegenprüfer, der nur die Behauptung kennt und sie zu
+widerlegen versucht. Bericht hat neue Blöcke „Prüfrunden“ und „Verworfene Verdachtsfälle“, Ampel zählt nur
+Gegengeprüftes. Installiert per `scripts/skills-installieren.sh`; Lea und Lorenz bekommen es mit dem nächsten
+Selbst-Update.
+
+Geprüft: Probelauf an CONTO (Server-Grundgerüst). Fünf Runden, vier Orange-Verdachtsfälle, davon einer bestätigt
+(andere Konten umgehen die Anmeldung über 127.0.0.1), drei auf Gelb abgeschwächt, einer davon mit falschen
+Zeilennummern der Runde, die der Gegenprüfer berichtigt hat. Bericht: `~/projekte/CONTO/doku/CODEGUARD-v1.0-2026-09-29.md`.
+
+Fehler unterwegs, als Lehre in die Anleitung übernommen: Die Zugriffsrunde konnte das Caddyfile nicht lesen
+(braucht sudo) und hat deshalb geraten; jetzt gibt die Hauptprüfung solche Auszüge wörtlich in die Landkarte.
+Zwei Runden widersprachen sich beim Formular-Schutz; solche Widersprüche gehen jetzt ausdrücklich in die
+Gegenprüfung.
