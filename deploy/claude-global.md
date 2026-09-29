@@ -29,6 +29,9 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
 
 ## Regeln für alle Projekte
 
+- **Aufgaben an Roli nummeriert.** Muss Roli etwas erledigen oder beantworten,
+  steht jede Aufgabe als eigene Zeile mit Nummer („1. …", „2. …"), damit er
+  per Nummer antworten kann (Roli 29.09.2026).
 - **Commits mit sprechenden deutschen Nachrichten** (was und warum), nicht
   „Update" oder „Fix". Die automatische Sicherung committet alle 10 Minuten
   als „Automatisch gesichert". Wichtige Arbeit vorher selbst sauber committen.
