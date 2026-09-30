@@ -3265,11 +3265,11 @@ async function aktualisiereKontextBalken() {
   const fuellung = $("kontext-fuellung");
   fuellung.style.width = voll + "%";
   // Ab 70% wird's eng, ab 90% staucht Claude bald zusammen — das zeigt die Farbe.
-  // Dazu die 150.000-Token-Regel (Beschluss 20.09.2026): Jeder Zug schickt den
+  // Dazu die 200.000-Token-Regel (Beschluss 20.09.2026, am 30.09.2026 von 150.000 hochgesetzt): Jeder Zug schickt den
   // ganzen Verlauf mit, also wird die Karte ab dort teuer und ein neues Fenster
   // fällig — auch wenn der Balken bei einer Million Kontext noch fast leer ist.
   kontextGroesse = { name: fuer, benutzt: typeof k.benutzt === "number" ? k.benutzt : 0 };
-  const neueKarte = typeof k.benutzt === "number" && k.benutzt >= 150000;
+  const neueKarte = typeof k.benutzt === "number" && k.benutzt >= 200000;
   fuellung.classList.toggle("knapp", (voll >= 70 && voll < 90) || (neueKarte && voll < 90));
   fuellung.classList.toggle("voll", voll >= 90);
   const tokens = typeof k.benutzt === "number" ? ` · ${tokenKurz(k.benutzt)} benutzt` : "";
