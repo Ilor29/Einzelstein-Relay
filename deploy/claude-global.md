@@ -50,6 +50,13 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
   `seiten-roli.service`, Port 8803, auf noindex gesetzt; Links sind frei, nur das Inhaltsverzeichnis ohne index.html verlangt seit 28.09.2026 ein Passwort). Roli
   arbeitet viel vom Handy, er braucht einen Link. Dasselbe gibt es für Lorenz
   (`seiten-lorenz`) und Lea (`seiten-lea`).
+- **Jedes Mockup bekommt einen festen Platz.** Mockups und Entwürfe liegen immer als
+  `~/seiten/<name>/index.html` mit einem sprechenden `<title>` (Projekt, was es zeigt) und
+  möglichst einer `<meta name="description">` mit einem Satz zum Zweck. Sie erscheinen dann von
+  selbst in der Mockup-Übersicht im LEIT//PULS (Mehr, „Mockups und Entwürfe“), mit Projekt und
+  Datum. Dort sieht Roli auch nach einer Übergabe alle Mockups wieder und markiert, was weg
+  kann. Gelöscht wird nur auf sein Wort, verschoben nach `~/papierkorb-seiten/`
+  (Roli 01.10.2026 09:16). Die Übersicht baut `leitstand/mockups-bauen.py` alle 10 Minuten.
 - **Seiten vor dem Zeigen selbst im Browser aufmachen.** Playwright liegt in
   `/home/roli/werkzeuge/browser/.venv`. Screenshot machen, Konsole auf Fehler
   ansehen, auf fehlende Dateien prüfen. Nicht raten lassen, was man selbst
