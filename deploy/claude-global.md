@@ -31,7 +31,7 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
 
 - **Aufgaben an Roli nummeriert.** Muss Roli etwas erledigen oder beantworten,
   steht jede Aufgabe als eigene Zeile mit Nummer („1. …", „2. …"), damit er
-  per Nummer antworten kann (Roli 29.09.2026).
+  per Nummer antworten kann (Roli 29.09.2026). **Die Nummern laufen im ganzen Gespräch fortlaufend weiter** (nach 1 bis 4 folgt 5, 6 …) und fangen nicht in jeder Antwort bei 1 neu an, damit Roli sie eindeutig zuordnen kann (Roli 08.10.2026 07:51).
 - **Commits mit sprechenden deutschen Nachrichten** (was und warum), nicht
   „Update" oder „Fix". Die automatische Sicherung committet alle 10 Minuten
   als „Automatisch gesichert". Wichtige Arbeit vorher selbst sauber committen.
