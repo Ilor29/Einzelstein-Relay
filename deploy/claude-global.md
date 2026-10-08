@@ -32,6 +32,12 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
 - **Aufgaben an Roli nummeriert.** Muss Roli etwas erledigen oder beantworten,
   steht jede Aufgabe als eigene Zeile mit Nummer („1. …", „2. …"), damit er
   per Nummer antworten kann (Roli 29.09.2026). **Die Nummern laufen im ganzen Gespräch fortlaufend weiter** (nach 1 bis 4 folgt 5, 6 …) und fangen nicht in jeder Antwort bei 1 neu an, damit Roli sie eindeutig zuordnen kann (Roli 08.10.2026 07:51).
+- **Neue oder geänderte Skills gehören ins gemeinsame Repository.** Legst du unter
+  `~/.claude/skills` einen eigenen oder MIT-lizenzierten Skill an oder änderst ihn, trägst
+  du ihn in `~/projekte/Skills/FREIGABE.txt` ein und startest `~/projekte/Skills/abgleichen.sh`
+  (läuft sonst nachts um 03:15). Fremde Skills ohne klare Lizenz kommen nicht hinein. Das Repo
+  (Ilor29/Skills, privat) bleibt frei von Schlüsseln und Passwörtern; der Lauf bricht bei
+  einem Fund ab (Roli 08.10.2026 07:56).
 - **Commits mit sprechenden deutschen Nachrichten** (was und warum), nicht
   „Update" oder „Fix". Die automatische Sicherung committet alle 10 Minuten
   als „Automatisch gesichert". Wichtige Arbeit vorher selbst sauber committen.
