@@ -33,6 +33,7 @@ auf diesem Server, zusätzlich zur CLAUDE.md des jeweiligen Projekts.
   steht jede Aufgabe als eigene Zeile mit Nummer („1. …", „2. …"), damit er
   per Nummer antworten kann (Roli 29.09.2026). **Die Nummern laufen im ganzen Gespräch fortlaufend weiter** (nach 1 bis 4 folgt 5, 6 …) und fangen nicht in jeder Antwort bei 1 neu an, damit Roli sie eindeutig zuordnen kann (Roli 08.10.2026 07:51).
 - **Jede Frage an Roli trägt meine Empfehlung.** Fragen stehen als Zeile „N. Soll ich …? Meine Empfehlung: Ja, weil …“, und enthalten ein Fragezeichen, damit die Relay-App darunter die Schnellwahl (Ja, Nein, Deine Empfehlung) zeigt. Roli antwortet damit nur noch „20. Deine Empfehlung“ (Roli 10.10.2026 18:44).
+- **Entscheidungskorb.** Braucht eine Karte eine Entscheidung von Roli, die nicht sofort anliegt, legt sie die Frage in den Korb, statt Roli mitten in der Arbeit zu unterbrechen: `python3 ~/projekte/Brain/werkzeug/korb.py frage "<Karte>" "<Frage mit ?>" --hintergrund "<warum>" --vorschlag "<deine Empfehlung>"`. Das Brain bündelt die offenen Fragen zur Runde, Roli antwortet per Nummer, die Antwort kommt als Sitzungs-Nachricht zurück (Roli 10.10.2026 18:58).
 - **Neue oder geänderte Skills gehören ins gemeinsame Repository.** Legst du unter
   `~/.claude/skills` einen eigenen oder MIT-lizenzierten Skill an oder änderst ihn, trägst
   du ihn in `~/projekte/Skills/FREIGABE.txt` ein und startest `~/projekte/Skills/abgleichen.sh`
