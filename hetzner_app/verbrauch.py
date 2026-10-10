@@ -71,50 +71,121 @@ def kontext(cwd: str) -> dict | None:
         schluessel = (str(datei), st.st_size, st.st_mtime_ns)
         alt = _kontext_cache.get(cwd)
         if alt and alt[0] == schluessel:
-            return alt[1]
+            return _mit_cache_rest(alt[1])
         wert = _kontext_lesen(datei)
         _kontext_cache[cwd] = (schluessel, wert)
-        return wert
+        return _mit_cache_rest(wert)
     except OSError:
         return None
 
 
+# --- Prompt-Cache -------------------------------------------------------------
+#
+# Anthropic hält den vorderen, unveränderten Teil einer Unterhaltung als
+# Zwischenspeicher („Prompt-Cache") vor. Trifft ein Zug den Speicher, kosten
+# diese Token nur ein Zehntel; ist er abgelaufen, wird der ganze Verlauf neu
+# angelegt (1,25-fach) — bei einer großen Karte also rund das Zwölffache eines
+# warmen Zuges. Jeder Zug erneuert die Lebensdauer. Wie lang sie ist, steht in
+# jeder Abrechnung: cache_creation.ephemeral_1h_input_tokens (eine Stunde) oder
+# …ephemeral_5m_input_tokens (fünf Minuten). Auf diesem Server ist praktisch
+# alles auf eine Stunde (Zählung 10.10.2026: 114.000 Einträge mit 1 h gegen
+# 46 mit 5 min). Die Anzeige wünschte sich Roli am 10.10.2026 16:40, um vor
+# einem teuren Zug entweder weiterzuarbeiten, solange es warm ist, oder gleich
+# eine Übergabe zu machen.
+_CACHE_TTL_ANNAHME = 3600
+
+
+def _zeitpunkt(iso: str | None) -> float | None:
+    """ISO-Zeitstempel der Mitschrift („2026-10-10T14:47:32.775Z") als Epoche."""
+    if not iso:
+        return None
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(iso).timestamp()
+    except ValueError:
+        return None
+
+
+def _mit_cache_rest(wert: dict | None) -> dict | None:
+    """Die Restwärme JETZT ausrechnen — der Rest ist aus der Mitschrift zwischengespeichert."""
+    if not wert or not wert.get("cache"):
+        return wert
+    c = dict(wert["cache"])
+    c["rest_s"] = max(0, int(c["warm_bis"] - time.time()))
+    c["warm"] = c["rest_s"] > 0
+    c["kalt_seit_s"] = 0 if c["warm"] else int(time.time() - c["warm_bis"])
+    aus = dict(wert)
+    aus["cache"] = c
+    return aus
+
+
 def _kontext_lesen(datei: Path, happen: int = 262_144) -> dict | None:
-    """Die jüngste Token-Abrechnung vom Ende der Mitschrift."""
+    """Die jüngste Token-Abrechnung vom Ende der Mitschrift — und dazu, wann der
+    letzte Zug war und wie lange sein Prompt-Cache lebt."""
     with open(datei, "rb") as f:
         f.seek(0, os.SEEK_END)
         groesse = f.tell()
         f.seek(max(0, groesse - happen))
         rest = f.read().decode("utf-8", "replace")
 
+    ergebnis: dict | None = None
+    zuletzt: float | None = None     # jüngster Zug der Hauptunterhaltung
+    ttl: int | None = None           # Lebensdauer des Caches laut Abrechnung
+    gesehen = 0
     for zeile in reversed(rest.splitlines()):
-        if '"usage"' not in zeile:
+        if '"timestamp"' not in zeile:
             continue
         try:
             eintrag = json.loads(zeile)
         except ValueError:
             continue        # die erste Zeile des Happens ist oft angeschnitten
         # Unteragenten führen eigene Unterhaltungen mit eigenem, kleinerem
-        # Kontext — ihr Füllstand ist nicht der der Sitzung.
-        if eintrag.get("isSidechain") or eintrag.get("type") != "assistant":
+        # Kontext und eigenem Cache — ihr Stand ist nicht der der Sitzung.
+        if eintrag.get("isSidechain") or eintrag.get("type") not in ("user", "assistant"):
+            continue
+        # Der jüngste Eintrag, egal ob Frage oder Antwort: Auf jede Frage (auch
+        # ein Werkzeug-Ergebnis) folgt sofort ein Zug, der den Cache erneuert.
+        if zuletzt is None:
+            zuletzt = _zeitpunkt(eintrag.get("timestamp"))
+        if eintrag.get("type") != "assistant":
             continue
         usage = eintrag.get("message", {}).get("usage") or {}
-        benutzt = (
-            (usage.get("input_tokens") or 0)
-            + (usage.get("cache_read_input_tokens") or 0)
-            + (usage.get("cache_creation_input_tokens") or 0)
-        )
-        if benutzt <= 0:
-            continue
-        modell = eintrag.get("message", {}).get("model") or ""
-        limit = _limit_fuer(modell)
-        return {
-            "benutzt": benutzt,
-            "limit": limit,
-            "prozent": min(100, round(benutzt * 100 / limit)),
-            "modell": modell,
+        if ergebnis is None:
+            benutzt = (
+                (usage.get("input_tokens") or 0)
+                + (usage.get("cache_read_input_tokens") or 0)
+                + (usage.get("cache_creation_input_tokens") or 0)
+            )
+            if benutzt > 0:
+                modell = eintrag.get("message", {}).get("model") or ""
+                limit = _limit_fuer(modell)
+                ergebnis = {
+                    "benutzt": benutzt,
+                    "limit": limit,
+                    "prozent": min(100, round(benutzt * 100 / limit)),
+                    "modell": modell,
+                }
+        if ttl is None:
+            anlage = usage.get("cache_creation") or {}
+            if (anlage.get("ephemeral_1h_input_tokens") or 0) > 0:
+                ttl = 3600
+            elif (anlage.get("ephemeral_5m_input_tokens") or 0) > 0:
+                ttl = 300
+        gesehen += 1
+        # Reine Lese-Züge nennen keine Lebensdauer; ein paar Züge zurückschauen
+        # reicht, danach gilt die Annahme (eine Stunde, siehe oben).
+        if ergebnis is not None and (ttl is not None or gesehen >= 40):
+            break
+    if ergebnis is None:
+        return None
+    if zuletzt is not None:
+        ergebnis["cache"] = {
+            "ttl_s": ttl if ttl is not None else _CACHE_TTL_ANNAHME,
+            "angenommen": ttl is None,
+            "zuletzt": zuletzt,
+            "warm_bis": zuletzt + (ttl if ttl is not None else _CACHE_TTL_ANNAHME),
         }
-    return None
+    return ergebnis
 
 
 # --- Verlauf --------------------------------------------------------------

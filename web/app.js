@@ -3212,6 +3212,9 @@ async function oeffneVerbrauchsBlatt() {
         daten.kontext.prozent,
         `${tokenKurz(daten.kontext.benutzt)} / ${tokenKurz(daten.kontext.limit)}`
       ));
+      kontextGroesse = { name: aktuelleSitzung.name, benutzt: daten.kontext.benutzt || 0 };
+      const cz = cacheZeile(daten.kontext.cache);
+      if (cz) liste.appendChild(cz);
     }
     for (const limit of daten.limits || []) {
       liste.appendChild(verbrauchZeile(limit.name, limit.prozent, resetText(limit.reset)));
@@ -3274,8 +3277,59 @@ async function aktualisiereKontextBalken() {
   fuellung.classList.toggle("voll", voll >= 90);
   const tokens = typeof k.benutzt === "number" ? ` · ${tokenKurz(k.benutzt)} benutzt` : "";
   $("kontext-text").textContent =
-    `Kontext ${frei}% frei${tokens}${neueKarte ? " · neue Karte" : ""}`;
+    `Kontext ${frei}% frei${tokens}${neueKarte ? " · neue Karte" : ""}${cacheKurz(k.cache)}`;
   balken.hidden = false;
+}
+
+// --- Prompt-Cache: wie lange die Karte noch warm ist --------------------------
+// Anthropic hält den Verlauf eine Stunde (manchmal fünf Minuten) als
+// Zwischenspeicher vor; jeder Zug erneuert das. Ein Zug in eine warme Karte
+// zahlt für den alten Verlauf ein Zehntel, ein Zug in eine kalte legt alles
+// neu an (1,25-fach) — bei einer großen Karte rund das Zwölffache. Darum
+// steht hier, wie viel Wärme noch da ist, und bei kalt UND groß eine Warnung:
+// dann lieber Übergabe und neue Karte (Roli 10.10.2026 16:40).
+const CACHE_WARNUNG_AB = 100000;   // Token benutzt — darunter ist Neuaufbau verschmerzbar
+
+function dauerKurz(s) {
+  s = Math.max(0, Math.round(s));
+  if (s < 60) return `${s} s`;
+  const m = Math.round(s / 60);
+  if (m <= 90) return `${m} min`;   // „60 min“ liest sich besser als „1 h 0 min“
+  const h = Math.floor(m / 60);
+  return `${h} h ${m % 60} min`;
+}
+
+function cacheKurz(c) {
+  if (!c || typeof c.rest_s !== "number") return "";
+  if (c.warm) return ` · Cache warm ${dauerKurz(c.rest_s)}`;
+  const teuer = kontextGroesse.benutzt >= CACHE_WARNUNG_AB;
+  return teuer ? " · ⚠ Cache kalt, Neuaufbau teuer" : " · Cache kalt";
+}
+
+function cacheZeile(c) {
+  if (!c || typeof c.rest_s !== "number") return null;
+  const lebensdauer = dauerKurz(c.ttl_s) + (c.angenommen ? " (angenommen)" : "");
+  if (c.warm) {
+    const prozent = Math.round(100 * (1 - c.rest_s / Math.max(1, c.ttl_s)));
+    const z = verbrauchZeile("Cache-Wärme", prozent,
+      `warm noch ${dauerKurz(c.rest_s)} von ${lebensdauer}`);
+    z.appendChild(verbrauchHinweis(
+      "Der Balken zeigt, wie viel der Lebensdauer schon um ist. Jeder Zug erneuert sie; solange die Karte warm ist, kostet der alte Verlauf nur ein Zehntel."));
+    return z;
+  }
+  const z = verbrauchZeile("Cache-Wärme", 100, `kalt seit ${dauerKurz(c.kalt_seit_s)}`);
+  z.appendChild(verbrauchHinweis(
+    kontextGroesse.benutzt >= CACHE_WARNUNG_AB
+      ? `Der nächste Zug legt den ganzen Verlauf (${tokenKurz(kontextGroesse.benutzt)}) neu an, rund zwölfmal so teuer wie ein warmer Zug. Lieber Übergabe schreiben und eine neue Karte aufmachen.`
+      : "Der nächste Zug legt den Verlauf neu an; bei dieser Größe ist das verschmerzbar."));
+  return z;
+}
+
+function verbrauchHinweis(text) {
+  const h = document.createElement("div");
+  h.className = "verbrauch-hinweis";
+  h.textContent = text;
+  return h;
 }
 
 function blattZu() {

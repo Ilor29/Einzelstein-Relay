@@ -560,3 +560,38 @@ Fehler unterwegs, als Lehre in die Anleitung übernommen: Die Zugriffsrunde konn
 (braucht sudo) und hat deshalb geraten; jetzt gibt die Hauptprüfung solche Auszüge wörtlich in die Landkarte.
 Zwei Runden widersprachen sich beim Formular-Schutz; solche Widersprüche gehen jetzt ausdrücklich in die
 Gegenprüfung.
+
+## V178 (10.10.2026): Cache-Wärme im Kontext-Balken und im Verbrauchs-Blatt (Brain-Karte 23)
+
+Auslöser Roli, 10.10. 16:40: „Können wir in der Relay-App oder in der Leitzentrale den Cache
+sehen? Wie viel Zeit ist da noch, wann läuft das ab, damit man Token sparen kann oder dass man
+eine Übergabe macht.“ Vorbild waren die Mods „cache-tax“ und „keepwarm“ von Julian Ivanov; der
+Sperr-Mechanismus (Eingabe blockieren) wurde bewusst weggelassen, hier wird nur angezeigt und gewarnt.
+
+Hintergrund: Anthropic hält den unveränderten Verlauf als Prompt-Cache vor. Trifft ein Zug den
+Speicher, kosten diese Token ein Zehntel; ist er abgelaufen, wird alles neu angelegt (1,25-fach),
+also rund das Zwölffache eines warmen Zuges. Jeder Zug erneuert die Lebensdauer. Vorfrage „5 Minuten
+oder 1 Stunde“ aus der Mitschrift beantwortet: Jede Abrechnung trägt `cache_creation` mit
+`ephemeral_1h_input_tokens` oder `ephemeral_5m_input_tokens`; Zählung über alle Mitschriften am
+10.10.: 114.000 Einträge mit 1 h, 46 mit 5 min. Die Lebensdauer wird je Karte aus der Abrechnung
+gelesen, Annahme 1 h nur, wenn die letzten 40 Züge reine Lese-Züge waren.
+
+Lösung: `verbrauch._kontext_lesen` liest zusätzlich den jüngsten Zug der Hauptunterhaltung (Frage
+oder Antwort, ohne Unteragenten) und die Lebensdauer; `kontext()` liefert dazu `cache` mit `ttl_s`,
+`zuletzt`, `warm_bis`, und bei jedem Aufruf frisch `rest_s`, `warm`, `kalt_seit_s` (die Mitschrift
+bleibt zwischengespeichert, nur die Restzeit wird neu gerechnet). Der Balken zeigt „Cache warm
+42 min“ oder „Cache kalt“, bei kalt und über 100.000 Token „⚠ Cache kalt, Neuaufbau teuer“. Im
+Verbrauchs-Blatt eine Zeile „Cache-Wärme“ mit Balken (wie viel der Lebensdauer um ist) und einem
+Satz dazu; bei kalt und groß der Rat, Übergabe zu schreiben und eine neue Karte zu öffnen. Keine
+Preise in Dollar, nur der Faktor, weil Preise je Modell anders sind.
+
+Fehler unterwegs: Der längere Text verschluckte den Balken (auf 430 Pixel blieb ein Stummel). Jetzt
+hat die Schiene eine Mindestbreite und der Text darf in zwei Zeilen umbrechen.
+
+Geprüft: Mit dem Python des Dienstes an allen laufenden Karten (warm mit Restzeit, PACHMAYR 10 kalt
+seit 32 h). Im echten Browser gegen den Testserver 8799 (Anmeldung per dependency_overrides
+ausgehängt, Startskript in /tmp): Brain 23 „Cache warm 60 min“, PACHMAYR 10 Warnung, Blatt mit
+Hinweistext, keine Konsolenfehler, Screenshots angesehen. Dienst neu gestartet, `/api/version` 178.
+Derselbe Leser versorgt den LEIT//PULS (leitstand/lage-messen.py importiert `hetzner_app.verbrauch`).
+Nicht geprüft: am echten Handy. Bekannte Grenze: Karten im selben Ordner (Skillsradar 15/17/20)
+teilen sich die jüngste Mitschrift, wie schon beim Kontext-Füllstand.
