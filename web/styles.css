@@ -2340,3 +2340,11 @@ mark.treffer.aktuell { background: var(--akzent); color: #fff; }
   font: inherit; font-weight: 600; cursor: pointer;
 }
 .uebergabe-knopf:active { filter: brightness(1.2); }
+
+/* Entscheidungskorb oben in der Kartenliste */
+.korb { margin: .2rem 0 .6rem; }
+.korb-frage { margin: .3rem 0; padding: .6rem .7rem; background: var(--erhoben); border: 1px solid var(--linie); border-left: 3px solid var(--akzent, #D97757); border-radius: .8rem; }
+.korb-karte { font-size: .75rem; color: var(--schrift-schwach); font-weight: 600; margin-bottom: .15rem; }
+.korb-text { font-size: .98rem; line-height: 1.4; margin-bottom: .25rem; }
+.korb-hinter { font-size: .82rem; color: var(--schrift-leise); margin-bottom: .2rem; }
+.korb .wahl-reihe { display: flex; margin-top: .35rem; }

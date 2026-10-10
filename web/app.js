@@ -461,6 +461,67 @@ function karte(sitzung) {
   return el;
 }
 
+// Entscheidungskorb (Roli 10.10.2026 22:20 „37. Ja“): offene Fragen der Karten, oben in der
+// Liste, mit denselben Tasten wie unter den Fragen im Verlauf. Ein Tipp schickt die Antwort
+// sofort an die Karte, die gefragt hat.
+function korbKasten(fragen) {
+  const kasten = document.createElement("div");
+  kasten.className = "korb";
+  const kopf = document.createElement("div");
+  kopf.className = "gruppe";
+  kopf.innerHTML = `<span class="titel">Entscheidungskorb</span><span class="anzahl">${fragen.length}</span>`;
+  kasten.append(kopf);
+  for (const q of fragen) {
+    const zeile = document.createElement("div");
+    zeile.className = "korb-frage";
+    const wer = document.createElement("div");
+    wer.className = "korb-karte";
+    wer.textContent = q.karte;
+    const text = document.createElement("div");
+    text.className = "korb-text";
+    text.textContent = q.frage;
+    zeile.append(wer, text);
+    if (q.hintergrund) {
+      const h = document.createElement("div");
+      h.className = "korb-hinter";
+      h.textContent = q.hintergrund;
+      zeile.append(h);
+    }
+    if (q.vorschlag) {
+      const v = document.createElement("div");
+      v.className = "korb-hinter";
+      v.textContent = "Vorschlag der Karte: " + q.vorschlag;
+      zeile.append(v);
+    }
+    const reihe = document.createElement("div");
+    reihe.className = "wahl-reihe";
+    for (const [label, wert] of [["Ja", "ja"], ["Nein", "nein"], ["Empfehlung", "empfehlung"]]) {
+      const k = document.createElement("button");
+      k.type = "button";
+      k.className = "wahl-taste";
+      k.textContent = label;
+      k.addEventListener("click", async () => {
+        reihe.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+        try {
+          const r = await (await api(`/korb/${q.id}/antwort`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ antwort: wert }),
+          })).json();
+          melde(r.zugestellt ? `Antwort an ${q.karte} geschickt.` : "Antwort festgehalten, das Brain gibt sie weiter.");
+          ladeListe();
+        } catch (err) {
+          melde(err.message || "Die Antwort ging nicht durch.");
+          reihe.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+        }
+      });
+      reihe.append(k);
+    }
+    zeile.append(reihe);
+    kasten.append(zeile);
+  }
+  return kasten;
+}
+
 // Welche klappbaren Gruppen gerade offen stehen — gemerkt über die Neuladungen
 // hinweg. Ohne das baute der 5-Sekunden-Takt die Liste neu und klappte alles
 // wieder zu; man tippte auf, und beim nächsten Takt war es zu.
@@ -474,8 +535,12 @@ async function ladeListe() {
     return;   // nicht angemeldet — die Ansicht hat schon gewechselt
   }
 
+  let korbFragen = [];
+  try { korbFragen = await (await api("/korb", taktOptionen())).json(); } catch { /* ohne Korb weiter */ }
+
   const liste = $("liste");
   liste.replaceChildren();
+  if (korbFragen.length) liste.append(korbKasten(korbFragen));
 
   if (sitzungen.length === 0) {
     const leer = document.createElement("p");

@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import befehle, bibliothek, geraete, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
+from . import befehle, bibliothek, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -233,7 +233,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 182
+VERSION = 183
 
 
 @app.get("/api/version")
@@ -1947,6 +1947,57 @@ def session_antwort(name: str, body: Antwort) -> dict:
 
     tmux.send_text(name, str(body.nummer))
     return {"ok": True}
+
+
+class KorbAntwort(BaseModel):
+    antwort: str  # "ja", "nein" oder "empfehlung"
+
+
+@app.get("/api/korb", dependencies=[Depends(require_auth)])
+def korb_offen() -> list[dict]:
+    """Offene Fragen der Karten an Roli (Entscheidungskorb)."""
+    return [
+        {"id": q["id"], "karte": q["karte"], "frage": q["frage"],
+         "hintergrund": q.get("hintergrund", ""), "vorschlag": q.get("vorschlag", "")}
+        for q in korb.offene()
+    ]
+
+
+@app.post("/api/korb/{frage_id}/antwort", dependencies=[Depends(require_auth)])
+async def korb_antwort(frage_id: int, body: KorbAntwort) -> dict:
+    """Roli antwortet per Taste. Die Antwort geht direkt in die Karte, die gefragt hat,
+    sofern sie in der Relay so heißt wie im Korb; sonst bleibt sie als beantwortet
+    liegen und das Brain gibt sie weiter."""
+    if body.antwort not in ("ja", "nein", "empfehlung"):
+        raise HTTPException(400, "Antwort muss ja, nein oder empfehlung sein.")
+
+    def nachricht(q: dict) -> str:
+        wort = {"ja": "Ja.", "nein": "Nein.",
+                "empfehlung": "Mach es, wie du es empfohlen hast." + (f" ({q['vorschlag']})" if q.get("vorschlag") else "")}[body.antwort]
+        return f"Antwort aus dem Entscheidungskorb auf deine Frage \"{q['frage']}\": {wort}"
+
+    ziel = {"name": None}
+
+    def zustellen(q: dict, text: str) -> bool:
+        gesucht = q["karte"].strip().casefold()
+        for s in state.overview():
+            if gesucht in (str(s.get("anzeige", "")).strip().casefold(), str(s.get("name", "")).strip().casefold()):
+                ziel["name"] = s["name"]
+                return True
+        return False
+
+    # Erst die Karte suchen, dann senden; festgehalten wird so oder so.
+    q = korb.antworten(frage_id, body.antwort, zustellen)
+    if q is None:
+        raise HTTPException(404, "Diese Frage ist nicht mehr offen.")
+    if ziel["name"]:
+        try:
+            await session_senden(ziel["name"], Nachricht(text=nachricht(q)))
+        except HTTPException as e:
+            # Karte beschäftigt oder weg: Antwort bleibt festgehalten, das Brain stellt zu.
+            korb.zurueck_auf_beantwortet(frage_id)
+            return {"ok": True, "zugestellt": False, "grund": e.detail}
+    return {"ok": True, "zugestellt": bool(ziel["name"]), "karte": q["karte"]}
 
 
 @app.post("/api/sessions/{name}/modus", dependencies=[Depends(require_auth)])
