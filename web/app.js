@@ -986,6 +986,8 @@ function verlaufBlock(block) {
 
     leiste.append(hoeren, kopieren, teilen, zeitmarke(block.zeit));
     el.append(text, leiste);
+    const wahl = baueSchnellwahl(block.text);
+    if (wahl) el.append(wahl);
     return el;
   }
 
@@ -3215,6 +3217,11 @@ async function oeffneVerbrauchsBlatt() {
       kontextGroesse = { name: aktuelleSitzung.name, benutzt: daten.kontext.benutzt || 0 };
       const cz = cacheZeile(daten.kontext.cache);
       if (cz) liste.appendChild(cz);
+      // Ab 100.000 Token (oder kalt) ist eine Übergabe der günstige Weg: ein Zug
+      // jetzt statt eines teuren Neuaufbaus später.
+      if (daten.kontext.benutzt >= CACHE_WARNUNG_AB || (daten.kontext.cache && !daten.kontext.cache.warm)) {
+        liste.appendChild(uebergabeKnopf());
+      }
     }
     for (const limit of daten.limits || []) {
       liste.appendChild(verbrauchZeile(limit.name, limit.prozent, resetText(limit.reset)));
@@ -6197,3 +6204,115 @@ start();
   window.addEventListener("orientationchange", () => { basis = 0; setTimeout(messen, 300); });
   messen();
 })();
+
+// --- Schnellwahl unter nummerierten Fragen ---------------------------------------
+// Roli 10.10.2026 18:44: „wenn eine Zahl kommt … eine Schnellwahltaste, wo ich
+// nur Ja, Nein oder Deine Empfehlung sagen kann, bevor ich jedes Mal was tippen
+// muss“. Fragen an ihn stehen als Zeilen „20. Soll ich …?“. Unter der jüngsten
+// Antwort bekommt jede solche Zeile drei Tasten. Ein Tipp trägt „20. Ja“ in
+// das Eingabefeld ein (ein zweiter Tipp auf dieselbe Taste nimmt es zurück,
+// ein anderer ersetzt es), gesendet wird erst mit dem Senden-Pfeil, so kann man
+// mehrere Fragen beantworten und dann einmal abschicken.
+const WAHL_ANTWORTEN = [["Ja", "Ja"], ["Nein", "Nein"], ["Empfehlung", "Deine Empfehlung"]];
+
+function baueSchnellwahl(text) {
+  const fragen = [];
+  for (const zeile of String(text || "").split("\n")) {
+    const t = zeile.match(/^\s*(\d{1,3})\.\s+(.*\?)\s*$/);   // Zeile mit Nummer, die mit ? endet
+    if (t) fragen.push(Number(t[1]));
+  }
+  if (!fragen.length) return null;
+  const box = document.createElement("div");
+  box.className = "schnellwahl";
+  const alle = [...new Set(fragen)];
+  for (const nr of alle) {
+    const reihe = document.createElement("div");
+    reihe.className = "wahl-reihe";
+    const zahl = document.createElement("span");
+    zahl.className = "wahl-nr";
+    zahl.textContent = nr + ".";
+    reihe.append(zahl);
+    for (const [label, satz] of WAHL_ANTWORTEN) {
+      const k = document.createElement("button");
+      k.type = "button";
+      k.className = "wahl-taste";
+      k.dataset.nr = nr;
+      k.dataset.satz = satz;
+      k.textContent = label;
+      k.addEventListener("click", () => waehle(nr, satz, box));
+      reihe.append(k);
+    }
+    box.append(reihe);
+  }
+  if (alle.length > 1) {
+    const reihe = document.createElement("div");
+    reihe.className = "wahl-reihe";
+    const k = document.createElement("button");
+    k.type = "button";
+    k.className = "wahl-taste wahl-alle";
+    k.textContent = "Überall: deine Empfehlung";
+    k.addEventListener("click", () => { for (const nr of alle) waehle(nr, "Deine Empfehlung", box, true); });
+    reihe.append(k);
+    box.append(reihe);
+  }
+  return box;
+}
+
+function waehle(nr, satz, box, nurSetzen = false) {
+  const feld = $("eingabe");
+  const zeilen = feld.value.split("\n").filter((z) => z.trim() !== "");
+  const re = new RegExp(`^${nr}\\.\\s`);
+  const i = zeilen.findIndex((z) => re.test(z));
+  const neu = `${nr}. ${satz}`;
+  if (i >= 0 && zeilen[i] === neu && !nurSetzen) zeilen.splice(i, 1);    // nochmal getippt: zurücknehmen
+  else if (i >= 0) zeilen[i] = neu;
+  else zeilen.push(neu);
+  // Nach Nummer sortieren, damit die Antwort in der Reihenfolge der Fragen steht.
+  const num = (z) => { const m = z.match(/^(\d+)\.\s/); return m ? Number(m[1]) : 1e9; };
+  zeilen.sort((a, b) => num(a) - num(b));
+  feld.value = zeilen.join("\n");
+  feld.dispatchEvent(new Event("input", { bubbles: true }));
+  // Welche Taste gilt, sieht man an der Füllung (und am Haken, nicht nur an der Farbe).
+  const gewaehlt = {};
+  for (const z of zeilen) { const m = z.match(/^(\d+)\.\s(.*)$/); if (m) gewaehlt[m[1]] = m[2]; }
+  box.querySelectorAll(".wahl-taste[data-nr]").forEach((k) => {
+    const an = gewaehlt[k.dataset.nr] === k.dataset.satz;
+    k.classList.toggle("an", an);
+    k.textContent = (an ? "✓ " : "") + k.textContent.replace(/^✓ /, "");
+  });
+}
+
+// Nur unter der jüngsten Antwort zeigen: Ältere Fragen sind erledigt oder überholt.
+(function () {
+  const verlauf = $("verlauf");
+  if (!verlauf) return;
+  let wartet = false;
+  const mark = () => {
+    wartet = false;
+    const alle = verlauf.querySelectorAll(".antwort");
+    alle.forEach((a, i) => a.classList.toggle("juengste", i === alle.length - 1));
+  };
+  new MutationObserver(() => { if (!wartet) { wartet = true; requestAnimationFrame(mark); } })
+    .observe(verlauf, { childList: true });
+  mark();
+})();
+
+// --- Übergabe vorbereiten (Knopf im Verbrauchs-Blatt) ---------------------------
+// Roli 10.10.2026 18:44 „bei Nummer 20 ja bitte Übergabe vorbereiten“.
+const UEBERGABE_AUFTRAG =
+  "Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register " +
+  "nachtragen, dann UEBERGABE.md im Projektordner schreiben (Stand, offen, nächster Schritt, Beschlüsse mit " +
+  "Auslöser-Satz, Rolis letzter Wortlaut) und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.";
+
+function uebergabeKnopf() {
+  const k = document.createElement("button");
+  k.type = "button";
+  k.className = "uebergabe-knopf";
+  k.textContent = "Übergabe vorbereiten";
+  k.addEventListener("click", async () => {
+    if (!confirm("Claude schreibt jetzt die Übergabe für eine neue Karte. Abschicken?")) return;
+    verbrauchBlattZu();
+    await sendeInSitzung(UEBERGABE_AUFTRAG);
+  });
+  return k;
+}
