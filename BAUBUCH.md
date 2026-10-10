@@ -595,3 +595,17 @@ Hinweistext, keine Konsolenfehler, Screenshots angesehen. Dienst neu gestartet, 
 Derselbe Leser versorgt den LEIT//PULS (leitstand/lage-messen.py importiert `hetzner_app.verbrauch`).
 Nicht geprüft: am echten Handy. Bekannte Grenze: Karten im selben Ordner (Skillsradar 15/17/20)
 teilen sich die jüngste Mitschrift, wie schon beim Kontext-Füllstand.
+
+## V179 (10.10.2026): Kontext-Balken in zwei Zeilen, Modus-Zeile weg bei offener Tastatur (Brain 23)
+
+Auslöser Roli, 10.10. 17:09 mit zwei Handybildern: „Aufteilung besser machen“ (der Cache-Text brach
+in zwei Zeilen um und ließ vom Balken einen Stummel) und 17:11 „1. Deine Empfehlung 2. Ja. Das alles
+so viel frisst, wenn ich was eintippen muss“.
+
+Lösung: Der Balken läuft dünn über die ganze Breite, darunter eine Zeile mit links „Kontext 81 %
+frei · 187k benutzt“ und rechts „Cache warm 48 min“ (eigenes Element `cache-text`; bei kalt und groß
+orange und fett mit Warnzeichen, Text bleibt, wegen Rot-Grün-Schwäche nie nur Farbe). Dazu die
+Tastatur-Messung aus dem LEIT//PULS übernommen (sichtbare Höhe gegen die größte je gemessene,
+unter drei Viertel heißt Tastatur offen, `body.eng`); dann verschwindet die Modus-Zeile.
+Geprüft im Browser gegen Testserver 8799: Medienwerk 75 warm, PACHMAYR 10 Warnung, Balken voll
+breit, Tastatur-Modus per Klasse nachgestellt, keine Konsolenfehler. Nicht geprüft: am echten Handy.

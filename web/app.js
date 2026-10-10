@@ -3277,7 +3277,10 @@ async function aktualisiereKontextBalken() {
   fuellung.classList.toggle("voll", voll >= 90);
   const tokens = typeof k.benutzt === "number" ? ` · ${tokenKurz(k.benutzt)} benutzt` : "";
   $("kontext-text").textContent =
-    `Kontext ${frei}% frei${tokens}${neueKarte ? " · neue Karte" : ""}${cacheKurz(k.cache)}`;
+    `Kontext ${frei}% frei${tokens}${neueKarte ? " · neue Karte" : ""}`;
+  const cache = cacheKurz(k.cache);
+  $("cache-text").textContent = cache;
+  $("cache-text").classList.toggle("warnung", cache.startsWith("⚠"));
   balken.hidden = false;
 }
 
@@ -3301,9 +3304,9 @@ function dauerKurz(s) {
 
 function cacheKurz(c) {
   if (!c || typeof c.rest_s !== "number") return "";
-  if (c.warm) return ` · Cache warm ${dauerKurz(c.rest_s)}`;
+  if (c.warm) return `Cache warm ${dauerKurz(c.rest_s)}`;
   const teuer = kontextGroesse.benutzt >= CACHE_WARNUNG_AB;
-  return teuer ? " · ⚠ Cache kalt, Neuaufbau teuer" : " · Cache kalt";
+  return teuer ? "⚠ Cache kalt, Neuaufbau teuer" : "Cache kalt";
 }
 
 function cacheZeile(c) {
@@ -6175,3 +6178,22 @@ $("knopf-tour").addEventListener("click", () => {
 })();
 
 start();
+
+// --- Tastatur offen? ---------------------------------------------------------
+// Dieselbe Messung wie im LEIT//PULS (dort seit 15.09.2026): Die sichtbare Höhe
+// wird gegen die größte je gemessene verglichen, also gegen den Zustand ohne
+// Tastatur. Schrumpft sie auf unter drei Viertel, ist die Tastatur offen und
+// body.eng räumt Zeilen weg, die beim Tippen nur Platz kosten.
+(function () {
+  const vv = window.visualViewport;
+  let basis = Math.max(window.innerHeight, vv ? vv.height : 0);
+  function messen() {
+    const h = vv ? vv.height : window.innerHeight;
+    if (h > basis) basis = h;
+    document.body.classList.toggle("eng", h < basis * 0.75);
+  }
+  if (vv) { vv.addEventListener("resize", messen); vv.addEventListener("scroll", messen); }
+  window.addEventListener("resize", messen);
+  window.addEventListener("orientationchange", () => { basis = 0; setTimeout(messen, 300); });
+  messen();
+})();

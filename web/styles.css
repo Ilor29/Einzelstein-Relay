@@ -146,11 +146,15 @@ html, body {
    Füllung und einem Wort daneben. Immer sichtbar, sobald der Füllstand
    bekannt ist — anders als die kleine Prozentzahl, die man leicht übersieht. */
 .kontext-balken {
+  /* Zwei Zeilen mit Absicht (Roli 10.10.2026 17:11, Bild vom Handy): oben der
+     Balken über die ganze Breite, darunter links der Kontext, rechts der Cache.
+     Vorher teilten sich Balken und Text eine Zeile, und der längere Text
+     ließ vom Balken nur einen Stummel übrig. */
   display: flex;
-  align-items: center;
-  gap: .6rem;
+  flex-direction: column;
+  gap: .28rem;
   width: 100%;
-  padding: .3rem .8rem .4rem;
+  padding: .35rem .8rem .4rem;
   background: var(--erhoben);
   border: 0;
   border-bottom: 1px solid var(--linie);
@@ -160,9 +164,9 @@ html, body {
 }
 .kontext-balken:active { filter: brightness(1.2); }
 .kontext-schiene {
-  flex: 1;
-  min-width: 64px;   /* der Text (seit V178 mit Cache-Wärme) darf den Balken nicht verschlucken */
-  height: 8px;
+  display: block;
+  width: 100%;
+  height: 6px;
   border-radius: 999px;
   background: var(--erhoben-2);
   overflow: hidden;
@@ -179,13 +183,27 @@ html, body {
    dass Claude das Gespräch bald zusammenstauchen muss. */
 .kontext-fuellung.knapp { background: var(--wartet); }
 .kontext-fuellung.voll { background: var(--verwerfen); }
-.kontext-text {
-  flex: 0 1 auto;
-  font-size: .72rem;
-  line-height: 1.25;
-  color: var(--schrift-leise);
-  text-align: right;   /* darf auf schmalen Handys in zwei Zeilen umbrechen */
+.kontext-zeile {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  width: 100%;
 }
+.kontext-text {
+  font-size: .72rem;
+  line-height: 1.2;
+  color: var(--schrift-leise);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cache-text { flex: none; }
+.cache-text.warnung { color: var(--wartet); font-weight: 600; }
+
+/* Tastatur offen (body.eng, gemessen über visualViewport): Die Modus-Zeile
+   verschwindet, damit zum Lesen mehr übrig bleibt (Roli 10.10.2026 17:11:
+   „das alles so viel frisst, wenn ich was eintippen muss"). */
+body.eng .sitzung-info { display: none; }
 
 /* Während geglättet wird, funkelt der Knopf im Akzent und lässt sich nicht
    nochmal drücken. */
