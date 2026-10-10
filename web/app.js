@@ -930,7 +930,7 @@ function verlaufBlock(block) {
 
     const text = document.createElement("div");
     text.className = "blase claude";
-    schreibe(text, block.text);
+    const wahlAlle = schreibeMitWahl(text, block.text, el);
 
     const leiste = document.createElement("div");
     leiste.className = "antwort-leiste";
@@ -986,8 +986,7 @@ function verlaufBlock(block) {
 
     leiste.append(hoeren, kopieren, teilen, zeitmarke(block.zeit));
     el.append(text, leiste);
-    const wahl = baueSchnellwahl(block.text);
-    if (wahl) el.append(wahl);
+    if (wahlAlle) el.append(wahlAlle);
     return el;
   }
 
@@ -6215,47 +6214,55 @@ start();
 // mehrere Fragen beantworten und dann einmal abschicken.
 const WAHL_ANTWORTEN = [["Ja", "Ja"], ["Nein", "Nein"], ["Empfehlung", "Deine Empfehlung"]];
 
-function baueSchnellwahl(text) {
-  const fragen = [];
-  for (const zeile of String(text || "").split("\n")) {
-    const t = zeile.match(/^\s*(\d{1,3})\.\s+.*\?/);   // Zeile mit Nummer, in der irgendwo ein ? steht (die Empfehlung folgt oft dahinter)
-    if (t) fragen.push(Number(t[1]));
-  }
-  if (!fragen.length) return null;
-  const box = document.createElement("div");
-  box.className = "schnellwahl";
-  const alle = [...new Set(fragen)];
-  for (const nr of alle) {
-    const reihe = document.createElement("div");
-    reihe.className = "wahl-reihe";
-    const zahl = document.createElement("span");
-    zahl.className = "wahl-nr";
-    zahl.textContent = nr + ".";
-    reihe.append(zahl);
-    for (const [label, satz] of WAHL_ANTWORTEN) {
-      const k = document.createElement("button");
-      k.type = "button";
-      k.className = "wahl-taste";
-      k.dataset.nr = nr;
-      k.dataset.satz = satz;
-      k.textContent = label;
-      k.addEventListener("click", () => waehle(nr, satz, box));
-      reihe.append(k);
+// Roli 10.10.2026 20:12 „Wäre es nicht sinniger direkt unter der Frage die Antworten?“:
+// Die Tasten stehen jetzt unter der jeweiligen Frage im Text, nicht gesammelt am Ende.
+// Schreibt den Text wie schreibe(), setzt aber unter jede Frageszeile „N. … ?“ eine Reihe
+// Ja / Nein / Empfehlung. Gibt bei mehreren Fragen die Reihe „Überall“ zurück (sonst null).
+function schreibeMitWahl(ziel, text, box) {
+  const nummern = [];
+  const segmente = String(text || "").split(/(```[\s\S]*?```)/g);
+  for (const seg of segmente) {
+    if (!seg) continue;
+    if (seg.startsWith("```") && seg.endsWith("```") && seg.length > 6) { schreibe(ziel, seg); continue; }
+    let stueck = [];
+    const leere = () => { if (stueck.length) { schreibe(ziel, stueck.join("\n")); stueck = []; } };
+    for (const zeile of seg.split("\n")) {
+      stueck.push(zeile);
+      const t = zeile.match(/^\s*(\d{1,3})\.\s+.*\?/);   // Nummer vorn, irgendwo ein ? (die Empfehlung folgt oft dahinter)
+      if (t) {
+        leere();
+        const nr = Number(t[1]);
+        if (!nummern.includes(nr)) { nummern.push(nr); ziel.append(baueWahlReihe(nr, box)); }
+      }
     }
-    box.append(reihe);
+    leere();
   }
-  if (alle.length > 1) {
-    const reihe = document.createElement("div");
-    reihe.className = "wahl-reihe";
+  if (nummern.length < 2) return null;
+  const reihe = document.createElement("div");
+  reihe.className = "schnellwahl wahl-reihe";
+  const k = document.createElement("button");
+  k.type = "button";
+  k.className = "wahl-taste wahl-alle";
+  k.textContent = "Überall: deine Empfehlung";
+  k.addEventListener("click", () => { for (const nr of nummern) waehle(nr, "Deine Empfehlung", box, true); });
+  reihe.append(k);
+  return reihe;
+}
+
+function baueWahlReihe(nr, box) {
+  const reihe = document.createElement("div");
+  reihe.className = "schnellwahl wahl-reihe";
+  for (const [label, satz] of WAHL_ANTWORTEN) {
     const k = document.createElement("button");
     k.type = "button";
-    k.className = "wahl-taste wahl-alle";
-    k.textContent = "Überall: deine Empfehlung";
-    k.addEventListener("click", () => { for (const nr of alle) waehle(nr, "Deine Empfehlung", box, true); });
+    k.className = "wahl-taste";
+    k.dataset.nr = nr;
+    k.dataset.satz = satz;
+    k.textContent = label;
+    k.addEventListener("click", () => waehle(nr, satz, box));
     reihe.append(k);
-    box.append(reihe);
   }
-  return box;
+  return reihe;
 }
 
 function waehle(nr, satz, box, nurSetzen = false) {

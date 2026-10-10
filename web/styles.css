@@ -2323,15 +2323,10 @@ mark.treffer.aktuell { background: var(--akzent); color: #fff; }
 .tour-weiter { width: auto; padding: 10px 22px; }
 
 
-/* Schnellwahl unter nummerierten Fragen (nur unter der jüngsten Antwort). */
+/* Schnellwahl direkt unter der jeweiligen Frage (nur in der jüngsten Antwort). */
 .antwort .schnellwahl { display: none; }
-.antwort.juengste .schnellwahl {
-  display: flex; flex-direction: column; gap: .4rem;
-  margin: .2rem 0 .5rem; padding: .5rem .6rem;
-  background: var(--erhoben); border: 1px solid var(--linie); border-radius: .8rem;
-}
-.wahl-reihe { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-.wahl-nr { min-width: 2.2rem; font-weight: 600; font-size: .95rem; color: var(--schrift-leise); }
+.antwort.juengste .schnellwahl { display: flex; margin: .1rem 0 .6rem; }
+.wahl-reihe { align-items: center; gap: .4rem; flex-wrap: wrap; }
 .wahl-taste {
   min-height: 44px; padding: 0 .9rem; border-radius: 999px;
   border: 1px solid var(--linie); background: var(--erhoben-2); color: inherit;
