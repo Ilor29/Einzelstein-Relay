@@ -609,3 +609,11 @@ Tastatur-Messung aus dem LEIT//PULS übernommen (sichtbare Höhe gegen die grö�
 unter drei Viertel heißt Tastatur offen, `body.eng`); dann verschwindet die Modus-Zeile.
 Geprüft im Browser gegen Testserver 8799: Medienwerk 75 warm, PACHMAYR 10 Warnung, Balken voll
 breit, Tastatur-Modus per Klasse nachgestellt, keine Konsolenfehler. Nicht geprüft: am echten Handy.
+
+## V180 (10.10.2026): Schnellwahl unter nummerierten Fragen, Knopf „Übergabe vorbereiten“ (Brain 23)
+
+Auslöser Roli, 10.10. 18:44: „bei Nummer 20 ja bitte Übergabe vorbereiten“ und „wenn jetzt eine Zahl kommt … eine Schnellwahltaste, wo ich dann einfach nur sagen kann ja, nein, deine Empfehlung, bevor ich jedes Mal was tippen muss“.
+
+Lösung: (1) Unter der jüngsten Claude-Antwort erscheint für jede Zeile „N. … ?“ (Nummer, Ende mit Fragezeichen) eine Reihe Ja / Nein / Empfehlung. Ein Tipp schreibt „N. Ja“ ins Eingabefeld (sortiert nach Nummer, zweiter Tipp nimmt zurück, Haken ✓ zusätzlich zur Farbe), gesendet wird erst mit dem Pfeil. Bei mehreren Fragen dazu „Überall: deine Empfehlung“. Ältere Antworten zeigen keine Tasten (MutationObserver setzt Klasse `juengste`). (2) Im Verbrauchs-Blatt ab 100.000 Token oder bei kaltem Cache ein Knopf „Übergabe vorbereiten“; nach Rückfrage geht ein fester Auftrag an die Karte (Stein zu Ende, Baubuch, Register, UEBERGABE.md, Satz „Übergabe lesen“ als Codeblock). (3) Regel in der globalen Anleitung und im Gedächtnis: jede Frage an Roli trägt meine Empfehlung.
+
+Geprüft im Browser gegen Testserver 8799: Tasten unter der 20, „20. Ja“ im Feld, Wechsel auf Empfehlung ersetzt statt anzuhängen, Blatt zeigt Knopf, Rückfrage erscheint (im Test abgebrochen, nichts gesendet). Schönheitsfehler: die Tasten stehen nur, wenn die jüngste Antwort die Fragen enthält; schreibt eine Karte nach der Frage noch einen Satz, sind sie weg. Nicht geprüft: am echten Handy.
