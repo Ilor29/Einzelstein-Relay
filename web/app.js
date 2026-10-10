@@ -6218,7 +6218,7 @@ const WAHL_ANTWORTEN = [["Ja", "Ja"], ["Nein", "Nein"], ["Empfehlung", "Deine Em
 function baueSchnellwahl(text) {
   const fragen = [];
   for (const zeile of String(text || "").split("\n")) {
-    const t = zeile.match(/^\s*(\d{1,3})\.\s+(.*\?)\s*$/);   // Zeile mit Nummer, die mit ? endet
+    const t = zeile.match(/^\s*(\d{1,3})\.\s+.*\?/);   // Zeile mit Nummer, in der irgendwo ein ? steht (die Empfehlung folgt oft dahinter)
     if (t) fragen.push(Number(t[1]));
   }
   if (!fragen.length) return null;
@@ -6289,8 +6289,15 @@ function waehle(nr, satz, box, nurSetzen = false) {
   let wartet = false;
   const mark = () => {
     wartet = false;
-    const alle = verlauf.querySelectorAll(".antwort");
-    alle.forEach((a, i) => a.classList.toggle("juengste", i === alle.length - 1));
+    // Die jüngste Antwort MIT Fragen, solange sie unter den letzten drei liegt:
+    // Schreibt Claude nach der Frage noch eine Antwort ohne Frage, sollen die
+    // Tasten nicht gleich verschwinden (Roli 10.10.2026 18:52 „da kommen keine Boxen“).
+    const alle = [...verlauf.querySelectorAll(".antwort")];
+    let ziel = -1;
+    for (let i = alle.length - 1; i >= Math.max(0, alle.length - 3); i--) {
+      if (alle[i].querySelector(".schnellwahl")) { ziel = i; break; }
+    }
+    alle.forEach((a, i) => a.classList.toggle("juengste", i === ziel));
   };
   new MutationObserver(() => { if (!wartet) { wartet = true; requestAnimationFrame(mark); } })
     .observe(verlauf, { childList: true });
