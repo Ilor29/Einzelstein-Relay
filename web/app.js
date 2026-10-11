@@ -3946,6 +3946,27 @@ function stille() {
   sprecherKnopf?.classList.remove("spricht");
   zeichen(sprecherKnopf, "#i-lautsprecher");
   sprecherKnopf = null;
+  tonSchlafenLegen();
+}
+
+// Der Ton-Kontext nach dem Vortrag wieder schlafen legen (Roli 12.10.2026 00:45
+// „65. Ja“, Verdacht auf hohen Akkuverbrauch von Chrome). Einmal geweckt lief er
+// sonst bis zum Schließen der App weiter, auch auf Android, wo der Vortrag als
+// Strom kommt und der Kontext nur beim Tipp mitgeweckt wird. Ein laufender
+// Kontext hält die Ton-Leitung offen und kann das Handy am Tiefschlaf hindern.
+// Zehn Sekunden Ruhe, dann aus. Nicht im Freisprech-Modus (im Auto soll der
+// nächste Vortrag ohne Tipp bei dunklem Bildschirm anspringen), nicht bei
+// offenem Mikrofon, nicht bei einem Rest nach einem Anruf und nicht bei
+// Hand-Pause. Der nächste Vortrag weckt ihn selbst (Tipp und sprichHaeppchen).
+let tonSchlafZeit = null;
+function tonSchlafenLegen() {
+  clearTimeout(tonSchlafZeit);
+  tonSchlafZeit = setTimeout(() => {
+    if (!hörCtx || spricht || hoert || restText || freisprech || manuellPausiert) return;
+    if (hörCtx.state !== "running") return;
+    tonEreignis("kontext-schlafen");
+    hörCtx.suspend().catch(() => { /* dann eben nicht */ });
+  }, 10000);
 }
 
 // --- Wenn das Telefon klingelt -----------------------------------------------
