@@ -38,6 +38,30 @@
   --neben: #171716;
 }
 
+/* Helle Fassung, nur eingebettet im LEIT//PULS, wenn dort „Hell“ gilt (Roli 11.10.2026 23:48
+   „57. Ja“). Farben wie der helle LEIT//PULS-Rahmen: kühles Weiß, Navy-Schrift, Rost als
+   Akzent. Allein geöffnet bleibt die Relay dunkel. Gesetzt wird die Klasse im Kopf von
+   index.html (Adresse ?farbe=hell) oder per Nachricht vom LEIT//PULS (app.js, „farbe“). */
+:root.hell {
+  --grund: #F5F6FA;
+  --erhoben: #FFFFFF;
+  --erhoben-2: #EEF0F5;
+  --linie: #E4E7EF;
+  --schrift: #14182B;
+  --schrift-leise: #5B6275;
+  --schrift-schwach: #8A91A3;
+  --akzent: #B5541D;
+  --akzent-weich: #F3E2D6;
+  --laeuft: #1E7A55;
+  --wartet: #9A6200;
+  --ruht: #8A91A3;
+  --verwerfen: #B3423A;
+  --verwerfen-weich: #F6E0DD;
+  --neben: #E9ECF3;
+  color-scheme: light;
+}
+:root.hell .knopf-blank.an { color: var(--akzent); }
+
 /* Alle Icons sind gezeichnete Linien, keine Emoji: Sie nehmen die Farbe ihres
    Knopfes an, sind auf jedem Gerät gleich und sehen nicht nach Provisorium aus. */
 svg {

@@ -5200,6 +5200,14 @@ window.addEventListener("message", async (e) => {
   if (window.parent === window || e.source !== window.parent) return;
   if (e.origin !== `https://leitstand.${location.host}`) return;
   const d = e.data;
+  // Darstellung umschalten, wenn im LEIT//PULS Hell oder Dunkel gewählt wird.
+  if (d && d.tu === "farbe" && (d.wert === "hell" || d.wert === "dunkel")) {
+    document.documentElement.classList.toggle("hell", d.wert === "hell");
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = d.wert === "hell" ? "#F5F6FA" : "#1F1E1D";
+    try { sessionStorage.setItem("relay-farbe", d.wert); } catch (fehler) {}
+    return;
+  }
   if (!d || d.tu !== "schlafen" || typeof d.name !== "string") return;
   const antwort = { tat: "schlafen", name: d.name, ok: false };
   try {
