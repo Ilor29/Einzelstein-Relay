@@ -1209,6 +1209,29 @@
 
 <audio id="stimme" hidden></audio>
 
+<!-- Zur Hand: rechte Spalte, nur am breiten Rechner neben einer offenen Karte
+     (Roli 12.10.2026 „78. Ja“). Am Handy bleibt sie versteckt. -->
+<aside id="zur-hand" class="zur-hand" hidden aria-label="Zur Hand">
+  <header class="kopf"><h1>Zur Hand</h1></header>
+  <div class="zh-rollt">
+    <section class="zh-block">
+      <h2><span>Offene Fragen dieser Karte</span><span id="zur-hand-fragen-zahl"></span></h2>
+      <div id="zur-hand-fragen"></div>
+    </section>
+    <section class="zh-block">
+      <h2><span>Entscheidungskorb</span></h2>
+      <div id="zur-hand-korb"></div>
+    </section>
+    <button type="button" id="zh-kontext-block" class="zh-block zh-kontext" aria-label="Verbrauch dieser Karte, antippen für Details">
+      <h2><span>Diese Karte</span></h2>
+      <span class="kontext-schiene"><span id="zh-fuellung" class="kontext-fuellung"></span></span>
+      <span class="zh-wert"><span>Kontext</span><span id="zh-kontext"></span></span>
+      <span class="zh-wert"><span>Cache</span><span id="zh-cache"></span></span>
+      <span class="zh-wert"><span>Modell</span><span id="zh-modell"></span></span>
+    </button>
+  </div>
+</aside>
+
 <script src="/vendor/xterm.js"></script>
 <script src="/vendor/xterm-addon-fit.js"></script>
 <script src="/app.js?v=__VERSION__"></script>

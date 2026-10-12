@@ -11,10 +11,16 @@
 // du immer wieder hängengeblieben.
 const $ = (id) => document.getElementById(id);
 
+const BREIT = window.matchMedia("(min-width: 1280px)");
 const ANSICHTEN = ["anmeldung", "geraet", "liste", "sitzung", "neu", "einstellungen", "bibliothek", "routinen"];
 
 function zeige(name) {
-  for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name;
+  // Am breiten Rechner steht die Kartenliste links neben dem Gespräch und rechts
+  // die Spalte „Zur Hand“ (Roli 12.10.2026 „78. Ja“). Am Handy bleibt es bei einer Ansicht.
+  const dreiSpalten = name === "sitzung" && BREIT.matches;
+  for (const a of ANSICHTEN) $(`ansicht-${a}`).hidden = a !== name && !(dreiSpalten && a === "liste");
+  document.body.classList.toggle("drei-spalten", dreiSpalten);
+  $("zur-hand").hidden = !dreiSpalten;
   // Die geführte Einführung startet von selbst, wenn man eine Ansicht zum
   // ersten Mal betritt (Abschnitt Spotlight-Tour, ganz unten).
   tourVielleichtStarten(name);
@@ -285,7 +291,9 @@ function benannt(s) {
 
 function karte(sitzung) {
   const el = document.createElement("div");
-  el.className = "karte" + (sitzung.pinned ? " angeheftet" : "");
+  el.className = "karte" + (sitzung.pinned ? " angeheftet" : "")
+    + (aktuelleSitzung?.name === sitzung.name ? " aktiv" : "");
+  el.dataset.name = sitzung.name;
   el.innerHTML = `
     <div class="streifen"></div>
     <div class="zeile-oben">
@@ -541,6 +549,7 @@ async function ladeListe() {
   const liste = $("liste");
   liste.replaceChildren();
   if (korbFragen.length) liste.append(korbKasten(korbFragen));
+  zurHandKorb(korbFragen);
 
   if (sitzungen.length === 0) {
     const leer = document.createElement("p");
@@ -1886,7 +1895,19 @@ function baueTerminal() {
 }
 
 function oeffneSitzung(sitzung) {
-  stoppeListe();
+  // Breite Ansicht: man wechselt direkt von Karte zu Karte, ohne den Zurück-Knopf.
+  // Was der Zurück-Knopf sonst aufräumt, geschieht dann hier.
+  if (aktuelleSitzung && aktuelleSitzung.name !== sitzung.name) {
+    steckdose?.close();
+    steckdose = null;
+    gesehenMelden(aktuelleSitzung.name);
+  }
+  if (BREIT.matches) {
+    // Die Liste läuft links weiter mit, also auch ihr Takt.
+    if (!listeOffen) { listeOffen = true; listenTaktPlanen(); }
+  } else {
+    stoppeListe();
+  }
   entwurfMerken();     // was in der vorigen Karte noch im Feld stand
   gesehenMelden(sitzung.name);   // die Ungelesen-Markierung erlischt
   aktuelleSitzung = sitzung;
@@ -1936,6 +1957,8 @@ function oeffneSitzung(sitzung) {
   $("denkt").hidden = true;
   sendeSperren(false);
   sitzungsTakt();
+  document.querySelectorAll("#liste .karte").forEach((k) => k.classList.toggle("aktiv", k.dataset.name === sitzung.name));
+  zurHandAuffrischen();
 }
 
 // Der Sitzungs-Takt: Verlauf, Arbeitet-Claude, Rückfrage — und der Füllstand
@@ -6326,7 +6349,7 @@ function schreibeMitWahl(ziel, text, box) {
       if (t) {
         leere();
         const nr = Number(t[1]);
-        if (!nummern.includes(nr)) { nummern.push(nr); ziel.append(baueWahlReihe(nr, box)); }
+        if (!nummern.includes(nr)) { nummern.push(nr); ziel.append(baueWahlReihe(nr, box, zeile)); }
       }
     }
     leere();
@@ -6343,9 +6366,10 @@ function schreibeMitWahl(ziel, text, box) {
   return reihe;
 }
 
-function baueWahlReihe(nr, box) {
+function baueWahlReihe(nr, box, frage = "") {
   const reihe = document.createElement("div");
   reihe.className = "schnellwahl wahl-reihe";
+  reihe.dataset.frage = frage.trim();
   for (const [label, satz] of WAHL_ANTWORTEN) {
     const k = document.createElement("button");
     k.type = "button";
@@ -6376,7 +6400,7 @@ function waehle(nr, satz, box, nurSetzen = false) {
   // Welche Taste gilt, sieht man an der Füllung (und am Haken, nicht nur an der Farbe).
   const gewaehlt = {};
   for (const z of zeilen) { const m = z.match(/^(\d+)\.\s(.*)$/); if (m) gewaehlt[m[1]] = m[2]; }
-  box.querySelectorAll(".wahl-taste[data-nr]").forEach((k) => {
+  document.querySelectorAll(".wahl-taste[data-nr]").forEach((k) => {
     const an = gewaehlt[k.dataset.nr] === k.dataset.satz;
     k.classList.toggle("an", an);
     k.textContent = (an ? "✓ " : "") + k.textContent.replace(/^✓ /, "");
@@ -6399,6 +6423,7 @@ function waehle(nr, satz, box, nurSetzen = false) {
       if (alle[i].querySelector(".schnellwahl")) { ziel = i; break; }
     }
     alle.forEach((a, i) => a.classList.toggle("juengste", i === ziel));
+    zurHandAuffrischen();
   };
   new MutationObserver(() => { if (!wartet) { wartet = true; requestAnimationFrame(mark); } })
     .observe(verlauf, { childList: true });
@@ -6424,3 +6449,108 @@ function uebergabeKnopf() {
   });
   return k;
 }
+
+// --- Zur Hand: rechte Spalte am breiten Rechner ---------------------------------
+// Roli 12.10.2026 01:20 „rechts links ist auf jeden Fall Platz, da paar Sachen noch
+// reinzunehmen“, beschlossen 01:36, Mockup abgenommen 10:04 „78. Ja“. Die Spalte
+// zeigt nur, was die App schon weiß: die offenen Fragen der jüngsten Antwort mit
+// denselben Tasten wie im Verlauf, den Entscheidungskorb und den Kontext-Stand.
+let zurHandAbdruck = "";
+function zurHandAuffrischen() {
+  if ($("zur-hand").hidden) return;
+  const reihen = [...document.querySelectorAll("#verlauf .antwort.juengste .wahl-reihe[data-frage]")];
+  const abdruck = (aktuelleSitzung?.name || "") + "|" + reihen.map((r) => r.dataset.frage).join("|");
+  if (abdruck !== zurHandAbdruck) {
+    zurHandAbdruck = abdruck;
+    const ziel = $("zur-hand-fragen");
+    ziel.replaceChildren();
+    for (const r of reihen) {
+      const nr = r.querySelector("[data-nr]")?.dataset.nr;
+      if (!nr) continue;
+      const roh = r.dataset.frage.replace(/^\s*\d{1,3}\.\s+/, "");
+      const teil = roh.split(/\s*Meine Empfehlung:\s*/);
+      const f = document.createElement("div");
+      f.className = "zh-frage";
+      const t = document.createElement("div");
+      t.className = "zh-frage-text";
+      const n = document.createElement("span");
+      n.className = "zh-nr";
+      n.textContent = nr + ".";
+      t.append(n, " " + teil[0].replace(/\*\*/g, ""));
+      f.append(t);
+      if (teil[1]) {
+        const e = document.createElement("div");
+        e.className = "zh-empf";
+        e.textContent = "Empfehlung: " + teil.slice(1).join(" ").replace(/\*\*/g, "");
+        f.append(e);
+      }
+      f.append(baueWahlReihe(Number(nr), document));
+      ziel.append(f);
+    }
+    if (!ziel.children.length) {
+      const leer = document.createElement("p");
+      leer.className = "zh-leer";
+      leer.textContent = "Gerade keine offene Frage in dieser Karte.";
+      ziel.append(leer);
+    }
+    $("zur-hand-fragen-zahl").textContent = reihen.length || "";
+    // Schon gewählte Antworten aus dem Eingabefeld wieder als Haken zeigen.
+    const gewaehlt = {};
+    for (const z of $("eingabe").value.split("\n")) { const m = z.match(/^(\d+)\.\s(.*)$/); if (m) gewaehlt[m[1]] = m[2]; }
+    ziel.querySelectorAll(".wahl-taste[data-nr]").forEach((k) => {
+      if (gewaehlt[k.dataset.nr] === k.dataset.satz) { k.classList.add("an"); k.textContent = "✓ " + k.textContent; }
+    });
+  }
+  zurHandKontext();
+}
+
+function zurHandKontext() {
+  if ($("zur-hand").hidden) return;
+  const kt = $("kontext-text").textContent.trim();
+  const ct = $("cache-text").textContent.trim();
+  // Die Zeile im Gespräch sagt „Kontext 85% frei · …“; hier steht das Wort schon links.
+  $("zh-kontext").textContent = kt.replace(/^Kontext\s+/, "") || "noch nicht bekannt";
+  $("zh-cache").textContent = ct.replace(/^Cache\s+/, "") || "noch nicht bekannt";
+  $("zh-modell").textContent = $("modell-name").textContent.trim() || "noch nicht bekannt";
+  const quelle = $("kontext-fuellung");
+  const fuell = $("zh-fuellung");
+  fuell.style.width = quelle.style.width;
+  fuell.className = quelle.className;
+}
+
+function zurHandKorb(fragen) {
+  const ziel = $("zur-hand-korb");
+  ziel.replaceChildren();
+  if (fragen.length) ziel.append(korbKasten(fragen));
+  else {
+    const leer = document.createElement("p");
+    leer.className = "zh-leer";
+    leer.textContent = "Der Korb ist leer.";
+    ziel.append(leer);
+  }
+}
+
+(function () {
+  // Kontext, Cache und Modell ändern sich ohne neue Antwort; mitlesen statt abfragen.
+  const beobachter = new MutationObserver(() => zurHandKontext());
+  for (const id of ["kontext-text", "cache-text", "modell-name", "kontext-fuellung"]) {
+    beobachter.observe($(id), { childList: true, characterData: true, subtree: true, attributes: true });
+  }
+  // Eine Antwort wächst, während Claude schreibt; die Fragen kommen oft erst am Ende.
+  let wartet = false;
+  new MutationObserver(() => {
+    if (wartet || $("zur-hand").hidden) return;
+    wartet = true;
+    requestAnimationFrame(() => { wartet = false; zurHandAuffrischen(); });
+  }).observe($("verlauf"), { childList: true, subtree: true });
+  $("zh-kontext-block").addEventListener("click", () => oeffneVerbrauchsBlatt());
+  // Fenster breiter oder schmaler gezogen: Aufteilung neu setzen.
+  BREIT.addEventListener("change", () => {
+    if ($("ansicht-sitzung").hidden) return;
+    if (!BREIT.matches) stoppeListe();
+    else if (!listeOffen) { listeOffen = true; ladeListe().then(listenTaktPlanen); }
+    zeige("sitzung");
+    zurHandAbdruck = "";
+    zurHandAuffrischen();
+  });
+})();

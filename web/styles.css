@@ -2372,3 +2372,69 @@ mark.treffer.aktuell { background: var(--akzent); color: #fff; }
 .korb-text { font-size: .98rem; line-height: 1.4; margin-bottom: .25rem; }
 .korb-hinter { font-size: .82rem; color: var(--schrift-leise); margin-bottom: .2rem; }
 .korb .wahl-reihe { display: flex; margin-top: .35rem; }
+
+/* --- Drei Spalten am breiten Rechner (Roli 12.10.2026 „78. Ja“) ----------------
+ * Ab 1280 Pixel Fensterbreite steht neben einer offenen Karte links die
+ * Kartenliste und rechts „Zur Hand“. Es bleiben dieselben Ansichten wie am
+ * Handy, sie werden nur nebeneinandergestellt. */
+body.drei-spalten #ansicht-liste {
+  right: auto;
+  width: 320px;
+  border-right: 1px solid var(--linie);
+}
+body.drei-spalten #ansicht-liste > *:not(.blatt) { max-width: none; border-left: 0; border-right: 0; }
+body.drei-spalten #ansicht-sitzung { left: 320px; right: 320px; --spalte: 860px; }
+/* Den Korb zeigt rechts „Zur Hand“, den Kontext auch; links und in der Mitte nicht doppelt. */
+body.drei-spalten #liste .korb { display: none; }
+body.drei-spalten #kontext-balken { display: none !important; }
+/* In der schmalen linken Spalte rücken die Knöpfe zusammen, damit „Sitzungen“ ganz bleibt. */
+body.drei-spalten #ansicht-liste .kopf { gap: .25rem; }
+body.drei-spalten #ansicht-liste .kopf h1 { flex: none; margin-right: auto; }
+#liste .karte.aktiv { border-color: var(--akzent); background: var(--erhoben); }
+
+.zur-hand {
+  position: fixed;
+  top: 0; bottom: 0; right: 0;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--grund);
+  border-left: 1px solid var(--linie);
+  padding-top: var(--oben);
+}
+.zh-rollt { flex: 1; overflow: auto; padding: .7rem; display: flex; flex-direction: column; gap: .7rem; }
+.zh-block {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--erhoben);
+  border: 1px solid var(--linie);
+  border-radius: 12px;
+  padding: .75rem;
+}
+.zh-block h2 {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: .5rem;
+  font: 600 .72rem var(--mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--schrift-leise);
+}
+.zh-frage { padding: .55rem 0 .2rem; border-top: 1px solid var(--linie); }
+.zh-frage:first-child { border-top: 0; padding-top: 0; }
+.zh-frage-text { font-size: .9rem; line-height: 1.45; }
+.zh-nr { font-family: var(--mono); font-weight: 700; color: var(--akzent); }
+.zh-empf { font-size: .8rem; line-height: 1.4; color: var(--schrift-leise); margin: .3rem 0 .1rem; }
+.zh-frage .wahl-reihe { display: flex; flex-wrap: wrap; margin-top: .35rem; }
+.zh-leer { font-size: .85rem; color: var(--schrift-schwach); }
+#zur-hand-korb .korb { margin: 0; }
+#zur-hand-korb .korb > :first-child { display: none; }   /* eigener Titel steht schon im Block */
+.zh-kontext { cursor: pointer; }
+.zh-kontext .kontext-schiene { display: block; margin: .1rem 0 .55rem; }
+.zh-wert { display: flex; justify-content: space-between; gap: .5rem; font-size: .85rem; padding: .15rem 0; }
+.zh-wert span:last-child { font-family: var(--mono); font-size: .78rem; text-align: right; color: var(--schrift-leise); }
+/* Links ist es eng: vom Verbindungsstand bleibt nur der Punkt, das Wort steht im Titel-Tooltip. */
+body.drei-spalten #verbindung { font-size: 0; gap: 0; }
