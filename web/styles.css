@@ -2358,6 +2358,12 @@ mark.treffer.aktuell { background: var(--akzent); color: #fff; }
 }
 .wahl-taste.an { background: var(--akzent, #D97757); color: #fff; border-color: transparent; font-weight: 600; }
 .wahl-alle { flex: 1; }
+.wahl-eigen {
+  flex: 1 1 100%; width: 100%; box-sizing: border-box; min-height: 3.2rem; padding: .6rem .8rem;
+  border-radius: .7rem; border: 1px solid var(--linie); background: var(--erhoben-2);
+  color: inherit; font: inherit; font-size: 1rem; resize: vertical;
+}
+.wahl-eigen[hidden] { display: none; }
 .uebergabe-knopf {
   margin: .6rem 0 .2rem; min-height: 48px; width: 100%; border-radius: .8rem;
   border: 1px solid var(--akzent, #D97757); background: transparent; color: inherit;

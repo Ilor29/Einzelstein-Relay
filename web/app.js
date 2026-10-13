@@ -6380,7 +6380,57 @@ function baueWahlReihe(nr, box, frage = "") {
     k.addEventListener("click", () => waehle(nr, satz, box));
     reihe.append(k);
   }
+  // Roli 13.10.2026 11:47: „direkt unter der Frage die Möglichkeit, eine eigene Antwort einzugeben“,
+  // weil Ja und Nein oft nicht reichen. Vierte Taste klappt ein Feld auf; der Text landet als
+  // „N. <Text>“ im Eingabefeld, gesendet wird wie bei den Tasten mit dem Senden-Pfeil.
+  const eigen = document.createElement("button");
+  eigen.type = "button";
+  eigen.className = "wahl-taste wahl-eigen-taste";
+  eigen.textContent = "Eigene Antwort";
+  const feldEigen = document.createElement("textarea");
+  feldEigen.className = "wahl-eigen";
+  feldEigen.dataset.nr = nr;
+  feldEigen.rows = 2;
+  feldEigen.hidden = true;
+  feldEigen.placeholder = "Deine Antwort zu Frage " + nr + " (tippen oder diktieren)";
+  feldEigen.setAttribute("aria-label", "Eigene Antwort zu Frage " + nr);
+  feldEigen.addEventListener("input", () => {
+    const text = feldEigen.value.replace(/\s*\n\s*/g, " ").trim();
+    if (text) waehle(nr, text, box, true);
+    else eigenZuruecknehmen(nr);
+  });
+  eigen.addEventListener("click", () => {
+    feldEigen.hidden = !feldEigen.hidden;
+    eigen.classList.toggle("an", !feldEigen.hidden);
+    if (!feldEigen.hidden) feldEigen.focus();
+  });
+  reihe.append(eigen, feldEigen);
   return reihe;
+}
+
+// Eigene Antwort leer geräumt: die Zeile „N. …“ aus dem Eingabefeld nehmen, Tasten neu beleuchten.
+function eigenZuruecknehmen(nr) {
+  const feld = $("eingabe");
+  const re = new RegExp(`^${nr}\\.\\s`);
+  feld.value = feld.value.split("\n").filter((z) => !re.test(z)).join("\n");
+  feld.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+// Eingabefeld und Eigen-Felder gleich halten: Wurde abgeschickt oder die Zeile gelöscht, leert sich
+// das Feld; steht eine Zeile da, die keine der Tasten ist, zeigt das Feld sie (auch nach Neuaufbau).
+function eigeneAntwortenAbgleichen() {
+  const gewaehlt = {};
+  for (const z of $("eingabe").value.split("\n")) { const m = z.match(/^(\d+)\.\s(.*)$/); if (m) gewaehlt[m[1]] = m[2]; }
+  const preset = WAHL_ANTWORTEN.map((a) => a[1]);
+  document.querySelectorAll("textarea.wahl-eigen").forEach((t) => {
+    const g = gewaehlt[t.dataset.nr];
+    const eigenerText = g !== undefined && !preset.includes(g);
+    if (document.activeElement === t) return;
+    if (eigenerText) { if (t.value !== g) t.value = g; t.hidden = false; }
+    else if (t.value) { t.value = ""; }
+    const taste = t.parentElement?.querySelector(".wahl-eigen-taste");
+    if (taste) taste.classList.toggle("an", !t.hidden);
+  });
 }
 
 function waehle(nr, satz, box, nurSetzen = false) {
@@ -6406,6 +6456,9 @@ function waehle(nr, satz, box, nurSetzen = false) {
     k.textContent = (an ? "✓ " : "") + k.textContent.replace(/^✓ /, "");
   });
 }
+
+$("eingabe")?.addEventListener("input", eigeneAntwortenAbgleichen);
+new MutationObserver(eigeneAntwortenAbgleichen).observe($("verlauf") || document.body, { childList: true, subtree: true });
 
 // Nur unter der jüngsten Antwort zeigen: Ältere Fragen sind erledigt oder überholt.
 (function () {
