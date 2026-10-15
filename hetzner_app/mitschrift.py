@@ -68,6 +68,12 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
     if eintrag.get("isSidechain"):
         return []
 
+    # Seit Oktober 2026 schreibt Claude Code zu jeder Nachricht eine Kopie als
+    # „api-request-blob“ mit ins Protokoll. Sie ist keine eigene Nachricht und
+    # ließ jede Antwort von Roli doppelt im Verlauf erscheinen (Roli 15.10.).
+    if eintrag.get("type") not in (None, "user", "assistant"):
+        return []
+
     nachricht = eintrag.get("message")
     if not isinstance(nachricht, dict):
         return []
