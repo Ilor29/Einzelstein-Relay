@@ -92,8 +92,14 @@ async def sicherheits_header(request: Request, call_next):
     # 35 MB lassen dafür Luft. Ohne den Deckel könnte ein angemeldetes Gerät
     # mit einem einzigen Riesen-Paket die kleine Maschine in den Speichertod
     # schicken.
+    # Ausnahme seit 18.10.2026: Der Datei-Anhang darf bis 210 MB (ZIP und Apps,
+    # die genaue Grenze prüft session_datei beim häppchenweisen Lesen).
     laenge = request.headers.get("content-length")
-    if laenge and laenge.isdigit() and int(laenge) > 35 * 1024 * 1024:
+    deckel = 35 * 1024 * 1024
+    teile = request.url.path.split("/")
+    if len(teile) == 5 and teile[1:3] == ["api", "sessions"] and teile[4] == "datei":
+        deckel = MAX_ZIP + 10 * 1024 * 1024
+    if laenge and laenge.isdigit() and int(laenge) > deckel:
         return JSONResponse({"detail": "Die Anfrage ist zu groß."}, status_code=413)
 
     antwort = await call_next(request)
@@ -233,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 187
+VERSION = 188
 
 
 @app.get("/api/version")
@@ -1380,6 +1386,18 @@ DOK_ENDUNGEN = {
 
 MAX_DATEI = 30 * 1024 * 1024      # 30 MB — Dokumente sind schwerer als Fotos
 
+# App-Pakete für Android (APK, APKS, XAPK) sind innen ZIP-Archive. Roli 18.10.2026
+# „57. Ja“ (Anregung aus der Karte Zerlegen): Die Büroklammer soll sie annehmen und
+# die Endung behalten, damit die Karte gleich sieht, was es ist. Angenommen nur,
+# wenn der Inhalt wirklich mit dem ZIP-Kopf beginnt; ausgeführt wird nichts.
+APP_ENDUNGEN = {".apk", ".apks", ".xapk"}
+
+# Apps sind oft 50 bis 150 MB groß. Die höhere Grenze gilt nur für Dateien, die
+# am Inhalt als ZIP erkannt werden, alles andere bleibt bei 30 MB. Caddy lässt
+# auf dem Datei-Weg ebenfalls bis 210 MB durch (sonst 35 MB).
+MAX_ZIP = 200 * 1024 * 1024
+ZIP_KOPF = b"PK\x03\x04"
+
 
 # Bilder an ihrer Signatur erkennen, nicht an der Endung. Roli am 18.09.2026: „wir können hier in
 # der App keine PNG-Dateien einfügen." Der Grund lag nicht am Foto-Weg, der nimmt PNG längst,
@@ -1416,7 +1434,7 @@ def _endung_erraten(inhalt: bytes) -> str:
     Nullbytes), als Text. Alles Undurchsichtige bleibt weiter draußen, und die
     Endung vergeben wir selbst — ausführbar wird hier nichts.
     """
-    if inhalt.startswith(b"PK\x03\x04"):
+    if inhalt.startswith(ZIP_KOPF):
         return ".zip"
     stueck = inhalt[:65536]
     if len(inhalt) > len(stueck):
@@ -1444,12 +1462,26 @@ async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
 
-    inhalt = await datei.read()
-    if len(inhalt) > MAX_DATEI:
-        raise HTTPException(413, "Die Datei ist zu groß (mehr als 30 MB).")
+    # Häppchenweise lesen und bei MAX_ZIP abbrechen, damit niemand den Speicher
+    # mit einer Riesendatei füllt. Erst danach entscheidet der Inhalt, welche
+    # Grenze gilt: ZIP bis 200 MB, alles andere bis 30 MB.
+    teile, gelesen = [], 0
+    while stueck := await datei.read(1024 * 1024):
+        gelesen += len(stueck)
+        if gelesen > MAX_ZIP:
+            raise HTTPException(413, "Die Datei ist zu groß (mehr als 200 MB).")
+        teile.append(stueck)
+    inhalt = b"".join(teile)
+    ist_zip = inhalt.startswith(ZIP_KOPF)
+    if len(inhalt) > MAX_DATEI and not ist_zip:
+        raise HTTPException(
+            413, "Die Datei ist zu groß (mehr als 30 MB, nur ZIP-Archive und Apps dürfen bis 200 MB)."
+        )
 
     endung = Path(datei.filename or "").suffix.lower()
-    if endung not in DOK_ENDUNGEN:
+    if endung in APP_ENDUNGEN and not ist_zip:
+        raise HTTPException(400, f'Die Datei heißt „{endung}", ist innen aber kein App-Paket.')
+    if endung not in DOK_ENDUNGEN and endung not in APP_ENDUNGEN:
         # Zweite Chance: in die Datei schauen. Text und ZIP nehmen wir auch
         # mit fremder oder fehlender Endung an — Skill-Dateien zum Beispiel.
         erraten = _bild_erkannt(inhalt) or _endung_erraten(inhalt)
