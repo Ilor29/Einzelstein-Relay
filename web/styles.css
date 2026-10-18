@@ -374,6 +374,28 @@ body.eng .sitzung-info { display: none; }
   cursor: pointer;
 }
 .befehl-zeile.wird-bearbeitet { border-color: var(--schrift-schwach); }
+.befehl-griff {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  margin: -.3rem 0 -.3rem -.3rem;
+  border: 0;
+  background: none;
+  color: var(--schrift-schwach);
+  cursor: grab;
+  touch-action: none;          /* Ziehen statt Blättern, nur am Griff */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.befehl-griff svg { width: 20px; height: 20px; fill: currentColor; }
+.befehl-zeile.wird-gezogen {
+  border-color: var(--schrift-schwach);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  opacity: .92;
+}
+.befehl-zeile.wird-gezogen .befehl-griff { cursor: grabbing; }
 .befehl-text strong { font-size: .92rem; }
 .befehl-text span {
   font-size: .8rem;

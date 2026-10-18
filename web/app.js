@@ -2493,9 +2493,65 @@ function befehleListeZeichnen() {
     leiste.textContent = "Leiste";
     leiste.addEventListener("click", () => befehlLeisteUmschalten(i));
 
-    zeile.append(text, stift, leiste, weg);
+    // Griff zum Verschieben (Roli 18.10.2026 „6. Ja“): an ihm zieht man die Zeile
+    // nach oben oder unten, die Leiste übernimmt die Reihenfolge. Das Ziehen sitzt
+    // hier und nicht in der Leiste selbst, weil dort langer Druck schon den Satz
+    // ins Feld legt und die Leiste seitlich rollt.
+    const griff = document.createElement("button");
+    griff.type = "button";
+    griff.className = "befehl-griff";
+    griff.setAttribute("aria-label", "Zum Verschieben ziehen");
+    griff.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>'
+      + '<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>'
+      + '<circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+    griff.addEventListener("pointerdown", (e) => befehlZiehenStart(e, zeile));
+
+    zeile.dataset.index = i;
+    zeile.append(griff, text, stift, leiste, weg);
     liste.appendChild(zeile);
   });
+}
+
+// Eine Zeile am Griff ziehen: Die Zeile wandert im Blatt sofort mit, beim
+// Loslassen gilt die neue Reihenfolge und geht zum Server.
+function befehlZiehenStart(e, zeile) {
+  e.preventDefault();
+  const liste = $("befehle-liste");
+  const finger = e.pointerId;
+  // Die Lauscher hängen an der ganzen Seite, nicht am Griff: Wird die Zeile im
+  // Blatt umgehängt, verliert der Griff sonst den Finger und das Ziehen reißt ab.
+  zeile.classList.add("wird-gezogen");
+  try { navigator.vibrate?.(10); } catch { /* Handy ohne Vibration */ }
+
+  const bewegen = (ev) => {
+    if (ev.pointerId !== finger) return;
+    ev.preventDefault();
+    // Die Zeile vor die erste andere Zeile setzen, deren Mitte unter dem Finger liegt.
+    const andere = [...liste.querySelectorAll(".befehl-zeile")].filter((z) => z !== zeile);
+    const davor = andere.find((z) => {
+      const r = z.getBoundingClientRect();
+      return ev.clientY < r.top + r.height / 2;
+    });
+    if (davor) { if (zeile.nextElementSibling !== davor) liste.insertBefore(zeile, davor); }
+    else if (liste.lastElementChild !== zeile) liste.appendChild(zeile);
+  };
+  const ende = (ev) => {
+    if (ev.pointerId !== finger) return;
+    document.removeEventListener("pointermove", bewegen);
+    document.removeEventListener("pointerup", ende);
+    document.removeEventListener("pointercancel", ende);
+    zeile.classList.remove("wird-gezogen");
+    const alt = eigeneBefehleLesen();
+    const reihenfolge = [...liste.querySelectorAll(".befehl-zeile")].map((z) => Number(z.dataset.index));
+    if (reihenfolge.every((n, k) => n === k)) return;      // nichts bewegt
+    eigeneBefehleSchreiben(reihenfolge.map((n) => alt[n]));
+    befehlFormZuruecksetzen();     // ein laufendes Bearbeiten zeigte sonst auf die falsche Zeile
+    befehleListeZeichnen();
+    eigeneBefehleZeichnen();
+  };
+  document.addEventListener("pointermove", bewegen, { passive: false });
+  document.addEventListener("pointerup", ende);
+  document.addEventListener("pointercancel", ende);
 }
 
 // Einen Befehl in die sichtbare Leiste stellen oder wieder ins Menü nehmen.
@@ -6064,7 +6120,7 @@ function tourSchritte(ansicht) {
     { kapitel: "Dein erstes Gespräch", sel: '[data-tour="schnellbefehle"]', titel: "Schnellbefehle",
       text: "Fertige Sätze für einen Tipp, zum Beispiel <b>Los geht's</b> oder " +
             "<b>Weiter</b>. Kurzer Tipp sendet sofort, langer Druck legt den " +
-            "Satz erst ins Eingabefeld. Über den Zauberstab legst du eigene an." },
+            "Satz erst ins Eingabefeld. Über den Zauberstab legst du eigene an und ziehst sie in deine Reihenfolge." },
     { kapitel: "Dein erstes Gespräch", sel: '[data-tour="vorlesen"]', titel: "Vorlesen lassen",
       text: "Der Lautsprecher liest dir Claudes Antwort vor — einmal antippen " +
             "reicht, es liest weiter, während Claude noch schreibt. Die Stimme " +
