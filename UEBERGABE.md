@@ -1,4 +1,4 @@
-# Übergabe Hetzner-App (Relay), 18.10.2026 17:50
+# Übergabe Hetzner-App (Relay), 18.10.2026 19:00
 
 ## Stand
 Relay V188 ist ausgerollt und läuft (Commit de606bd, auf GitHub). Die Büroklammer nimmt
@@ -28,6 +28,9 @@ andere Wege mit 40 MB werden gesperrt (413).
 - ANREGUNG-APK-ANHANG-2026-10-18.md liegt noch im Ordner. Sie ist erledigt, wird aber nur auf
   Rolis Wort gelöscht.
 
+- Aufgabe 7 an Roli: am Handy das Ziehen am Griff probieren und sagen, ob die Reihenfolge
+  in der Leiste stimmt. Noch keine Antwort.
+
 ## Nächster Schritt
 Rolis Rückmeldung zu Aufgabe 5 abwarten. Kommt die App nicht an, ins Protokoll von
 hetzner-app.service schauen, ob ein POST auf /datei ankam und mit welchem Status.
@@ -37,7 +40,12 @@ hetzner-app.service schauen, ob ein POST auf /datei ankam und mit welchem Status
 - Roli 18.10. 17:27 „1. Deine Empfehlung, 2. Deine Empfehlung“: Die Karte bleibt im
   Hetzner-App-Ordner und baut die APK-Anregung.
 
+- Roli 18.10. 18:32 „ich würde gerne die schnellwahl knöpfe verschiebbar machen“, 18:33
+  „6. Ja“: Reihenfolge der Leiste über dem Eingabefeld selbst festlegen, gespeichert auf dem Server.
+
 ## Rolis letzter Wortlaut
+18:33 „6. Ja / ist alles auf github commitet“ (Antwort: ja, alles committet und gepusht).
+Davor:
 „Auftrag: Die Büroklammer der Relay soll APK-Dateien annehmen … 4. Mit einer echten APK am
 Handy-Profil im Browser prüfen. 5. Baubuch, Register, committen. … Ausführbar wird nichts,
 die Datei liegt nur im Ordner.“
