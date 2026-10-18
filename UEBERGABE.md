@@ -8,6 +8,11 @@ in der App-eigenen Middleware gilt für /api/sessions/*/datei jetzt bis 210 MB, 
 35 MB, und zwar für Roli, Lorenz und Lea. Sicherung: /etc/caddy/Caddyfile.vor-apk-2026-10-18.
 Baubuch (Eintrag 18.10.2026, V188) und Brain-Register sind nachgetragen.
 
+## Nachtrag 18:55
+Relay V189 (Commit 545bc1b): Eigene Schnellbefehle im Blatt „Eigene Schnellbefehle“ am Griff
+ziehen, die Leiste übernimmt die Reihenfolge (Roli 18:32 „schnellwahl knöpfe verschiebbar“, „6. Ja“).
+Offen: Roli probiert es am Handy. Das Blatt rollt beim Ziehen nicht von selbst mit.
+
 ## Geprüft
 Testserver 8799 mit Rolis echter App aus Zerlegen und einer 120-MB-App angenommen; falsche
 APK, 40-MB-PDF und 205-MB-ZIP abgelehnt. Playwright im Profil Pixel 7: Anhang-Kärtchen
