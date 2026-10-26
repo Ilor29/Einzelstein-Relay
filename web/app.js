@@ -1890,8 +1890,25 @@ function baueTerminal() {
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open($("terminal"));
+  terminalStileSpiegeln();
   term.onData((daten) => steckdose?.send(daten));
   baueSondertasten();
+}
+
+// xterm setzt Schriftfarbe, Farbtabelle und Zeichenmaße über eigene <style>-Blöcke.
+// Die Sicherheitsregel der App (style-src 'self') sperrt solche Blöcke, also erbte die
+// Terminalschrift die Textfarbe der Seite: im hellen LEIT//PULS Dunkelblau auf Schwarz
+// (Roli 26.10.2026 13:41 „im terminal kann man so nichts lesen“). Hier wird derselbe
+// Text in ein per Skript gebautes Stilblatt übernommen, das die Regel erlaubt, und bei
+// jeder Änderung durch xterm (Größe, Schrift) nachgezogen.
+function terminalStileSpiegeln() {
+  const blatt = new CSSStyleSheet();
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, blatt];
+  const bloecke = [...$("terminal").querySelectorAll("style")];
+  const abgleichen = () => blatt.replaceSync(bloecke.map((b) => b.textContent).join("\n"));
+  const wache = new MutationObserver(abgleichen);
+  for (const b of bloecke) wache.observe(b, { childList: true, characterData: true, subtree: true });
+  abgleichen();
 }
 
 function oeffneSitzung(sitzung) {
