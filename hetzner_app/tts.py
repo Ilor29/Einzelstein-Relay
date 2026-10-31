@@ -635,6 +635,50 @@ def speicher_pruefen() -> None:
         # nächsten Sprechen auf und startet frisch.
 
 
+# --- Aussprache-Liste für Kaira ------------------------------------------------
+#
+# Kairas deutsche Stimme liest englische Wörter nach deutschen Regeln (GitHub,
+# Relay, committed). Die Kaira-Karte führt dafür eine Liste „Wort = Lautschrift“
+# (Roli 31.10.2026 10:46 „29. Ja“, ausdrücklich auch für die Relay). Gelesen
+# wird direkt ihre Datei, nicht eine Kopie, damit jede Nachbesserung in beiden
+# Apps gilt; bei Änderung der Datei wird neu eingelesen. Regel wie in Kaira
+# (server/stimme.py): ganze Wörter, Groß/Klein egal, längste Einträge zuerst.
+# Fehlt die Datei (Lea, Lorenz), passiert nichts.
+AUSSPRACHE_DATEI = Path.home() / "projekte" / "Kaira-Assistent" / "server" / "aussprache.txt"
+AUSSPRACHE_STIMMEN = {"kaira_de-DE"}
+_aussprache: dict = {"stand": None, "muster": None, "ersatz": {}}
+
+
+def aussprache_anwenden(text: str) -> str:
+    try:
+        stand = AUSSPRACHE_DATEI.stat().st_mtime
+    except OSError:
+        return text
+    if stand != _aussprache["stand"]:
+        ersatz: dict[str, str] = {}
+        try:
+            zeilen = AUSSPRACHE_DATEI.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return text
+        for zeile in zeilen:
+            zeile = zeile.strip()
+            if not zeile or zeile.startswith("#") or " = " not in zeile:
+                continue
+            wort, neu = (teil.strip() for teil in zeile.split(" = ", 1))
+            if wort and neu:
+                ersatz[wort.lower()] = neu
+        woerter = sorted(ersatz, key=len, reverse=True)
+        _aussprache["muster"] = re.compile(
+            r"(?<!\w)(" + "|".join(map(re.escape, woerter)) + r")(?!\w)", re.IGNORECASE
+        ) if woerter else None
+        _aussprache["ersatz"] = ersatz
+        _aussprache["stand"] = stand
+    muster, ersatz = _aussprache["muster"], _aussprache["ersatz"]
+    if not muster:
+        return text
+    return muster.sub(lambda m: ersatz[m.group(0).lower()], text)
+
+
 def _sprechen(text: str, name: str) -> bytes:
     """Die eigentliche Arbeit — läuft in einem Nebenläufer, damit der Dienst
     weiter antwortet, während gesprochen wird."""
@@ -648,6 +692,8 @@ def _sprechen(text: str, name: str) -> bytes:
     _letzte_nutzung = time.time()      # markiert Aktivität — der Wächter fasst
                                        # Piper dann nicht an (siehe speicher_pruefen)
     stem, sprecher = _zerlegen_stimme(name)
+    if stem in AUSSPRACHE_STIMMEN:
+        text = aussprache_anwenden(text)
 
     anfrage: dict = {"text": text, "voice": stem}
     tempo = TEMPOS[gewaehltes_tempo()]
