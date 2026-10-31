@@ -272,6 +272,49 @@ def warte_bis_bereit(name: str, sekunden: float = 30) -> bool:
     return False
 
 
+# Die Tastenhilfe unter dem Nebenfrage-Fenster endet immer so, ob die Antwort
+# noch entsteht („Answering…“) oder schon dasteht.
+_NEBENFRAGE_FUSS = "esc to close"
+
+
+def nebenfrage_lesen(name: str) -> dict | None:
+    """Liest das offene Nebenfrage-Fenster (/btw) vom Bildschirm.
+
+    Claude Code schreibt Nebenfragen und ihre Antworten NICHT ins Protokoll,
+    aus dem die App den Verlauf baut; es gibt sie nur auf dem Schirm. Das
+    Fenster zeigt auch frühere Nebenfragen, die neueste steht unten. Ist kein
+    Fenster offen, kommt None zurück.
+    """
+    try:
+        zeilen = capture(name, lines=None).rstrip().splitlines()
+    except TmuxError:
+        return None
+    fuss = next(
+        (i for i in range(len(zeilen) - 1, max(-1, len(zeilen) - 13), -1)
+         if _NEBENFRAGE_FUSS in zeilen[i].lower()),
+        None,
+    )
+    if fuss is None:
+        return None
+    start = next(
+        (i for i in range(fuss - 1, -1, -1) if zeilen[i].strip().startswith("/btw ")),
+        None,
+    )
+    if start is None:
+        return {"frage": "", "antwort": "", "fertig": False}
+    frage = zeilen[start].strip()[len("/btw "):].strip()
+    rumpf = [z.strip() for z in zeilen[start + 1:fuss]]
+    rumpf = [z for z in rumpf if z]
+    # Solange die Antwort entsteht, steht dort nur eine Zeile „✽ Answering…“
+    # (das Zeichen davor wechselt im Takt).
+    entsteht = len(rumpf) <= 1 and any(z.endswith("Answering…") for z in rumpf)
+    return {
+        "frage": frage,
+        "antwort": "" if entsteht else " ".join(rumpf),
+        "fertig": not entsteht,
+    }
+
+
 def dialog_zustand(name: str) -> str:
     """Liegt gerade ein Auswahl-Dialog über der Eingabe?
 

@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 192
+VERSION = 193
 
 
 @app.get("/api/version")
@@ -555,7 +555,9 @@ async def _eingabe_bereit(name: str) -> str:
         await asyncio.to_thread(tmux.vertrauensfrage_beantworten, name)
         await asyncio.to_thread(tmux.warte_bis_bereit, name, 15)
         zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
-    if zustand == "abbrechbar":
+    if zustand in ("abbrechbar", "nebenfrage"):
+        # Auch ein offenes Nebenfrage-Fenster (/btw) wird geschlossen, bevor
+        # getippt wird; die Antwort hat die App da schon angezeigt.
         tmux.send_key(name, "Escape")
         await asyncio.sleep(0.8)
         zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
@@ -2217,6 +2219,69 @@ async def glaetten(body: Diktat) -> dict:
     # Kommt nichts Brauchbares zurück, lieber den Urtext behalten als eine leere
     # Zeile — nichts geht verloren.
     return {"text": sauber or text}
+
+
+# --- Nebenfrage (/btw) --------------------------------------------------------
+#
+# Roli 31.10.2026 („13. Ja“, „17. Ja“): Eine kurze Frage stellen, während
+# Claude arbeitet, ohne die Arbeit zu stören. Claude Code kann das mit /btw;
+# die Antwort steht aber nur in einem Fenster auf dem Schirm, nicht im
+# Protokoll. Die App schickt die Frage, liest die Antwort vom Schirm und
+# schließt das Fenster auf Wunsch wieder.
+
+class Nebenfrage(BaseModel):
+    text: str
+
+
+@app.post("/api/sessions/{name}/nebenfrage", dependencies=[Depends(require_auth)])
+async def nebenfrage_stellen(name: str, body: Nebenfrage) -> dict:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    frage = " ".join(body.text.split())
+    if not frage:
+        raise HTTPException(400, "Die Nebenfrage ist leer.")
+    if len(frage) > 4000:
+        raise HTTPException(413, "Für eine Nebenfrage ist das zu lang. Bitte als normale Nachricht schicken.")
+    # Erlaubt auch, während Claude arbeitet: genau dafür ist /btw da. Ein
+    # offenes älteres Nebenfrage-Fenster ist kein Hindernis, /btw darin
+    # stellt einfach die nächste Frage.
+    zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand not in ("frei", "nebenfrage"):
+        zustand = await _eingabe_bereit(name)
+    if zustand not in ("frei", "nebenfrage"):
+        raise HTTPException(
+            409,
+            "Claude zeigt in dieser Sitzung gerade eine Frage an. Bitte erst im "
+            "Terminal beantworten, sonst würde die Nebenfrage verschluckt.",
+        )
+    if zustand == "nebenfrage":
+        # Im offenen Fenster sind einzelne Buchstaben Kurztasten (c kopiert,
+        # f zweigt ab). Erst schließen, dann sauber an der Eingabe tippen.
+        tmux.send_key(name, "Escape")
+        await asyncio.sleep(0.6)
+    tmux.send_text(name, "/btw " + frage)
+    await asyncio.sleep(0.3)
+    tmux.send_key(name, "Enter")
+    return {"ok": True}
+
+
+@app.get("/api/sessions/{name}/nebenfrage", dependencies=[Depends(require_auth)])
+async def nebenfrage_lesen(name: str) -> dict:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    gelesen = await asyncio.to_thread(tmux.nebenfrage_lesen, name)
+    return {"offen": gelesen is not None, **(gelesen or {})}
+
+
+@app.post("/api/sessions/{name}/nebenfrage/schliessen", dependencies=[Depends(require_auth)])
+async def nebenfrage_schliessen(name: str) -> dict:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    # Escape NUR, wenn das Fenster wirklich offen ist: An der normalen
+    # Eingabe bricht Escape Claudes laufende Arbeit ab.
+    if await asyncio.to_thread(tmux.dialog_zustand, name) == "nebenfrage":
+        tmux.send_key(name, "Escape")
+    return {"ok": True}
 
 
 @app.post("/api/sessions/{name}/senden", dependencies=[Depends(require_auth)])

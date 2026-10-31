@@ -1972,6 +1972,7 @@ function oeffneSitzung(sitzung) {
   zuletztVorgelesen = "";  // neue Sitzung: die erste Antwort darf vorgelesen werden
   denktBis = 0;
   $("denkt").hidden = true;
+  nebenfrageZettelZu(true);   // der Zettel gehört zur vorigen Karte
   sendeSperren(false);
   sitzungsTakt();
   document.querySelectorAll("#liste .karte").forEach((k) => k.classList.toggle("aktiv", k.dataset.name === sitzung.name));
@@ -2235,6 +2236,109 @@ async function schnellbefehl(text) {
     melde(err.message);
   }
 }
+
+// --- Nebenfrage (/btw) ---------------------------------------------------------
+//
+// Roli 31.10.2026 („13. Ja“, „17. Ja“): Während Claude arbeitet, ist Senden
+// gesperrt. Eine kurze Frage nebenher soll trotzdem gehen, ohne die Arbeit zu
+// stören. Claude Code kann das mit /btw. Die Antwort steht aber nur in einem
+// Fenster im Terminal, nicht im Verlauf; die App liest sie vom Schirm und
+// zeigt sie auf einem eigenen Zettel. Beim Schließen des Zettels schließt
+// der Server auch das Fenster, sonst verschluckte es die nächste Nachricht.
+let nebenfrageLauf = 0;        // zählt hoch, damit ein alter Abruf aufgibt
+let nebenfrageSitzung = null;  // zu welcher Karte der Zettel gehört
+
+function nebenfrageZettelZu(fensterSchliessen = true) {
+  nebenfrageLauf++;
+  $("nebenfrage-zettel").hidden = true;
+  if (spricht && sprecherKnopf === $("nebenfrage-vorlesen")) stille();
+  const sitzung = nebenfrageSitzung;
+  nebenfrageSitzung = null;
+  if (fensterSchliessen && sitzung) {
+    api(`/sessions/${encodeURIComponent(sitzung)}/nebenfrage/schliessen`, { method: "POST" })
+      .catch(() => {});
+  }
+}
+
+async function nebenfrageStellen() {
+  if (!aktuelleSitzung || imTerminal) return;
+  const feld = $("eingabe");
+  const frage = feld.value.replace(/\s+/g, " ").trim();
+  if (!frage) {
+    melde("Erst die Frage ins Feld schreiben oder diktieren, dann „Nebenfrage stellen“ antippen.");
+    feld.focus();
+    return;
+  }
+  hoertStoppen?.();
+  const sitzung = aktuelleSitzung.name;
+  const lauf = ++nebenfrageLauf;
+  nebenfrageSitzung = sitzung;
+  $("nebenfrage-frage").textContent = frage;
+  $("nebenfrage-antwort").textContent = "Claude antwortet …";
+  $("nebenfrage-vorlesen").hidden = true;
+  $("nebenfrage-zettel").hidden = false;
+  feld.value = "";
+  feldAnpassen();
+  entwurfMerken();
+  try {
+    await api(`/sessions/${encodeURIComponent(sitzung)}/nebenfrage`, {
+      method: "POST",
+      body: JSON.stringify({ text: frage }),
+    });
+  } catch (err) {
+    if (lauf !== nebenfrageLauf) return;
+    feld.value = frage;        // nichts verloren
+    feldAnpassen();
+    nebenfrageSitzung = null;
+    $("nebenfrage-zettel").hidden = true;
+    melde(err.message || "Die Nebenfrage ging nicht raus.");
+    return;
+  }
+  // Das Fenster zeigt eine lange Frage auf eine Zeile gekürzt (mit „…“),
+  // darum zählt nur, dass sie mit dem gekürzten Anfang übereinstimmt.
+  const passt = (vomSchirm) => {
+    const kurz = (vomSchirm || "").replace(/…$/, "").replace(/\s+/g, " ").trim();
+    return kurz.length > 0 && frage.startsWith(kurz);
+  };
+  const ende = Date.now() + 120000;
+  while (lauf === nebenfrageLauf && Date.now() < ende) {
+    await new Promise((r) => setTimeout(r, 1500));
+    if (lauf !== nebenfrageLauf) return;
+    let stand;
+    try {
+      stand = await (await api(`/sessions/${encodeURIComponent(sitzung)}/nebenfrage`)).json();
+    } catch {
+      continue;
+    }
+    if (lauf !== nebenfrageLauf) return;
+    if (stand.offen && stand.fertig && passt(stand.frage) && stand.antwort) {
+      $("nebenfrage-antwort").textContent = stand.antwort;
+      $("nebenfrage-vorlesen").hidden = false;
+      if (freisprech) sprich(stand.antwort, $("nebenfrage-vorlesen"));
+      return;
+    }
+    if (!stand.offen && Date.now() > ende - 110000) {
+      // Das Fenster ist nach über zehn Sekunden zu, ohne dass wir eine
+      // Antwort gesehen haben (jemand hat im Terminal Escape gedrückt).
+      $("nebenfrage-antwort").textContent =
+        "Das Antwortfenster wurde im Terminal geschlossen, bevor die Antwort ankam.";
+      return;
+    }
+  }
+  if (lauf === nebenfrageLauf) {
+    $("nebenfrage-antwort").textContent =
+      "Nach zwei Minuten kam keine Antwort. Im Terminal nachsehen.";
+  }
+}
+
+$("knopf-nebenfrage").addEventListener("click", nebenfrageStellen);
+$("nebenfrage-zu").addEventListener("click", () => nebenfrageZettelZu(true));
+$("nebenfrage-vorlesen").addEventListener("click", (e) => {
+  tonEntsperren();
+  const knopf = e.currentTarget;
+  if (spricht && sprecherKnopf === knopf) { stille(); return; }
+  sprich($("nebenfrage-antwort").textContent, knopf);
+});
 
 function befehlsmenue(auf) {
   const wrap = $("schnellbefehle").querySelector(".befehle-wand-wrap");

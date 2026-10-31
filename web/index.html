@@ -524,7 +524,27 @@
        nichts mehr übrig, sobald Kreuz und Modellwähler dazukamen. -->
   <!-- Solange Claude arbeitet, steht hier "denkt nach …" — damit nach dem
        Absenden nie unerklärter Stillstand herrscht. -->
-  <div id="denkt" class="denkt" hidden>Claude denkt nach …</div>
+  <div id="denkt" class="denkt" hidden>
+    <span class="denkt-text">Claude denkt nach …</span>
+    <!-- Nebenfrage (/btw, Roli 31.10.2026): eine kurze Frage nebenher, ohne
+         die laufende Arbeit zu stören. Nimmt den Text aus dem Eingabefeld. -->
+    <button type="button" id="knopf-nebenfrage" class="denkt-knopf">Nebenfrage stellen</button>
+  </div>
+  <!-- Die Antwort auf eine Nebenfrage steht nicht im Verlauf (Claude Code
+       schreibt sie nicht ins Protokoll), darum ein eigener Zettel. -->
+  <div id="nebenfrage-zettel" class="nebenfrage-zettel" hidden>
+    <div class="nebenfrage-kopf">
+      <span class="nebenfrage-marke">Nebenfrage</span>
+      <button type="button" id="nebenfrage-vorlesen" class="klein-knopf" aria-label="Antwort vorlesen" hidden>
+        <svg viewBox="0 0 24 24"><use href="#i-lautsprecher"/></svg>
+      </button>
+      <button type="button" id="nebenfrage-zu" class="klein-knopf" aria-label="Nebenfrage schließen">
+        <svg viewBox="0 0 24 24"><use href="#i-kreuz"/></svg>
+      </button>
+    </div>
+    <p id="nebenfrage-frage" class="nebenfrage-frage"></p>
+    <p id="nebenfrage-antwort" class="nebenfrage-antwort"></p>
+  </div>
   <!-- Ein-Tipp-Befehle fürs Immerwiederkehrende. Wischbar, damit viele
        hineinpassen, ohne die Eingabe zu verdrängen. Der data-text ist, was
        wirklich an Claude geht — die Aufschrift bleibt kurz. -->
