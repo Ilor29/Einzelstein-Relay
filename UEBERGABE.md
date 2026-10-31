@@ -1,55 +1,38 @@
-# Übergabe Hetzner-App (Relay), 18.10.2026 19:00
+# Übergabe Hetzner-App (Relay), 31.10.2026 09:45
 
 ## Stand
-Relay V188 ist ausgerollt und läuft (Commit de606bd, auf GitHub). Die Büroklammer nimmt
-Android-Apps an (.apk, .apks, .xapk). Die Endung bleibt erhalten, aber nur, wenn innen ein ZIP
-steckt. ZIP-Anhänge dürfen bis 200 MB, alles andere bleibt bei 30 MB. Die Grenze im Caddy und
-in der App-eigenen Middleware gilt für /api/sessions/*/datei jetzt bis 210 MB, sonst weiter
-35 MB, und zwar für Roli, Lorenz und Lea. Sicherung: /etc/caddy/Caddyfile.vor-apk-2026-10-18.
-Baubuch (Eintrag 18.10.2026, V188) und Brain-Register sind nachgetragen.
+Relay V191 ausgerollt und auf GitHub: Ordnersuche mit Lupe in „Neue Sitzung“, Chip „Übergabe
+lesen“, „Fragt nie“ vorbelegt, neue Karten starten mit Sonnet (Aufwecken behält das Modell),
+Schnellbefehl-Leiste am Rechner per Mausrad rollbar. Baubuch (31.10., V191), Register und
+Zweitgehirn („02 Projekte/Einzelstein Relay.md“) sind nachgetragen. APK-Anregung gelöscht.
 
-## Nachtrag 18:55
-Relay V189 (Commit 545bc1b): Eigene Schnellbefehle im Blatt „Eigene Schnellbefehle“ am Griff
-ziehen, die Leiste übernimmt die Reihenfolge (Roli 18:32 „schnellwahl knöpfe verschiebbar“, „6. Ja“).
-Offen: Roli probiert es am Handy. Das Blatt rollt beim Ziehen nicht von selbst mit.
+## Beschlüsse 31.10.
+- Roli 09:22 (Screenshot „Neue Sitzung“): Lupe, Übergabe-Chip, Fragt nie an, Sonnet als Start.
+- Roli 09:22 „5. Ja“: APK über die Büroklammer kommt am Handy an. „8. Ja“: Anregung löschen.
+- Über die Kaira-Karte (Roli 00:48 „24. Ja“, 04:03 „25. Ja“, 09:03 „27. Ja“): Relay liest mit
+  Kairas Piper-Stimme vor, wählbar in den Einstellungen, Kaira als Vorgabe, alte Stimme bleibt.
+  Nur in Rolis Relay (Lizenz der Trainingsdaten ungeprüft). Auftrag:
+  ~/projekte/Kaira-Assistent/AUFTRAG-RELAY-STIMME.md (Modell stimmen/kaira/kaira_de-DE.onnx).
 
-## Geprüft
-Testserver 8799 mit Rolis echter App aus Zerlegen und einer 120-MB-App angenommen; falsche
-APK, 40-MB-PDF und 205-MB-ZIP abgelehnt. Playwright im Profil Pixel 7: Anhang-Kärtchen
-erscheint, keine Konsolenfehler. Von außen: Anhang-Weg mit 120 MB kommt bis zur Anmeldung (401),
-andere Wege mit 40 MB werden gesperrt (413).
-
-## Offen
-- Aufgabe 5 an Roli: am Handy eine echte App über Büroklammer und Dateien schicken und sagen,
-  ob sie in der Auswahl erscheint und ankommt. Noch keine Antwort.
-- Ungeprüft sind große Uploads übers Mobilnetz.
-- Die Karte Zerlegen lief nicht und hat keine Nachricht bekommen. Ihr bei Gelegenheit sagen,
-  dass .apk jetzt direkt geht (kein Umbenennen in .zip mehr).
-- ANREGUNG-APK-ANHANG-2026-10-18.md liegt noch im Ordner. Sie ist erledigt, wird aber nur auf
-  Rolis Wort gelöscht.
-
-- Aufgabe 7 an Roli: am Handy das Ziehen am Griff probieren und sagen, ob die Reihenfolge
-  in der Leiste stimmt. Noch keine Antwort.
+## Offen (Fragen an Roli, Nummern laufen weiter)
+- 9: Kairas Stimme jetzt einbauen? (Empfehlung Ja)
+- 10: Lokales Diktat (Whisper auf dem Server) als zweite Wahl neben Google, gegen Aussetzer
+  und Verhörer? (Empfehlung Ja, nach der Stimme). Unklar: Rolis Satz „dann ein bitte überprüfen“.
+- 11: Zweisprachig und auf GitHub bewerben, Kehrtwende zum Beschluss 03.08. (Relay bleibt
+  persönliches Werkzeug)? Empfehlung Ja, ohne „Claude“ im Namen, Hinweis auf eigenes Abo.
+- Roli 09:31 schickte den Artikel „Claude Code 2.0“ (kiberatung.de, Text in
+  /tmp/claude-code-2-0-beitrag.md): ganz gelesen, Doku-Prüfung durch Agenten lief, Antwort an
+  Roli noch offen. Konkreter Fund: Relay sperrt Senden, während Claude arbeitet; `/btw`
+  (Nebenfrage) wäre damit vom Handy nicht nutzbar.
+- Karte Zerlegen weiß noch nicht, dass .apk direkt geht (läuft nicht).
 
 ## Nächster Schritt
-Rolis Rückmeldung zu Aufgabe 5 abwarten. Kommt die App nicht an, ins Protokoll von
-hetzner-app.service schauen, ob ein POST auf /datei ankam und mit welchem Status.
+Rolis Antworten zu 9 bis 11 abwarten, dann Kairas Stimme (eigener Stein, Hörprobe als Link).
 
-## Beschlüsse
-- Roli 18.10. 14:30 „57. Ja“: Die Büroklammer soll APK-Dateien annehmen.
-- Roli 18.10. 17:27 „1. Deine Empfehlung, 2. Deine Empfehlung“: Die Karte bleibt im
-  Hetzner-App-Ordner und baut die APK-Anregung.
-
-- Roli 18.10. 18:32 „ich würde gerne die schnellwahl knöpfe verschiebbar machen“, 18:33
-  „6. Ja“: Reihenfolge der Leiste über dem Eingabefeld selbst festlegen, gespeichert auf dem Server.
-
-## Rolis letzter Wortlaut
-18:33 „6. Ja / ist alles auf github commitet“ (Antwort: ja, alles committet und gepusht).
-Davor:
-„Auftrag: Die Büroklammer der Relay soll APK-Dateien annehmen … 4. Mit einer echten APK am
-Handy-Profil im Browser prüfen. 5. Baubuch, Register, committen. … Ausführbar wird nichts,
-die Datei liegt nur im Ordner.“
+## Wissen
+Recherche ähnlicher Werkzeuge: ~/projekte/Brain/wissen/relay-aehnliche-werkzeuge-2026-10-31.md
 
 ## Merkhilfe für Tests
-Testsitzungen müssen auf dem tmux-Kanal hz mit dem Präfix hz- liegen. Im Testserver
-app.router.on_startup.clear() setzen, sonst starten Melde-Wächter und Piper mit.
+Testserver: PYTHONPATH=Projektordner, Anmeldung aushängen, app.router.on_startup.clear(),
+Port 8799, beenden mit fuser -k 8799/tcp. Playwright in ~/werkzeuge/browser/.venv, Tour-Schalter
+relay_tour_liste_v1 und relay_tour_sitzung_v1 auf "1".
