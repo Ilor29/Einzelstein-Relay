@@ -42,6 +42,12 @@ EINSTELLUNG = Path.home() / ".hetzner-app" / "stimme.txt"
 # einen stärkeren Server ("besserer Server, schönerer Klang"). Standard ist darum
 # bewusst die schnelle.
 KATALOG = {
+    # Kaira (31.10.2026, Roli „25. Ja“): Rolis eigene Stimme, auf RunPod trainiert
+    # (Kaira-Assistent, Epoche 3695). Die Lizenz der Trainingsdaten (Mila-Sätze)
+    # ist für eine Weitergabe NICHT geprüft. Deshalb liegt die Datei nur in Rolis
+    # ~/.hetzner-app/stimmen und nie im Repo; bei Lea, Lorenz und Kunden fehlt sie,
+    # dann taucht Kaira im Angebot gar nicht erst auf.
+    "kaira_de-DE": ("Kaira", "eigene Stimme, nur auf diesem Server"),
     "de_DE-thorsten-medium": ("Jonas", "ruhig, schnell — flüssig auch auf kleinem Server"),
     "de_DE-thorsten-high": ("Jonas · fein", "besonders klar — braucht einen stärkeren Server"),
     "de_DE-thorsten_emotional-medium": ("Max", "lebhaft, betont"),
@@ -64,7 +70,12 @@ KATALOG = {
 # bleiben rein bei Thorsten (CC0, keine Nennungsauflage), auch ohne Frauenstimme.
 MEHRSTIMMIG: dict[str, tuple[str, str]] = {}
 
-STANDARD = "de_DE-thorsten-medium"
+# Liegt Kaira im Stimmen-Ordner, ist sie die Vorgabe (Roli 31.10. „25. Ja“),
+# sonst bleibt es bei Jonas.
+STANDARD = (
+    "kaira_de-DE" if (STIMMEN / "kaira_de-DE.onnx").is_file()
+    else "de_DE-thorsten-medium"
+)
 
 
 # --- ElevenLabs: optionale Wolken-Stimmen ------------------------------------
