@@ -258,6 +258,14 @@ body.eng .sitzung-info { display: none; }
   scrollbar-width: none;
 }
 .chip-reihe::-webkit-scrollbar { display: none; }
+/* Am Rechner gibt es keinen Daumen zum Wischen: Dort bekommt die Reihe eine
+   schmale Rollleiste, und das Mausrad rollt sie seitlich (siehe app.js,
+   Roli 31.10.2026 „am Laptop ist die Schnellwahl nicht scrollbar“). */
+@media (hover: hover) and (pointer: fine) {
+  .chip-reihe { scrollbar-width: thin; scrollbar-color: var(--linie) transparent; padding-bottom: .15rem; }
+  .chip-reihe::-webkit-scrollbar { display: block; height: 5px; }
+  .chip-reihe::-webkit-scrollbar-thumb { background: var(--linie); border-radius: 3px; }
+}
 /* Die Chips liegen in einem Hüll-Element, das die App füllt. Ohne dieses
    `contents` wäre die Hülle das einzige flex-Kind: Der Abstand der Reihe
    griffe zwischen ihr und dem Nachbarn, aber nicht zwischen den Chips
@@ -1707,6 +1715,9 @@ body.eng .sitzung-info { display: none; }
 }
 
 .ordnerwahl { display: flex; flex-direction: column; gap: .35rem; }
+.bib-suche.neu-suche { padding: 0 0 .45rem; }
+.bib-suche.neu-suche .bib-suche-lupe { left: .7rem; }
+.neu-vorschlaege { display: flex; gap: .5rem; margin: -.35rem 0 .9rem; }
 .ordner {
   display: flex;
   align-items: center;

@@ -5146,6 +5146,8 @@ $("knopf-neu").addEventListener("click", async () => {
   const behaelter = $("neu-ordner");
   behaelter.replaceChildren();
   gewaehlterOrdner = ordner[0] ?? null;
+  $("neu-suche").value = "";
+  $("neu-ordner-leer").hidden = true;
 
   ordner.forEach((pfad, i) => {
     const el = document.createElement("div");
@@ -5165,6 +5167,29 @@ $("knopf-neu").addEventListener("click", async () => {
 });
 
 $("knopf-abbrechen").addEventListener("click", starteListe);
+
+// Die Lupe über der Ordnerliste (V191): zeigt nur Ordner, deren Name das
+// Getippte enthält. Fällt der gewählte Ordner aus der Sicht, rückt der erste
+// sichtbare nach, damit „Sitzung starten“ nie einen unsichtbaren Ordner nimmt.
+$("neu-suche").addEventListener("input", () => {
+  const wort = $("neu-suche").value.trim().toLowerCase();
+  const alle = [...$("neu-ordner").querySelectorAll(".ordner")];
+  let sichtbar = [];
+  alle.forEach((el) => {
+    const passt = !wort || el.querySelector(".pfad").textContent.toLowerCase().includes(wort);
+    el.hidden = !passt;
+    if (passt) sichtbar.push(el);
+  });
+  $("neu-ordner-leer").hidden = sichtbar.length > 0;
+  const gewaehlt = alle.find((el) => el.classList.contains("gewaehlt"));
+  if ((!gewaehlt || gewaehlt.hidden) && sichtbar.length) sichtbar[0].click();
+});
+
+// „Übergabe lesen“ als erster Auftrag, mit einem Tipp (V191).
+$("neu-vorschlag-uebergabe").addEventListener("click", () => {
+  $("neu-auftrag").value = "Übergabe lesen";
+  $("neu-auftrag").focus();
+});
 
 $("neu-formular").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -6119,9 +6144,11 @@ function tourSchritte(ansicht) {
             "sofort starten oder sein Protokoll lesen." },
     { kapitel: "Erste Schritte", sel: '[data-tour="neue-sitzung"]', titel: "Ein Gespräch beginnen",
       text: "Mit <b>Neue Sitzung</b> startest du ein Gespräch für ein Vorhaben — " +
-            "du gibst ihm nur einen Namen. Beim allerersten Mal führt dich die " +
-            "App durch die Claude-Anmeldung; du brauchst dafür ein eigenes " +
-            "Claude-Konto." },
+            "du wählst nur den Ordner (die Lupe hilft bei vielen). Neue Karten " +
+            "starten sparsam mit Sonnet und fragen nicht nach; beides stellst du " +
+            "vor dem Start oder später im Modell-Blatt um. Beim allerersten Mal " +
+            "führt dich die App durch die Claude-Anmeldung; du brauchst dafür ein " +
+            "eigenes Claude-Konto." },
     { kapitel: "Erste Schritte", sel: '[data-tour="einstellungen"]', titel: "Die Einstellungen",
       text: "Hier wählst du die Vorlese-Stimme, verwaltest deine Geräte und " +
             "findest die Erklärung aller Symbole. Auch diese Einführung " +
@@ -6315,10 +6342,21 @@ $("knopf-tour").addEventListener("click", () => {
   // links und rechts gehoeren keinem Roll-Container. Wer mit der Maus dort
   // steht und rollt, bewegt nichts (aufgefallen 25.08. im LEIT//PULS).
   // Darum: Rad-Rollen ueber "totem" Grund an den Verlauf weiterreichen.
+  // Die Schnellbefehl-Leiste rollt seitlich. Am Rechner gibt es keinen Daumen
+  // zum Wischen, also rollt das Mausrad sie quer (Roli 31.10.2026, V191).
+  document.querySelectorAll(".chip-reihe").forEach((reihe) => {
+    reihe.addEventListener("wheel", (e) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // echtes Quer-Rollen lassen
+      if (reihe.scrollWidth <= reihe.clientWidth) return;     // nichts zu rollen
+      reihe.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }, { passive: false });
+  });
+
   document.addEventListener("wheel", (e) => {
     const ziel = e.target;
     if (!(ziel instanceof Element)) return;
-    if (ziel.closest("#verlauf, #terminal, textarea, input, .blatt, pre")) return;
+    if (ziel.closest("#verlauf, #terminal, textarea, input, .blatt, pre, .chip-reihe")) return;
     const v = document.getElementById("verlauf");
     if (!v || v.offsetParent === null) return;
     v.scrollTop += e.deltaY;

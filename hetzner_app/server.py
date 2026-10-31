@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 190
+VERSION = 191
 
 
 @app.get("/api/version")
@@ -379,6 +379,13 @@ class NewSession(BaseModel):
     # "Fragt nie": Claude führt auch Befehle ohne Rückfrage aus. Nur beim Start
     # setzbar, nicht später umschaltbar.
     ohne_rueckfragen: bool = False
+    # Womit die Karte startet. Leer heißt STARTMODELL (Sonnet, Roli 31.10.2026:
+    # „Modellwahl Standard immer Sonnet beim Start einer neuen Karte“).
+    modell: str = ""
+
+
+# Neue Karten starten sparsam; hochschalten geht jederzeit im Modell-Blatt.
+STARTMODELL = "sonnet"
 
 
 class Patch(BaseModel):
@@ -482,8 +489,13 @@ async def create_session(body: NewSession) -> dict:
             "(Mond-Knopf auf der Karte), bevor du eine neue startest.",
         )
 
+    modell = body.modell or STARTMODELL
+    if modell not in MODELLE:
+        raise HTTPException(400, "Dieses Modell kenne ich nicht.")
+
     try:
-        kennung = tmux.create(name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen)
+        kennung = tmux.create(name, str(cwd), ohne_rueckfragen=body.ohne_rueckfragen,
+                              modell=modell)
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 
@@ -492,6 +504,7 @@ async def create_session(body: NewSession) -> dict:
         pinned=body.pinned,
         notify_when_done=body.notify_when_done,
         created_prompt=body.first_prompt,
+        modell=modell,
         # Fürs spätere Schlafen/Aufwecken: den Ordner und den Startmodus
         # merken — tmux weiß beides nicht mehr, sobald die Sitzung beendet ist.
         cwd=str(cwd),
@@ -634,7 +647,8 @@ async def brain_oeffnen() -> dict:
                 # GENAU dieses Gespräch fortsetzen. Die Kennung bleibt
                 # stehen — siehe dort, warum.
                 tmux.create(name, ordner_str, ohne_rueckfragen=meta.ohne_rueckfragen,
-                            fortsetzen=True, gespraech=meta.mitschrift)
+                            fortsetzen=True, gespraech=meta.mitschrift,
+                            modell=meta.modell if meta.modell in MODELLE else "")
             except tmux.TmuxError as error:
                 raise HTTPException(409, str(error))
         state.update(name, pinned=True, schlaeft=False, archiviert=False)
@@ -801,7 +815,8 @@ def session_wecken(name: str) -> dict:
         # (--resume) — nicht blind das jüngste des Ordners, das seit den
         # getrennten Karten auch ein Nachbar-Chat sein kann.
         tmux.create(name, meta.cwd, ohne_rueckfragen=meta.ohne_rueckfragen,
-                    fortsetzen=True, gespraech=meta.mitschrift)
+                    fortsetzen=True, gespraech=meta.mitschrift,
+                    modell=meta.modell if meta.modell in MODELLE else "")
     except tmux.TmuxError as error:
         raise HTTPException(409, str(error))
 

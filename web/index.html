@@ -711,7 +711,15 @@
 
     <div class="feld">
       <span class="marke">Arbeitsordner</span>
+      <!-- Die Lupe über der Ordnerliste: Bei über 40 Projekten rollt man sonst
+           ewig (Roli 31.10.2026). Filtert rein im Browser, Tippen genügt. -->
+      <div class="bib-suche neu-suche">
+        <svg class="bib-suche-lupe" viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
+        <input type="search" id="neu-suche" class="bib-suchfeld"
+               placeholder="Ordner suchen …" autocomplete="off" enterkeyhint="search">
+      </div>
       <div id="neu-ordner" class="ordnerwahl"></div>
+      <p id="neu-ordner-leer" class="hinweis" hidden>Kein Ordner passt zu dieser Suche.</p>
       <!-- Steht hier etwas, gewinnt es über die Auswahl oben: Die App legt
            dann unter ~/projekte einen frischen Ordner an — mit Start-CLAUDE.md
            und Git-Repo aus der Vorlage. -->
@@ -725,6 +733,11 @@
       <textarea id="neu-auftrag" class="eingabe" rows="3"
                 placeholder="Optional — kann auch leer bleiben"></textarea>
     </label>
+    <!-- Der häufigste erste Auftrag als Chip: Eine neue Karte liest zuerst die
+         Übergabe ihrer Vorgängerin (Roli 31.10.2026). -->
+    <div class="neu-vorschlaege">
+      <button type="button" class="chip" id="neu-vorschlag-uebergabe">Übergabe lesen</button>
+    </div>
 
     <label class="schalterzeile">
       <span>Sofort anheften</span>
@@ -740,7 +753,7 @@
 
     <label class="schalterzeile">
       <span>Fragt nie <small>— führt auch Befehle ohne Rückfrage aus</small></span>
-      <input type="checkbox" id="neu-ohne-rueckfragen">
+      <input type="checkbox" id="neu-ohne-rueckfragen" checked>
       <span class="schalter"></span>
     </label>
 

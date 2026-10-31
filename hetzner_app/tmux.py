@@ -167,6 +167,7 @@ def create(
     ohne_rueckfragen: bool = False,
     fortsetzen: bool = False,
     gespraech: str = "",
+    modell: str = "",
 ) -> str:
     """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
 
@@ -196,6 +197,12 @@ def create(
     # die Sitzungen gegenseitig (/list-agents) und das Brain kann einer Karte eine
     # Nachricht schicken oder erfahren, wenn sie fertig ist (Doku-Auswertung 05.09.2026).
     befehl = f"{befehl} --name {shlex.quote(name)}"
+    # Das Modell, mit dem die Karte startet (V191). Ohne Angabe nähme Claude Code
+    # die Voreinstellung des Kontos, und die steht seit Rolis /model-Wahl auf dem
+    # teuersten Modell. Neue Karten fangen mit Sonnet an und wechseln bei Bedarf
+    # über das Modell-Blatt hoch; beim Aufwecken bleibt das gemerkte Modell.
+    if modell:
+        befehl = f"{befehl} --model {shlex.quote(modell)}"
     kennung = ""
     if not fortsetzen:
         kennung = str(uuid.uuid4())
