@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import befehle, bibliothek, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
+from . import befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 196
+VERSION = 197
 
 
 @app.get("/api/version")
@@ -1111,6 +1111,23 @@ def stimme_waehlen(body: Stimme) -> dict:
     except ValueError as fehler:
         raise HTTPException(400, str(fehler))
     return {"ok": True, "stimme": body.name}
+
+
+@app.get("/api/diktat", dependencies=[Depends(require_auth)])
+def diktat_stand() -> dict:
+    """Ob das eigene Diktat (Whisper auf dem Server) hier eingerichtet ist."""
+    return {"verfuegbar": diktat.verfuegbar()}
+
+
+@app.post("/api/diktat", dependencies=[Depends(require_auth)])
+async def diktat_erkennen(request: Request) -> dict:
+    """Nimmt eine Aufnahme vom Handy (roher Körper) und liefert den Text."""
+    roh = await request.body()
+    try:
+        text = await asyncio.to_thread(diktat.erkennen, roh)
+    except diktat.DiktatFehler as fehler:
+        raise HTTPException(503, str(fehler))
+    return {"text": text}
 
 
 @app.get("/api/tempo", dependencies=[Depends(require_auth)])

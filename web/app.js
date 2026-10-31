@@ -3046,6 +3046,96 @@ eingabeFeld.addEventListener("keydown", (e) => {
 // der Text steht im Feld — abgeschickt wird erst, wenn du es willst, damit ein
 // Verhörer nicht sofort bei Claude landet.
 
+// Welches Diktat gilt: "google" (Spracherkennung des Browsers, Vorgabe) oder
+// "whisper" (Aufnahme geht zum eigenen Server, Roli 31.10.2026 „10. Ja“). Die Wahl
+// steht in den Einstellungen und wird auf dem Gerät gemerkt.
+function diktatArt() {
+  try { return localStorage.getItem("diktat_art") === "whisper" ? "whisper" : "google"; }
+  catch { return "google"; }
+}
+
+// Aufnahme mit MediaRecorder, Erkennung auf dem Server. Der Text kommt erst nach
+// dem zweiten Tipp (nicht mitlaufend) und wird hinter den vorhandenen Text gesetzt.
+async function whisperDiktat(knopf, feld) {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+    alert("Dieser Browser kann nicht aufnehmen. Stelle das Diktat in den Einstellungen auf Google.");
+    return;
+  }
+  let strom;
+  try {
+    strom = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch {
+    alert("Ohne Zugriff aufs Mikrofon kann ich nicht zuhören. Erlaube es in den Browser-Einstellungen.");
+    return;
+  }
+  const vorher = feld.value ? feld.value.trimEnd() + " " : "";
+  const rec = new MediaRecorder(strom);
+  const stuecke = [];
+  let verwerfen = false;
+  let beendet = false;
+  const MAX_MS = 150000;        // der Server nimmt höchstens 180 Sekunden
+  const frist = setTimeout(() => zustand.fertig(), MAX_MS);
+
+  const aufraeumen = () => {
+    clearTimeout(frist);
+    strom.getTracks().forEach((t) => t.stop());
+    knopf.classList.remove("hoert");
+    $("knopf-diktat-weg").hidden = true;
+    feld.placeholder = "Nachricht an Claude …";
+    hoertStoppen = null;
+    hoertVerwerfen = null;
+  };
+
+  const zustand = {
+    whisper: true,
+    // zweiter Tipp: aufhören und erkennen lassen
+    fertig() { if (!beendet) { beendet = true; if (rec.state !== "inactive") rec.stop(); } },
+    // alles andere (Absenden, Kartenwechsel): aufhören, nichts schreiben
+    abbrechen() { verwerfen = true; zustand.fertig(); },
+  };
+
+  rec.ondataavailable = (e) => { if (e.data.size) stuecke.push(e.data); };
+  rec.onstop = async () => {
+    aufraeumen();
+    hoert = null;
+    if (verwerfen || !stuecke.length) return;
+    feld.placeholder = "Ich schreibe auf …";
+    knopf.classList.add("laedt");
+    try {
+      const antwort = await fetch("/api/diktat", {
+        method: "POST",
+        headers: { "Content-Type": rec.mimeType || "audio/webm" },
+        body: new Blob(stuecke, { type: rec.mimeType || "audio/webm" }),
+      });
+      if (antwort.status === 401) { zeige("anmeldung"); return; }
+      if (!antwort.ok) {
+        const k = await antwort.json().catch(() => ({}));
+        melde(fehlerText(k) || "Das Diktat ließ sich gerade nicht erkennen.");
+        return;
+      }
+      const { text } = await antwort.json();
+      if (!text) { melde("Ich habe nichts verstanden."); return; }
+      feld.value = (feld.value && feld.value.trimEnd() ? feld.value.trimEnd() + " " : vorher) + text;
+      feldAnpassen();
+      feld.scrollTop = feld.scrollHeight;
+      entwurfMerken();
+    } catch {
+      melde("Das Diktat ließ sich gerade nicht erkennen. Nimm es nochmal auf.");
+    } finally {
+      knopf.classList.remove("laedt");
+      feld.placeholder = "Nachricht an Claude …";
+    }
+  };
+
+  hoert = zustand;
+  hoertStoppen = () => zustand.abbrechen();
+  hoertVerwerfen = () => { zustand.abbrechen(); feld.value = vorher.trimEnd(); feldAnpassen(); };
+  $("knopf-diktat-weg").hidden = false;
+  knopf.classList.add("hoert");
+  feld.placeholder = "Ich höre zu … zum Beenden nochmal tippen";
+  rec.start();
+}
+
 const Spracherkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
 let hoert = null;
 let hoertStoppen = null;    // beendet das Zuhören — von überall her aufrufbar
@@ -3054,6 +3144,16 @@ let hoertVerwerfen = null;  // beendet es und wirft das Diktierte weg
 $("knopf-diktat").addEventListener("click", () => {
   const knopf = $("knopf-diktat");
   const feld = $("eingabe");
+
+  // Eigenes Diktat (Whisper auf dem Server): ein Tipp startet die Aufnahme,
+  // der nächste beendet sie und schickt sie zur Erkennung.
+  if (diktatArt() === "whisper") {
+    if (hoert?.whisper) { hoert.fertig(); return; }
+    if (hoert) { hoertStoppen?.(); return; }
+    if (spricht) stille();
+    whisperDiktat(knopf, feld);
+    return;
+  }
 
   if (!Spracherkennung) {
     alert("Dieser Browser kann nicht zuhören. Nimm das Mikrofon auf der Tastatur.");
@@ -5080,6 +5180,7 @@ $("knopf-einstellungen").addEventListener("click", async () => {
   }
 
   ladeTempo();
+  ladeDiktatWahl();
   ladeGeraete();
 });
 
@@ -5090,6 +5191,36 @@ const TEMPO_NAMEN = {
   normal: ["Normal", "das eingebaute Tempo der Stimme"],
   flott: ["Flott", "spart Zeit bei langen Antworten"],
 };
+
+// Die Wahl des Diktats (Google oder eigener Server). Nur sichtbar, wenn der
+// Server das eigene Diktat kann (Whisper eingerichtet); gemerkt auf dem Gerät.
+async function ladeDiktatWahl() {
+  const feld = $("diktat-feld");
+  let stand;
+  try { stand = await (await api("/diktat")).json(); } catch { return; }
+  if (!stand.verfuegbar) { feld.hidden = true; return; }
+  feld.hidden = false;
+  const wahl = $("diktat-wahl");
+  wahl.replaceChildren();
+  const arten = [
+    ["google", "Google", "schreibt mit, während du sprichst"],
+    ["whisper", "Eigener Server", "nimmt auf und schreibt danach, genauer bei Fachwörtern"],
+  ];
+  for (const [art, name, sub] of arten) {
+    const el = document.createElement("div");
+    el.className = "ordner" + (art === diktatArt() ? " gewaehlt" : "");
+    el.innerHTML = `<span class="punkt-wahl"></span><span class="stimme-name"></span><span class="sub"></span>`;
+    el.querySelector(".stimme-name").textContent = name;
+    el.querySelector(".sub").textContent = sub;
+    el.addEventListener("click", () => {
+      try { localStorage.setItem("diktat_art", art); } catch { /* nur für diese Sitzung */ }
+      hoertStoppen?.();
+      wahl.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
+      el.classList.add("gewaehlt");
+    });
+    wahl.append(el);
+  }
+}
 
 async function ladeTempo() {
   const wahl = $("tempo-wahl");
