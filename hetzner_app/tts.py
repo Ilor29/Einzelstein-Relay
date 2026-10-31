@@ -676,7 +676,11 @@ def aussprache_anwenden(text: str) -> str:
     muster, ersatz = _aussprache["muster"], _aussprache["ersatz"]
     if not muster:
         return text
-    return muster.sub(lambda m: ersatz[m.group(0).lower()], text)
+    text = muster.sub(lambda m: ersatz[m.group(0).lower()], text)
+    # Piper schluckt ein Satzzeichen, das direkt hinter „]]“ steht, samt Pause
+    # („[[ ˈapdeɪt ]]. Die“ wird zu „ˈapdeɪtdiː“). Das Zeichen kommt deshalb vor
+    # die schließenden Klammern (Hinweis der Kaira-Karte 31.10.2026, gemessen).
+    return re.sub(r"\s*\]\]([.,!?;:])", r"\1 ]]", text)
 
 
 def _sprechen(text: str, name: str) -> bytes:
