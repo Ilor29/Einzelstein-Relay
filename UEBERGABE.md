@@ -32,13 +32,8 @@ Zweitgehirn („02 Projekte/Einzelstein Relay.md“) sind nachgetragen. APK-Anre
 Bei „9. Ja“: Kairas Stimme einbauen (Modell in den Relay-Bestand kopieren, Auswahl in den
 Einstellungen, Hörprobe als Link, Browser-Prüfer). Danach /btw-Knopf.
 
-## Wissen
+## Wissen (Testhinweise stehen in CLAUDE.md)
 Brain/wissen: relay-aehnliche-werkzeuge-2026-10-31.md, claude-code-2-0-artikel-kiberatung-2026-10-31.md
-
-## Merkhilfe für Tests
-Testserver: PYTHONPATH=Projektordner, Anmeldung aushängen, app.router.on_startup.clear(), Port 8799,
-beenden mit fuser -k 8799/tcp. Playwright in ~/werkzeuge/browser/.venv, Tour-Schalter
-relay_tour_liste_v1 und relay_tour_sitzung_v1 auf "1". Testsitzungen auf Kanal hz mit Präfix hz-.
 
 ## Rolis letzter Wortlaut
 10:02 „12. Ja / 13. Ja / 14. Ja“
