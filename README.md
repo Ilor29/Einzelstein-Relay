@@ -26,6 +26,19 @@ Anthropic; du meldest dich mit deinem eigenen Claude-Konto an.
   halten sich mit der App von selbst aktuell.
 - Die App meldet sich, wenn eine Sitzung fertig ist oder eine Rückfrage
   hat (Web-Push).
+- Antwort-Tasten: Stellt Claude nummerierte Fragen, stehen darunter die
+  passenden Antworten zum Antippen, bis du etwas schreibst.
+- Ein Knopf „Nebenfrage stellen": Während Claude arbeitet, stellst du eine
+  Zwischenfrage, ohne die Arbeit zu unterbrechen. Die Antwort erscheint
+  auf einem Zettel über der Eingabe und lässt sich vorlesen.
+- Neue Gespräche startest du mit Ordnersuche, einem Fertigsatz für den
+  Wiedereinstieg („Übergabe lesen") und dem günstigeren Modell Sonnet als
+  Vorgabe. Eigene Schnellbefehle ordnest du per Ziehen.
+- Eigene Stimmen: Weitere Piper-Stimmen legst du in einen Ordner auf dem
+  Server, dann erscheinen sie in den Einstellungen zur Auswahl.
+- Optional ein eigenes Diktat mit Whisper auf deinem Server, als Alternative
+  zum Browser-Diktat von Google. Es ist eingebaut, gehört aber noch nicht
+  zur automatischen Einrichtung: Du installierst faster-whisper selbst.
 
 ## Was du brauchst
 

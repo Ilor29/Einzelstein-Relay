@@ -26,6 +26,20 @@ product; you sign in with your own Claude account.
   update themselves along with the app.
 - The app notifies you when a session finishes or has a question for you
   (web push).
+- Answer buttons: when Claude asks numbered questions, matching answers
+  appear below them to tap, until you write something yourself.
+- A "side question" button: while Claude is working you can ask a quick
+  question without interrupting the job. The answer shows on a card above
+  the input and can be read aloud.
+- New conversations start with a folder search, a ready-made phrase for
+  picking up where you left off ("read the handover") and the cheaper
+  Sonnet model as the default. You reorder your own quick commands by
+  dragging.
+- Your own voices: put more Piper voices into a folder on the server and
+  they show up in the settings.
+- Optionally, your own dictation with Whisper on your server, as an
+  alternative to Google's browser dictation. It is built in but not yet part
+  of the automatic setup: you install faster-whisper yourself.
 
 A word of honesty: the app, its voices, the guided tour and the
 step-by-step guide are currently **German only**. Everything works in an
