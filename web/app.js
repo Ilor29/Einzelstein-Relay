@@ -6682,13 +6682,19 @@ new MutationObserver(eigeneAntwortenAbgleichen).observe($("verlauf") || document
   let wartet = false;
   const mark = () => {
     wartet = false;
-    // Die jüngste Antwort MIT Fragen, solange sie unter den letzten drei liegt:
-    // Schreibt Claude nach der Frage noch eine Antwort ohne Frage, sollen die
-    // Tasten nicht gleich verschwinden (Roli 10.10.2026 18:52 „da kommen keine Boxen“).
+    // Die jüngste Antwort MIT Fragen, solange Roli danach nichts geschrieben hat.
+    // Früher galt „unter den letzten drei Antworten“: Schrieb Claude nach der Frage
+    // noch drei Zwischentexte (Werkzeuglauf), verschwanden die Tasten, obwohl Roli
+    // noch nicht geantwortet hatte (Roli 31.10.2026 10:46, Tasten-Rätsel 15/16).
     const alle = [...verlauf.querySelectorAll(".antwort")];
     let ziel = -1;
-    for (let i = alle.length - 1; i >= Math.max(0, alle.length - 3); i--) {
+    for (let i = alle.length - 1; i >= 0; i--) {
       if (alle[i].querySelector(".schnellwahl")) { ziel = i; break; }
+    }
+    if (ziel >= 0) {
+      for (let n = alle[ziel].nextElementSibling; n; n = n.nextElementSibling) {
+        if (n.classList.contains("gesagt")) { ziel = -1; break; }
+      }
     }
     alle.forEach((a, i) => a.classList.toggle("juengste", i === ziel));
     zurHandAuffrischen();
