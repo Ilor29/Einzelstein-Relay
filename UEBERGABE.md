@@ -1,39 +1,40 @@
-# Übergabe Hetzner-App (Relay), 31.10.2026 10:12 (Karte Hetzner-App, Kontext 210k, Wechsel)
+# Übergabe Hetzner-App (Relay), 31.10.2026 11:25 (Karte Hetzner-App 2, Kontext rund 170k)
 
 ## Stand
-Relay V191 ausgerollt und auf GitHub: Ordnersuche mit Lupe in „Neue Sitzung“, Chip „Übergabe
-lesen“, „Fragt nie“ vorbelegt, neue Karten starten mit Sonnet (Aufwecken behält das Modell),
-Schnellbefehl-Leiste am Rechner per Mausrad rollbar. Baubuch (31.10., V191), Register und
-Zweitgehirn („02 Projekte/Einzelstein Relay.md“) sind nachgetragen. APK-Anregung gelöscht.
+Relay V194 ausgerollt und auf GitHub. Heute in dieser Karte gebaut, alles in Baubuch und Register:
+- V192: Kairas Piper-Stimme liest vor, Vorgabe in Rolis Relay, Jonas wählbar. Modell nur in
+  ~/.hetzner-app/stimmen, nicht im Repo (Lizenz Trainingsdaten ungeprüft, Lea/Lorenz ohne Kaira).
+- V193: Knopf „Nebenfrage stellen“ (/btw) in der Leiste „Claude denkt nach“, Antwort auf einem
+  Zettel über der Eingabe. Behoben: offenes /btw-Fenster verschluckte Nachrichten (Wächter-Zustand
+  „nebenfrage“, Escape nur wenn das Fenster offen ist).
+- V194: Aussprache-Liste aus Kaira-Assistent/server/aussprache.txt, nur für Kairas Stimme.
+Hörproben: https://seiten-roli.65-21-246-222.sslip.io/relay-kaira-stimme/ (1 bis 4).
 
-## Beschlüsse 31.10. (mit Rolis Wortlaut)
-- 09:22 (Screenshot „Neue Sitzung“): Lupe, Übergabe-Chip, Fragt nie an, Sonnet als Start. Gebaut.
-- 09:22 „5. Ja“: APK über die Büroklammer kommt am Handy an. „8. Ja“: Anregung löschen. Erledigt.
-- Über die Kaira-Karte (00:48 „24. Ja“, 04:03 „25. Ja“, 09:03 „27. Ja“): Relay liest mit Kairas
-  Piper-Stimme vor, wählbar in den Einstellungen, Kaira als Vorgabe, alte Stimme bleibt. Nur in
-  Rolis Relay (Lizenz der Trainingsdaten ungeprüft). Auftrag mit allen Pfaden:
-  ~/projekte/Kaira-Assistent/AUFTRAG-RELAY-STIMME.md (vorher prüfen, wer auf Port 5005 lauscht).
-- 10:02 „12. Ja, 13. Ja, 14. Ja“: Nebenfrage-Knopf für /btw bauen (nach der Stimme; Relay sperrt
-  Senden, solange Claude arbeitet, erst auf dem Testkanal prüfen, ob /btw dann angenommen wird);
-  Brain 63 legt Skill-Creator-Prüffälle an (Nachricht geschickt); Kaira 11 merkt gws vor (geschickt).
+## Beschlüsse 31.10. (Rolis Wortlaut)
+- 10:16 „9. Ja“ Kaira-Stimme (gebaut). „10. Ja“ lokales Whisper-Diktat als zweite Wahl neben
+  Google, gegen Aussetzer und Verhörer. „11. Ja“ Relay zweisprachig und auf GitHub bewerben,
+  Kehrtwende zum 03.08., ohne „Claude“ im Namen, Hinweis aufs eigene Abo, Kaira bleibt draußen.
+- 10:46 „17. Ja“ Nebenfrage-Knopf (gebaut). 11:12 „19. Ja“ Aussprache-Liste (gebaut).
+- Alle drei Beschlüsse stehen auch im Zweitgehirn „02 Projekte/Einzelstein Relay.md“.
 
-## Offen (Fragen an Roli, Nummern laufen weiter, zuletzt 16)
-- 9: Kairas Stimme jetzt einbauen? (Empfehlung Ja) – noch keine Antwort.
-- 10: Lokales Diktat (Whisper auf dem Server) als zweite Wahl neben Google gegen Aussetzer und
-  Verhörer? (Empfehlung Ja, nach der Stimme). Unklar: Rolis Satz „dann ein bitte überprüfen“.
-- 11: Zweisprachig und auf GitHub bewerben, Kehrtwende zum Beschluss 03.08. (Relay bleibt
-  persönliches Werkzeug)? Empfehlung Ja, ohne „Claude“ im Namen, Hinweis auf eigenes Abo.
-- 15/16: Roli 09:58 „Die Fragen-Auswahl ist wieder weg“. Im Testbrowser (Pixel-7-Profil, Testserver)
-  standen die Tasten unter 12 bis 14; Roli hat 12 bis 14 danach beantwortet. Welche Karte und
-  Screenshot noch offen; falls es wieder auftritt: Erkennung in web/app.js schreibeMitWahl().
-- Karte Zerlegen weiß noch nicht, dass .apk direkt geht (läuft nicht).
+## Offen (Nummern laufen weiter, zuletzt 19)
+- 18: Roli soll sich neu anmelden (/login), Claude Code meldete „login expires in 3 days“.
+- Tasten-Rätsel (15/16): Roli 10:46 „Das war übrigens in deinem eigenen Chat“, also in der
+  Hetzner-App-Karte verschwanden die Antwort-Tasten unter nummerierten Fragen. Erkennung in
+  web/app.js schreibeMitWahl() / baueWahlReihe prüfen, mit Rolis echten Antworttexten aus dieser
+  Karte (Fragen mit „N. Soll ich …? Meine Empfehlung: …“) im Testbrowser nachstellen.
+- Rolis Urteil zum Klang von Kaira und zur Aussprache steht aus.
+- Nicht am echten Handy geprüft: Kaira-Vorlesen, Nebenfrage-Zettel.
+- Danach: Whisper-Diktat (10), dann GitHub-Auftritt zweisprachig (11).
 
 ## Nächster Schritt
-Bei „9. Ja“: Kairas Stimme einbauen (Modell in den Relay-Bestand kopieren, Auswahl in den
-Einstellungen, Hörprobe als Link, Browser-Prüfer). Danach /btw-Knopf.
+Tasten-Rätsel nachstellen und beheben, dann Whisper-Diktat planen (Aufwand und Modell vorher nennen).
 
-## Wissen (Testhinweise stehen in CLAUDE.md)
-Brain/wissen: relay-aehnliche-werkzeuge-2026-10-31.md, claude-code-2-0-artikel-kiberatung-2026-10-31.md
+## Testhinweise
+Testserver: /tmp/k192/srv.py mit HETZNER_TTS_PORT=5015 starten (eigener Test-Piper), danach
+Server UND Test-Piper über ihre echten PIDs beenden (PID-Datei hält nur die Hülle).
+Probe-Sitzungen auf eigenem tmux-Kanal, in der App über die Kennung „kanal:sitzung“ ansprechbar,
+dann taucht keine Testkarte in Rolis Liste auf.
 
 ## Rolis letzter Wortlaut
-10:02 „12. Ja / 13. Ja / 14. Ja“
+11:12 „19. Ja“
