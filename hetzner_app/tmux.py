@@ -303,6 +303,13 @@ def dialog_zustand(name: str) -> str:
     # hin. Weiter oben steht Gesprächstext, und der darf diese Worte
     # zitieren, ohne dass wir einen Dialog wittern.
     fuss = "\n".join(schirm.rstrip().splitlines()[-12:]).lower()
+    # Das Antwortfenster einer Nebenfrage (/btw) VOR der Statuszeile prüfen:
+    # Es liegt über der Eingabe, die Statuszeile darunter bleibt aber stehen.
+    # Am 31.10. hielt der Wächter den Schirm darum für frei, und die nächste
+    # Nachricht verschwand spurlos im Fenster (dort sind c und f sogar
+    # Kurztasten für Kopieren und Abzweigen). Escape schließt es gefahrlos.
+    if _NEBENFRAGE_FUSS in fuss:
+        return "nebenfrage"
     if "shift+tab to cycle" in fuss:
         return "frei"  # die normale Statuszeile — kein Dialog liegt davor
     # Der Login-Bildschirm VOR dem Escape-Muster: Beide seiner Seiten (erst
