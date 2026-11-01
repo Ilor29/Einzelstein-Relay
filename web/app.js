@@ -6928,6 +6928,84 @@ function zurHandAuffrischen() {
     });
   }
   zurHandKontext();
+  zurHandAenderungen();
+}
+
+// Änderungen der Karte (Baustein 1 der Monitor-Ansicht): Git-Stand des Kartenordners.
+// Nur lesend; höchstens alle 12 Sekunden, beim Kartenwechsel sofort.
+let aendFuer = "", aendZuletzt = 0, aendAbdruck = "", aendOffen = new Set();
+async function zurHandAenderungen(erzwingen) {
+  if ($("zur-hand").hidden || !aktuelleSitzung) return;
+  const name = aktuelleSitzung.name;
+  if (!erzwingen && aendFuer === name && Date.now() - aendZuletzt < 12000) return;
+  if (aendFuer !== name) { aendOffen = new Set(); aendAbdruck = ""; }
+  aendFuer = name;
+  aendZuletzt = Date.now();
+  let d;
+  try {
+    d = await (await api(`/sessions/${encodeURIComponent(name)}/aenderungen`)).json();
+  } catch { return; }
+  if (aktuelleSitzung?.name !== name) return;
+  const abdruck = name + JSON.stringify(d);
+  if (abdruck === aendAbdruck) return;
+  aendAbdruck = abdruck;
+  const ziel = $("zh-aend-liste");
+  const summe = $("zh-aend-summe");
+  ziel.replaceChildren();
+  if (!d.git) {
+    summe.textContent = "";
+    ziel.innerHTML = '<p class="zh-leer">Dieser Ordner steht nicht unter Git.</p>';
+    return;
+  }
+  if (!d.dateien.length) {
+    summe.textContent = "";
+    ziel.innerHTML = '<p class="zh-leer">Nichts geändert seit dem letzten Commit.</p>';
+    return;
+  }
+  summe.textContent = `${d.dateien.length} · +${d.plus} −${d.minus}`;
+  for (const f of d.dateien) {
+    const box = document.createElement("div");
+    box.className = "zh-aend-datei";
+    const kopf = document.createElement("button");
+    kopf.type = "button";
+    kopf.className = "zh-aend-kopf";
+    const nm = document.createElement("span");
+    nm.className = "zh-aend-name";
+    nm.textContent = f.pfad + (f.neu ? " (neu)" : "");
+    const zahl = document.createElement("span");
+    zahl.className = "zh-aend-zahl";
+    zahl.textContent = f.geheim ? "Inhalt verborgen" : f.binaer ? "Binärdatei" : `+${f.plus} −${f.minus}`;
+    kopf.append(nm, zahl);
+    box.appendChild(kopf);
+    const fuellen = async () => {
+      let pre = box.querySelector(".zh-aend-diff");
+      if (!pre) { pre = document.createElement("pre"); pre.className = "zh-aend-diff"; box.appendChild(pre); }
+      pre.textContent = "Einen Moment …";
+      try {
+        const x = await (await api(
+          `/sessions/${encodeURIComponent(name)}/aenderungen/datei?pfad=${encodeURIComponent(f.pfad)}`
+        )).json();
+        pre.textContent = "";
+        if (x.geheim) { pre.textContent = "Diese Datei kann Zugangsdaten enthalten, der Inhalt wird nicht gezeigt."; return; }
+        if (x.binaer) { pre.textContent = "Binärdatei, keine Zeilen zu zeigen."; return; }
+        if (x.fehler) { pre.textContent = x.fehler; return; }
+        for (const z of x.zeilen) {
+          const el = document.createElement("span");
+          el.className = "z " + (z.startsWith("+") ? "p" : z.startsWith("-") ? "m" : "k");
+          el.textContent = z || " ";
+          pre.appendChild(el);
+        }
+        if (x.gekuerzt) pre.appendChild(Object.assign(document.createElement("span"), { className: "z k", textContent: "… gekürzt" }));
+      } catch { pre.textContent = "Das ließ sich gerade nicht abrufen."; }
+    };
+    kopf.addEventListener("click", () => {
+      const pre = box.querySelector(".zh-aend-diff");
+      if (pre) { pre.remove(); aendOffen.delete(f.pfad); }
+      else { aendOffen.add(f.pfad); fuellen(); }
+    });
+    ziel.appendChild(box);
+    if (aendOffen.has(f.pfad)) fuellen();
+  }
 }
 
 function zurHandKontext() {

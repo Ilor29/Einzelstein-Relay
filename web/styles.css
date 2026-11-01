@@ -2515,6 +2515,16 @@ body.drei-spalten #ansicht-liste .kopf h1 { flex: none; margin-right: auto; }
 .zh-leer { font-size: .85rem; color: var(--schrift-schwach); }
 #zur-hand-korb .korb { margin: 0; }
 #zur-hand-korb .korb > :first-child { display: none; }   /* eigener Titel steht schon im Block */
+.zh-aend-datei { border-top: 1px solid var(--linie); }
+.zh-aend-datei:first-child { border-top: 0; }
+.zh-aend-kopf { display: flex; justify-content: space-between; gap: .5rem; width: 100%; padding: .4rem 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.zh-aend-name { font: .78rem var(--mono); overflow-wrap: anywhere; }
+.zh-aend-zahl { font: .78rem var(--mono); white-space: nowrap; color: var(--schrift-leise); }
+.zh-aend-diff { margin: 0 0 .5rem; padding: .4rem; max-height: 16rem; overflow: auto; background: var(--grund); border: 1px solid var(--linie); border-radius: 8px; font: .72rem/1.45 var(--mono); }
+.zh-aend-diff .z { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.zh-aend-diff .z.p { background: rgba(60,140,80,.18); }
+.zh-aend-diff .z.m { background: rgba(190,70,70,.18); }
+.zh-aend-diff .z.k { color: var(--schrift-schwach); }
 .zh-kontext { cursor: pointer; }
 .zh-kontext .kontext-schiene { display: block; margin: .1rem 0 .55rem; }
 .zh-wert { display: flex; justify-content: space-between; gap: .5rem; font-size: .85rem; padding: .15rem 0; }

@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
+from . import aenderungen, befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 198
+VERSION = 199
 
 
 @app.get("/api/version")
@@ -1977,6 +1977,24 @@ def session_verbrauch(name: str) -> dict:
         "kontext": verbrauch.kontext(ordner) if ordner else None,
         "limits": verbrauch.limits(),
     }
+
+
+@app.get("/api/sessions/{name}/aenderungen", dependencies=[Depends(require_auth)])
+def session_aenderungen(name: str) -> dict:
+    """Was im Ordner dieser Karte gegenüber dem letzten Commit anders ist (nur lesen)."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    ordner = next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
+    return aenderungen.uebersicht(ordner)
+
+
+@app.get("/api/sessions/{name}/aenderungen/datei", dependencies=[Depends(require_auth)])
+def session_aenderung_datei(name: str, pfad: str = Query(..., max_length=500)) -> dict:
+    """Die Zeilen einer geänderten Datei. Dateien mit Zugangsdaten liefern nie Inhalt."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    ordner = next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
+    return aenderungen.datei_diff(ordner, pfad)
 
 
 @app.get("/api/sessions/{name}/kontext", dependencies=[Depends(require_auth)])
