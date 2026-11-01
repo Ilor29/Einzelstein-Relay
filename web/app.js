@@ -5179,10 +5179,31 @@ $("knopf-einstellungen").addEventListener("click", async () => {
     liste.append(el);
   }
 
+  ladeSpracheWahl();
   ladeTempo();
   ladeDiktatWahl();
   ladeGeraete();
 });
+
+// Die Wahl der Oberflächensprache (Deutsch oder Englisch), gemerkt auf dem Gerät.
+function ladeSpracheWahl() {
+  const wahl = $("sprache-wahl");
+  wahl.replaceChildren();
+  const sprachen = [["de", "Deutsch", "German"], ["en", "English", "Englisch"]];
+  for (const [kuerzel, name, sub] of sprachen) {
+    const el = document.createElement("div");
+    el.className = "ordner" + (kuerzel === sprache() ? " gewaehlt" : "");
+    el.innerHTML = `<span class="punkt-wahl"></span><span class="stimme-name"></span><span class="sub"></span>`;
+    el.querySelector(".stimme-name").textContent = name;
+    el.querySelector(".sub").textContent = sub;
+    el.addEventListener("click", () => {
+      spracheSetzen(kuerzel);
+      wahl.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
+      el.classList.add("gewaehlt");
+    });
+    wahl.append(el);
+  }
+}
 
 // Das Sprechtempo — gespeichert auf dem Server, gilt also auf jedem Gerät.
 // Beim Wählen kommt sofort eine kurze Probe im neuen Tempo.
