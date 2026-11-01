@@ -448,6 +448,8 @@
     <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">
       <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
     </button>
+    <!-- Kartenmenü (Monitor-Baustein 4): Umbenennen, Fork, Ungelesen, Archiv, Löschen. -->
+    <button id="knopf-kartenmenue" class="knopf-blank" aria-label="Menü dieser Karte">⋯</button>
   </header>
   <!-- Eine schlichte Zeile: links der Berechtigungs-Modus zum Antippen (fragt
        nach → Änderungen ok → nur Plan → Auto), dahinter welches Modell denkt
@@ -639,6 +641,24 @@
   <!-- Alles, was man an eine Nachricht hängen kann — in einem Blatt statt in
        einer Knopfreihe. Oben die drei Wege zu einer Datei als Kacheln, darunter
        die Skill-Bibliothek als Zeile. -->
+  <div id="kartenmenue-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="kartenmenue-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="kartenmenue-schliessen" class="knopf-blank" aria-label="Schließen">✕</button>
+        <h2 id="kartenmenue-titel">Diese Karte</h2>
+      </div>
+      <div class="kartenmenue-liste">
+        <button type="button" class="kartenmenue-punkt" data-punkt="umbenennen">Umbenennen</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="anheften">Anheften</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="ungelesen">Als ungelesen markieren</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="fork">Fork: Kopie bis hierher</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="archivieren">Ins Archiv stellen</button>
+        <button type="button" class="kartenmenue-punkt gefahr" data-punkt="loeschen">Löschen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Tastenkürzel am Rechner (Monitor-Baustein 13). Strg und / öffnet die Liste. -->
   <div id="kuerzel-blatt" class="blatt" hidden>
     <div class="blatt-schatten" id="kuerzel-schatten"></div>

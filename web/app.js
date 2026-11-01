@@ -3443,6 +3443,7 @@ $("sitzung-name").addEventListener("click", async () => {
   }
 });
 
+let ungelesenBleibt = false;   // Kartenmenü: „Als ungelesen“ soll das Hinausgehen überleben
 $("knopf-zurueck").addEventListener("click", () => {
   steckdose?.close();
   steckdose = null;
@@ -3451,7 +3452,8 @@ $("knopf-zurueck").addEventListener("click", () => {
   entwurfMerken();
   // Auch beim Hinausgehen: Was während des Offenseins hereinkam, hast du
   // gesehen. Ohne das leuchtete die Karte in der Liste sofort wieder auf.
-  gesehenMelden(aktuelleSitzung?.name);
+  if (!ungelesenBleibt) gesehenMelden(aktuelleSitzung?.name);
+  ungelesenBleibt = false;
   aktuelleSitzung = null;
   offeneSitzungMerken(null);
   starteListe();
@@ -7233,3 +7235,49 @@ document.addEventListener("keydown", (e) => {
     setTimeout(() => b.classList.remove("zh-blitz"), 1200);
   }
 });
+
+// --- Kartenmenü (Monitor-Baustein 4, Roli 01.11.2026 „3. Ja“, 23:07 „mach mit 4 weiter“) ---
+// Sammelt, was es verstreut schon gab (Name antippen, Nadel, Kiste), und ergänzt Fork,
+// Als-ungelesen und Löschen. Jeder Punkt fragt bei Folgen nach, Löschen immer.
+function kartenmenueBlatt(auf) { $("kartenmenue-blatt").hidden = !auf; }
+$("kartenmenue-schatten").addEventListener("click", () => kartenmenueBlatt(false));
+$("kartenmenue-schliessen").addEventListener("click", () => kartenmenueBlatt(false));
+$("knopf-kartenmenue").addEventListener("click", () => {
+  if (!aktuelleSitzung) return;
+  const eigen = aktuelleSitzung.eigen !== false;
+  $("kartenmenue-titel").textContent = benannt(aktuelleSitzung);
+  const punkt = (n) => document.querySelector(`.kartenmenue-punkt[data-punkt="${n}"]`);
+  punkt("anheften").textContent = aktuelleSitzung.pinned ? "Nicht mehr anheften" : "Anheften";
+  for (const n of ["fork", "archivieren", "loeschen"]) punkt(n).hidden = !eigen;
+  kartenmenueBlatt(true);
+});
+document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListener("click", async () => {
+  const s = aktuelleSitzung;
+  if (!s) return;
+  const name = encodeURIComponent(s.name);
+  const art = k.dataset.punkt;
+  kartenmenueBlatt(false);
+  try {
+    if (art === "umbenennen") { $("sitzung-name").click(); }
+    else if (art === "anheften") { $("knopf-anheften").click(); }
+    else if (art === "archivieren") { $("knopf-archivieren").click(); }
+    else if (art === "ungelesen") {
+      await api(`/sessions/${name}/ungelesen`, { method: "POST" });
+      melde("Wieder als ungelesen markiert.");
+      ungelesenBleibt = true;
+      $("knopf-zurueck").click();
+    } else if (art === "fork") {
+      if (!confirm(`Von „${benannt(s)}“ eine Kopie bis zu diesem Punkt anlegen? Die Kopie läuft als eigene Karte weiter.`)) return;
+      const neu = await (await api(`/sessions/${name}/fork`, { method: "POST" })).json();
+      melde(`Kopie „${neu.name}“ startet.`);
+      $("knopf-zurueck").click();
+    } else if (art === "loeschen") {
+      if (!confirm(`Die Karte „${benannt(s)}“ endgültig löschen? Das Terminal wird beendet, das Gespräch bleibt in Claude Codes eigener Ablage, kommt aber nicht zurück in die Liste.`)) return;
+      await api(`/sessions/${name}`, { method: "DELETE" });
+      melde("Karte gelöscht.");
+      $("knopf-zurueck").click();
+    }
+  } catch (err) {
+    melde(err.message || "Das ging gerade nicht.");
+  }
+}));

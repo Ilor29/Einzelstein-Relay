@@ -2558,3 +2558,9 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .kuerzel-liste dd { margin: 0; }
 .kuerzel-liste kbd { font: inherit; font-size: 0.85em; padding: 2px 7px; border: 1px solid currentColor; border-radius: 5px; opacity: 0.85; }
 .zh-blitz { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 6px; transition: outline-color 0.3s; }
+
+/* Kartenmenü (Baustein 4) */
+.kartenmenue-liste { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 18px; }
+.kartenmenue-punkt { text-align: left; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--linie, rgba(255,255,255,.14)); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.kartenmenue-punkt[hidden] { display: none; }
+.kartenmenue-punkt.gefahr { color: #ff8a80; }

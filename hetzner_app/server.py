@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 205
+VERSION = 206
 
 
 @app.get("/api/version")
@@ -725,6 +725,40 @@ def delete_session(name: str) -> dict:
     tmux.kill(name)
     state.forget(name)
     return {"ok": True}
+
+
+@app.post("/api/sessions/{name}/fork", dependencies=[Depends(require_auth)])
+async def session_fork(name: str) -> dict:
+    """Eine Kopie dieser Karte bis zum jetzigen Punkt (Monitor-Baustein 4).
+
+    Claude Code startet in derselben Ordnung mit --resume --fork-session, die
+    neue Karte hat ein eigenes Gespräch und läuft unabhängig weiter. Das Original
+    bleibt unberührt. Der Name der Kopie ist „<Name> Fork“, bei Bedarf mit Zahl.
+    """
+    meta = state.get(name)
+    if not meta.cwd or not meta.mitschrift:
+        raise HTTPException(409, "Von dieser Karte ist kein Gespräch gemerkt, es gibt nichts zu kopieren.")
+    if not Path(meta.cwd).is_dir():
+        raise HTTPException(409, f"Den Ordner {meta.cwd} gibt es nicht mehr.")
+    eigene = sum(1 for s in tmux.list_sessions() if s.eigen)
+    if eigene >= MAX_SITZUNGEN:
+        raise HTTPException(429, f"Es laufen schon {eigene} Sitzungen. Leg erst eine schlafen.")
+    basis = _sicherer_sitzungsname(f"{name} Fork")
+    neu_name, zaehler = basis, 2
+    while tmux.exists(neu_name) or state.get(neu_name).cwd:
+        neu_name = f"{basis} {zaehler}"
+        zaehler += 1
+    modell = meta.modell if meta.modell in MODELLE else STARTMODELL
+    try:
+        kennung = tmux.create(neu_name, meta.cwd, ohne_rueckfragen=meta.ohne_rueckfragen,
+                              modell=modell, abzweigen_von=meta.mitschrift)
+    except tmux.TmuxError as error:
+        raise HTTPException(409, str(error))
+    state.update(neu_name, pinned=False, notify_when_done=meta.notify_when_done,
+                 modell=modell, cwd=meta.cwd, ohne_rueckfragen=meta.ohne_rueckfragen,
+                 schlaeft=False, archiviert=False, mitschrift=kennung)
+    asyncio.create_task(_eingabe_bereit(neu_name))
+    return {"ok": True, "name": neu_name}
 
 
 @app.post("/api/sessions/{name}/schlafen", dependencies=[Depends(require_auth)])

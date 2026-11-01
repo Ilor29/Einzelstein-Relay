@@ -168,8 +168,14 @@ def create(
     fortsetzen: bool = False,
     gespraech: str = "",
     modell: str = "",
+    abzweigen_von: str = "",
 ) -> str:
     """Startet Claude Code in einer neuen, dauerhaften tmux-Sitzung.
+
+    Mit abzweigen_von (Gesprächs-Kennung einer anderen Karte) startet die
+    Sitzung als Kopie dieses Gesprächs bis zum jetzigen Punkt (Fork, Baustein 4):
+    --resume <alt> --fork-session --session-id <neu>. Die neue Kennung geben wir
+    selbst vor, so wissen wir sofort, welche Mitschrift zur Kopie gehört.
 
     Liefert die Gesprächs-Kennung, unter der Claude Code die Mitschrift
     ablegt — bei einem frischen Start vergeben WIR sie (--session-id), damit
@@ -204,7 +210,11 @@ def create(
     if modell:
         befehl = f"{befehl} --model {shlex.quote(modell)}"
     kennung = ""
-    if not fortsetzen:
+    sicher_alt = "".join(c for c in abzweigen_von if c.isalnum() or c == "-")
+    if sicher_alt:
+        kennung = str(uuid.uuid4())
+        befehl = f"{befehl} --resume {sicher_alt} --fork-session --session-id {kennung}"
+    elif not fortsetzen:
         kennung = str(uuid.uuid4())
         befehl = f"{befehl} --session-id {kennung}"
     if fortsetzen:
