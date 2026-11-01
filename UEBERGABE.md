@@ -1,41 +1,36 @@
-# Übergabe Hetzner-App (Relay), 01.11.2026 13:55 (Karte Hetzner-App 5)
+# Übergabe Hetzner-App (Relay), 01.11.2026 16:40 (Karte Hetzner-App 5, Fortsetzung)
 
 ## Stand
-Relay V198 läuft. Neu: web/texte.js (Textliste de/en, t(), texteAnwenden(), spracheSetzen()), Abschnitt
-„Sprache/Language“ oben in den Einstellungen, Wahl in localStorage „sprache“, Vorgabe Deutsch.
-Nur die Einstellungen-Überschriften und -Hinweise sind umgestellt (Schlüssel einst_titel, sprache_*,
-stimme_*, diktat_*, tempo_*, geraete_marke). Alles committet (ff2ba04), auf GitHub, Baubuch und Register stehen.
+Relay V198 läuft (Gerüst englische Oberfläche, Sprachwahl in den Einstellungen). Seitdem nichts in der App
+gebaut, nur Entwürfe und Prüfungen (Baubuch-Eintrag 01.11. „Entwurf Monitor-Ansicht“, committet).
+
+## Neu seit der letzten Übergabe
+- Rolis Auslöser: Spickzettel „Claude Desktop App“ (Julian Ivanov, PDF) und Video, Link
+  https://yt.65-21-246-222.sslip.io/qmuqhNZAoSzO/2026-11-01-claude-desktop-app-neu-gebaut-zehn-neue-funktionen-fur-claud.html
+  (Text und 58 Bilder; Bilder liegen in /tmp/vb, gehen verloren). Roli will diese Funktionen am Monitor/Arbeitslaptop nutzen.
+- Offizielle Doku (Agent): fast alles gibt es auch im Terminal als Befehl, nur Sitzungsleiste und geteilte Ansicht
+  sind Desktop-only. Desktop-App kann Umgebung „SSH“ (laut Doku, unerprobt). „Schaltzentrale“ heißt in der Doku
+  Cross-Session-Messaging (/list-agents), in tmux unbelegt.
+- /advisor gibt es hier NICHT (Probe-Sitzung: nur Skill „model-usage-advisor“; Notiz 15.10.: nur Plattform auf AWS).
+  Alternative: Sonnet-Karte holt für schwere Teile einen Opus-Unteragenten, oder /model von Hand.
+- Fertig und im Browser geprüft: Bauplan (elf Bausteine) https://seiten-roli.65-21-246-222.sslip.io/relay-monitor-bauplan/
+  und klickbares Mockup mit Tour und SSH-Anleitung https://seiten-roli.65-21-246-222.sslip.io/relay-monitor-mockup/
+  (Rolis Handy-Screenshot 16:23 zeigte die Spalten untereinander: behoben, am Handy jetzt Reiter Karten/Chat/Leiste).
 
 ## Beschlüsse
-01.11. 11:25 „8. Ja“ (Bau beginnt), 13:50 „9. Ja“ (Texte schreiben und Umstellung, in neuer Karte).
+01.11. 16:12 „5. Ja“ (Bauplan als Seite); 16:17 „2./3./4. Deine Empfehlung“ = Ja: Versuch Nachrichten zwischen Karten,
+Monitor-Leiste nach der englischen Oberfläche, SSH-Anleitung (steht im Mockup). Roli: englische Oberfläche zuerst
+zurückstellen? Er sagte 15:52 „wenn das englische erstmal zurück“ (Auslegung: Monitor-Ansicht soll vorgezogen werden,
+nachfragen!).
 
-## Nächster Schritt (Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md)
-1. Englische Texte für alle 144 Texte und 63 Attribute in web/index.html selbst schreiben, in texte.js
-   eintragen, data-t / data-t-attr setzen (Muster steht in den Einstellungen).
-2. Die rund 173 Stellen in app.js auf t() umstellen (Umsetzer, Sonnet, mit fertiger Textliste), dazu Tour,
-   relative Zeiten, Datumsformate (de-DE ist fest in Zeile ca. 1297, 2097).
-3. Server-Meldungen (99) in hetzner_app/texte.py, Sprache per Accept-Language.
-4. Englische Piper-Stimme, Browser-Diktat en-US, Whisper mit language.
-5. Playwright in beiden Sprachen, automatische Suche nach deutschem Rest, VERSION hoch, READMEs anpassen.
-
-## Anfrage der Kaira-Karte (Kaira-Assistent 12, 01.11. nach 13:53, Rolis „36./37. Ja“ dort)
-Roli will Kaira als Chefin über alle Karten (Aufträge nach seiner Bestätigung weitergeben, letzte Antwort als
-Einzeiler zurück). Ich habe geantwortet, nichts gebaut: Bausteine gibt es (POST /api/sessions/{name}/senden,
-GET .../verlauf, .../kontext, POST /api/sessions zum Starten), aber require_auth ist ein Geräte-Cookie, ein
-Dienstzugang und ein Einzeiler fehlen. Den automatischen Kartenwechsel bei 200.000 Token gibt es nicht.
-Frage 10 an Roli (unbeantwortet): beides bauen, Empfehlung Ja, erst nach der englischen Oberfläche, mit
-eigenem Schlüssel nur für senden und lesen (Schlüssel in schluessel_katalog.py eintragen, Bitwarden-Regel),
-Kartenwechsel erst nach Bestätigung in der App.
+## Nächster Schritt
+1. Versuch: können Karten sich gegenseitig anschreiben (/list-agents, SendMessage) in tmux-Karten? Mit Test-Karten, nichts an echten.
+2. Rolis Nummern der Bausteine von der Bauplan-Seite abwarten, dann bauen (Reihenfolge: 10 Versuch, 3, 2, 1, 6, 7).
+3. Englische Oberfläche: Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md, Reihenfolge mit Roli klären.
 
 ## Offen bei Roli
-Handyprobe Whisper-Diktat, Urteil zu Kaira und Aussprachetest Runde 2
-(https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/), Anmeldung /login am Montag 03.11.
-Nicht am Handy geprüft: Sprachwahl, Whisper-Diktat, Kaira-Vorlesen, Nebenfrage, Antwort-Tasten.
-
-## Testhinweise
-Testserver: HETZNER_TTS_PORT=5015 .venv/bin/python /tmp/k192/srv.py (Port 8799, Anmeldung aus).
-Beenden mit fuser -k 8799/tcp. Testskript Sprachwahl: /tmp/spr.py (Playwright aus ~/werkzeuge/browser/.venv).
-`wait_for_function` geht wegen CSP nicht.
+Frage 10 der Kaira-Karte (Dienstzugang, Kartenwechsel) hängt am Versuch 1; Anmeldung läuft 03.11. ab (/login);
+Handyprobe Whisper-Diktat, Aussprachetest Runde 2 (https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/).
 
 ## Rolis letzter Wortlaut
-01.11. 13:50 „9. Ja“ (Frage 10 steht offen)
+01.11. 16:23 (Screenshot des Mockups am Handy, „Mockup geht nur am Rechner oder“).
