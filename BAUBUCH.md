@@ -821,3 +821,7 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 ## 01.11.2026: Beschluss Reihenfolge, Englisch ganz zum Schluss
 **Auslöser:** Roli 01.11. 19:29 „wieso willst du dann englisch machen, da macht so kein sinn bitte erst wenn alles steht und geändert worden ist. dann machen wir die englische version“.
 **Folge:** Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md ruhen, bis die Monitor-Bausteine fertig sind. Meine Frage 12 („Englisch als Nächstes“) war falsch gestellt. Es bleiben der Videoabgleich (Frage 13) und die Bausteine 4, 5, 8, 9, 11.
+
+## 01.11.2026: Abgleich Spickzettel „Claude Desktop App“ gegen die Bausteine
+**Auslöser:** Roli 01.11. 19:26 „hast du alles eingebaut aus dem video?“, 19:30 „15. Ja“ (Abgleich). Das Video selbst liegt nicht auf dem Server, nur der Spickzettel (PDF, 7 Seiten plus Prompts und Kürzel, Bilder stammen laut Zettel aus dem Video). Verglichen wurde also der Zettel, nicht das Video Bild für Bild.
+**Ergebnis:** Neu gefunden und als Bausteine 13 bis 16 in den Bauplan gesetzt: Tastenkürzel (13), Befehle /doctor, /skill-doctor, /insights und die acht Prompts als Schnellbefehle (14), Ausgabestil und Transkript-Ansicht (15), geteilte Ansicht mit zwei Karten (16). Nicht übernommen, weil nur Desktop oder nicht möglich: iOS-Simulator, Weiter in Cloud, Claude Code Projects, Mods, Artefakte, Konnektoren. Bereits da oder gebaut: Seitenchat (V193), Abschnitte (V201), Status je Karte, Änderungen (V199), Kontext, Vorschau (V203). Offen: Untersitzungen, in tmux nicht als eigene Karten sichtbar.
