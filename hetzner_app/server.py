@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import aenderungen, befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf
+from . import aenderungen, befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -69,7 +69,7 @@ def _csp_bauen() -> str | None:
         "object-src 'none'",
         "base-uri 'none'",
         "frame-ancestors 'none'",
-    ])
+    ] + ([f"frame-src {vorschau.herkunft()}"] if vorschau.herkunft() else []))
 
 
 CSP = _csp_bauen()
@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 202
+VERSION = 203
 
 
 @app.get("/api/version")
@@ -1963,6 +1963,12 @@ def session_verbrauch(name: str) -> dict:
         "kontext": verbrauch.kontext(ordner) if ordner else None,
         "limits": verbrauch.limits(),
     }
+
+
+@app.get("/api/vorschau", dependencies=[Depends(require_auth)])
+def vorschau_liste() -> dict:
+    """Die Seiten im eigenen Webspace, jüngste zuerst (für die Vorschau neben dem Chat)."""
+    return vorschau.uebersicht()
 
 
 @app.get("/api/sessions/{name}/aenderungen", dependencies=[Depends(require_auth)])

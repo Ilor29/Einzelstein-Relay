@@ -1272,6 +1272,16 @@
       <h2><span>Änderungen dieser Karte</span><span id="zh-aend-summe"></span></h2>
       <div id="zh-aend-liste"></div>
     </section>
+    <section class="zh-block" id="zh-vorschau-block" hidden>
+      <h2><span>Vorschau</span></h2>
+      <div class="zh-vorschau-leiste">
+        <select id="zh-vorschau-wahl" aria-label="Seite für die Vorschau wählen"></select>
+        <button type="button" id="zh-vorschau-neu" class="zh-klein" aria-label="Vorschau neu laden">Neu laden</button>
+        <a id="zh-vorschau-auf" class="zh-klein" target="_blank" rel="noopener noreferrer" hidden>Eigenes Fenster</a>
+      </div>
+      <iframe id="zh-vorschau-rahmen" class="zh-vorschau-rahmen" title="Vorschau der gewählten Seite"
+              sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="no-referrer" hidden></iframe>
+    </section>
     <button type="button" id="zh-kontext-block" class="zh-block zh-kontext" aria-label="Verbrauch dieser Karte, antippen für Details">
       <h2><span>Diese Karte</span></h2>
       <span class="kontext-schiene"><span id="zh-fuellung" class="kontext-fuellung"></span></span>

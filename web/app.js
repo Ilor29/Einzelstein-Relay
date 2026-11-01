@@ -6985,11 +6985,43 @@ function zurHandAuffrischen() {
   }
   zurHandKontext();
   zurHandAenderungen();
+  zurHandVorschau();
 }
 
 // Änderungen der Karte (Baustein 1 der Monitor-Ansicht): Git-Stand des Kartenordners.
 // Nur lesend; höchstens alle 12 Sekunden, beim Kartenwechsel sofort.
 let aendFuer = "", aendZuletzt = 0, aendAbdruck = "", aendOffen = new Set();
+// Vorschau neben dem Chat (Monitor-Baustein 7, Roli 01.11.2026 „11. Ja“): eine Seite aus dem
+// eigenen Webspace im Rahmen, nur ansehen und neu laden. Die Wahl merkt sich das Gerät.
+let vorschauGeladen = false;
+async function zurHandVorschau() {
+  if ($("zur-hand").hidden || vorschauGeladen) return;
+  vorschauGeladen = true;
+  let d;
+  try { d = await (await api("/vorschau")).json(); } catch { vorschauGeladen = false; return; }
+  if (!d.aktiv) return;   // ohne Webspace-Adresse bleibt der Block weg
+  const wahl = $("zh-vorschau-wahl");
+  const leer = document.createElement("option");
+  leer.value = ""; leer.textContent = "Seite wählen …";
+  wahl.replaceChildren(leer, ...d.seiten.map((x) => {
+    const o = document.createElement("option");
+    o.value = x.name; o.textContent = x.titel;
+    return o;
+  }));
+  const rahmen = $("zh-vorschau-rahmen"), auf = $("zh-vorschau-auf");
+  const zeigen = (name, neu) => {
+    if (!name) { rahmen.hidden = true; auf.hidden = true; rahmen.removeAttribute("src"); return; }
+    const url = `${d.basis}/${encodeURIComponent(name)}/` + (neu ? `?neu=${Date.now()}` : "");
+    rahmen.src = url; rahmen.hidden = false;
+    auf.href = `${d.basis}/${encodeURIComponent(name)}/`; auf.hidden = false;
+  };
+  const gemerkt = localStorage.getItem("vorschau_seite") || "";
+  if (gemerkt && d.seiten.some((x) => x.name === gemerkt)) { wahl.value = gemerkt; zeigen(gemerkt); }
+  wahl.addEventListener("change", () => { localStorage.setItem("vorschau_seite", wahl.value); zeigen(wahl.value); });
+  $("zh-vorschau-neu").addEventListener("click", () => zeigen(wahl.value, true));
+  $("zh-vorschau-block").hidden = false;
+}
+
 async function zurHandAenderungen(erzwingen) {
   if ($("zur-hand").hidden || !aktuelleSitzung) return;
   const name = aktuelleSitzung.name;

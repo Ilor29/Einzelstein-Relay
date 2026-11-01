@@ -2541,3 +2541,11 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 }
 .antwort-vorschlag[hidden] { display: none; }
 .antwort-vorschlag:active { background: var(--erhoben); }
+
+/* Vorschau neben dem Chat (Baustein 7) */
+.zh-vorschau-leiste { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-bottom: .5rem; }
+.zh-vorschau-leiste select { flex: 1 1 100%; min-width: 0; font: inherit; font-size: .85rem; padding: .35rem; background: var(--erhoben); color: var(--schrift); border: 1px solid var(--linie); border-radius: 8px; }
+.zh-klein { font: inherit; font-size: .8rem; padding: .3rem .6rem; background: var(--erhoben-2); color: var(--schrift); border: 1px solid var(--linie); border-radius: 8px; cursor: pointer; text-decoration: none; }
+.zh-klein[hidden] { display: none; }
+.zh-vorschau-rahmen { width: 100%; height: 420px; border: 1px solid var(--linie); border-radius: 8px; background: #fff; }
+.zh-vorschau-rahmen[hidden] { display: none; }
