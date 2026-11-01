@@ -2564,3 +2564,6 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .kartenmenue-punkt { text-align: left; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--linie, rgba(255,255,255,.14)); background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .kartenmenue-punkt[hidden] { display: none; }
 .kartenmenue-punkt.gefahr { color: #ff8a80; }
+
+.rewind-text { margin: 4px 4px 12px; opacity: 0.85; }
+.rewind-klein { opacity: 0.65; }

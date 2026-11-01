@@ -652,10 +652,25 @@
         <button type="button" class="kartenmenue-punkt" data-punkt="umbenennen">Umbenennen</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="anheften">Anheften</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="ungelesen">Als ungelesen markieren</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="zurueckspulen">Zurückspulen (Gespräch zurücksetzen)</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="kurzfassung">Kurzfassung: wo steht die Karte?</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="fork">Fork: Kopie bis hierher</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="archivieren">Ins Archiv stellen</button>
         <button type="button" class="kartenmenue-punkt gefahr" data-punkt="loeschen">Löschen</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Zurückspulen (Monitor-Baustein 5): erst die Nachricht wählen, dann die Möglichkeit. -->
+  <div id="rewind-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="rewind-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="rewind-schliessen" class="knopf-blank" aria-label="Schließen">✕</button>
+        <h2 id="rewind-titel">Zurückspulen</h2>
+      </div>
+      <p id="rewind-text" class="rewind-text"></p>
+      <div id="rewind-liste" class="kartenmenue-liste"></div>
     </div>
   </div>
 
@@ -669,6 +684,7 @@
       </div>
       <dl class="kuerzel-liste">
         <dt><kbd>Esc</kbd></dt><dd>Antwort stoppen, während Claude arbeitet</dd>
+        <dt><kbd>Esc</kbd> <kbd>Esc</kbd></dt><dd>Zurückspulen öffnen (wenn Claude nicht arbeitet)</dd>
         <dt><kbd>Strg</kbd> <kbd>K</kbd></dt><dd>Im Verlauf suchen</dd>
         <dt><kbd>Strg</kbd> <kbd>D</kbd></dt><dd>Diktat starten oder beenden</dd>
         <dt><kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>D</kbd></dt><dd>Zu den Änderungen dieser Karte springen</dd>

@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import aenderungen, befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau
+from . import aenderungen, befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau, zurueckspulen
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 206
+VERSION = 207
 
 
 @app.get("/api/version")
@@ -759,6 +759,120 @@ async def session_fork(name: str) -> dict:
                  schlaeft=False, archiviert=False, mitschrift=kennung)
     asyncio.create_task(_eingabe_bereit(neu_name))
     return {"ok": True, "name": neu_name}
+
+
+# --- Zurückspulen (Monitor-Baustein 5) ------------------------------------------
+#
+# /rewind öffnet in Claude Code zwei Bildschirme hintereinander. Die App öffnet den
+# ersten, zeigt die Nachrichten als Liste, drückt nach der Wahl die Pfeiltasten und
+# fragt dann die Möglichkeiten des zweiten Bildschirms ab. Erst „ausführen“ tippt
+# die Ziffer. Jede Stufe prüft vorher, welcher Bildschirm wirklich offen ist.
+
+class RewindWahl(BaseModel):
+    zurueck: int      # wie viele Nachrichten vom Ende zurück (1 = die letzte)
+
+
+class RewindAusfuehren(BaseModel):
+    nr: int
+
+
+def _rewind_warte(name: str, pruefer, sekunden: float = 4.0) -> str:
+    """Wartet, bis der Bildschirm das Gesuchte zeigt; liefert dann den Schirm (sonst \"\")."""
+    ende = time.monotonic() + sekunden
+    while time.monotonic() < ende:
+        schirm = tmux.capture(name, lines=None)
+        if pruefer(schirm):
+            return schirm
+        time.sleep(0.25)
+    return ""
+
+
+@app.post("/api/sessions/{name}/rewind/start", dependencies=[Depends(require_auth)])
+async def rewind_start(name: str) -> dict:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    zustand = await _eingabe_bereit(name)
+    if zustand != "frei":
+        raise HTTPException(409, "Claude ist gerade beschäftigt oder zeigt eine Frage. Zurückspulen geht erst, wenn die Eingabe frei ist.")
+    # Steht in der Eingabezeile schon Text (etwa die Nachricht eines früheren
+    # Zurückspulens), würde „/rewind“ hinten angehängt und als Nachricht gesendet.
+    if zurueckspulen.eingabe_text(tmux.capture(name, lines=None)):
+        tmux.send_key(name, "C-u")
+        await asyncio.sleep(0.3)
+        if zurueckspulen.eingabe_text(tmux.capture(name, lines=None)):
+            raise HTTPException(409, "In der Eingabezeile der Karte steht noch Text. Bitte erst senden oder löschen.")
+    tmux.send_text(name, "/rewind")
+    await asyncio.sleep(0.3)
+    tmux.send_key(name, "Enter")
+    schirm = await asyncio.to_thread(_rewind_warte, name, zurueckspulen.ist_auswahl)
+    if not schirm:
+        raise HTTPException(409, "Claude hat die Auswahl nicht geöffnet. Vielleicht gibt es noch nichts zum Zurückspulen.")
+    liste = zurueckspulen.eintraege(schirm)
+    if not liste:
+        tmux.send_key(name, "Escape")
+        raise HTTPException(409, "Es gibt noch keine Nachricht, zu der man zurückspulen könnte.")
+    return {"ok": True, "eintraege": liste}
+
+
+@app.post("/api/sessions/{name}/rewind/waehlen", dependencies=[Depends(require_auth)])
+async def rewind_waehlen(name: str, body: RewindWahl) -> dict:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    schirm = tmux.capture(name, lines=None)
+    if not zurueckspulen.ist_auswahl(schirm):
+        raise HTTPException(409, "Die Auswahl ist nicht mehr offen. Bitte noch einmal von vorn.")
+    anzahl = len(zurueckspulen.eintraege(schirm))
+    if not 1 <= body.zurueck <= anzahl:
+        raise HTTPException(400, "Diese Nachricht gibt es nicht.")
+    for _ in range(body.zurueck):
+        tmux.send_key(name, "Up")
+        await asyncio.sleep(0.12)
+    tmux.send_key(name, "Enter")
+    schirm = await asyncio.to_thread(_rewind_warte, name, zurueckspulen.ist_bestaetigung)
+    if not schirm:
+        tmux.send_key(name, "Escape")
+        raise HTTPException(409, "Die Bestätigung kam nicht. Bitte noch einmal von vorn.")
+    opt = zurueckspulen.optionen(schirm)
+    if not opt:
+        tmux.send_key(name, "Escape")
+        raise HTTPException(409, "Ich konnte die Möglichkeiten nicht lesen. Bitte im Terminal nachsehen.")
+    return {"ok": True, "nachricht": zurueckspulen.zitierte_nachricht(schirm), "optionen": opt}
+
+
+@app.post("/api/sessions/{name}/rewind/ausfuehren", dependencies=[Depends(require_auth)])
+async def rewind_ausfuehren(name: str, body: RewindAusfuehren) -> dict:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    schirm = tmux.capture(name, lines=None)
+    if not zurueckspulen.ist_bestaetigung(schirm):
+        raise HTTPException(409, "Die Bestätigung ist nicht mehr offen. Bitte noch einmal von vorn.")
+    opt = zurueckspulen.optionen(schirm)
+    gewaehlt = next((o for o in opt if o["nr"] == body.nr), None)
+    if not gewaehlt:
+        raise HTTPException(400, "Diese Möglichkeit gibt es nicht.")
+    if gewaehlt["original"].lower().startswith("never mind"):
+        tmux.send_key(name, "Escape")
+        await asyncio.sleep(0.3)
+        if zurueckspulen.ist_auswahl(tmux.capture(name, lines=None)):
+            tmux.send_key(name, "Escape")
+        return {"ok": True, "getan": False}
+    tmux.send_text(name, str(body.nr))
+    return {"ok": True, "getan": True}
+
+
+@app.post("/api/sessions/{name}/rewind/abbrechen", dependencies=[Depends(require_auth)])
+async def rewind_abbrechen(name: str) -> dict:
+    """Schließt die Auswahl, falls sie offen ist. Escape nur dann: An der normalen Eingabe bräche es Claudes Arbeit ab."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    for _ in range(2):
+        schirm = tmux.capture(name, lines=None)
+        if zurueckspulen.ist_auswahl(schirm) or zurueckspulen.ist_bestaetigung(schirm):
+            tmux.send_key(name, "Escape")
+            await asyncio.sleep(0.35)
+        else:
+            break
+    return {"ok": True}
 
 
 @app.post("/api/sessions/{name}/schlafen", dependencies=[Depends(require_auth)])

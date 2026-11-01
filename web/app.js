@@ -7248,7 +7248,7 @@ $("knopf-kartenmenue").addEventListener("click", () => {
   $("kartenmenue-titel").textContent = benannt(aktuelleSitzung);
   const punkt = (n) => document.querySelector(`.kartenmenue-punkt[data-punkt="${n}"]`);
   punkt("anheften").textContent = aktuelleSitzung.pinned ? "Nicht mehr anheften" : "Anheften";
-  for (const n of ["fork", "archivieren", "loeschen"]) punkt(n).hidden = !eigen;
+  for (const n of ["zurueckspulen", "kurzfassung", "fork", "archivieren", "loeschen"]) punkt(n).hidden = !eigen;
   kartenmenueBlatt(true);
 });
 document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListener("click", async () => {
@@ -7261,6 +7261,11 @@ document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListene
     if (art === "umbenennen") { $("sitzung-name").click(); }
     else if (art === "anheften") { $("knopf-anheften").click(); }
     else if (art === "archivieren") { $("knopf-archivieren").click(); }
+    else if (art === "zurueckspulen") { rewindOeffnen(); }
+    else if (art === "kurzfassung") {
+      await api(`/sessions/${name}/senden`, { method: "POST", body: JSON.stringify({ text: "/recap" }) });
+      melde("Kurzfassung angefordert, die Antwort kommt gleich.");
+    }
     else if (art === "ungelesen") {
       await api(`/sessions/${name}/ungelesen`, { method: "POST" });
       melde("Wieder als ungelesen markiert.");
@@ -7281,3 +7286,91 @@ document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListene
     melde(err.message || "Das ging gerade nicht.");
   }
 }));
+
+// --- Zurückspulen und Kurzfassung (Monitor-Baustein 5, Roli 01.11.2026 „4. Ja“) ---
+// Zeigt die Nachrichten der Karte zur Wahl, danach die Möglichkeiten, die Claude Code
+// selbst anbietet. Getippt wird erst nach der letzten Wahl; Schließen lässt alles, wie es war.
+let rewindOffen = false;
+function rewindZu() {
+  $("rewind-blatt").hidden = true;
+  if (rewindOffen && aktuelleSitzung) {
+    api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/rewind/abbrechen`, { method: "POST" }).catch(() => {});
+  }
+  rewindOffen = false;
+}
+$("rewind-schatten").addEventListener("click", rewindZu);
+$("rewind-schliessen").addEventListener("click", rewindZu);
+function rewindKnopf(text, klein, auf, gefahr) {
+  const k = document.createElement("button");
+  k.type = "button";
+  k.className = "kartenmenue-punkt" + (gefahr ? " gefahr" : "");
+  k.textContent = text;
+  if (klein) { const s = document.createElement("small"); s.className = "rewind-klein"; s.textContent = klein; k.appendChild(document.createElement("br")); k.appendChild(s); }
+  k.addEventListener("click", auf);
+  return k;
+}
+async function rewindOeffnen() {
+  if (!aktuelleSitzung) return;
+  const name = encodeURIComponent(aktuelleSitzung.name);
+  $("rewind-titel").textContent = "Zurückspulen";
+  $("rewind-text").textContent = "Ich öffne die Auswahl in der Karte …";
+  $("rewind-liste").replaceChildren();
+  $("rewind-blatt").hidden = false;
+  let antwort;
+  try {
+    antwort = await (await api(`/sessions/${name}/rewind/start`, { method: "POST" })).json();
+  } catch (err) {
+    $("rewind-text").textContent = err.message || "Das ging gerade nicht.";
+    return;
+  }
+  rewindOffen = true;
+  $("rewind-text").textContent = "Zu welcher Nachricht willst du zurück? Alles ab dieser Nachricht fällt weg. Die neueste steht oben.";
+  const n = antwort.eintraege.length;
+  const kuerzen = (t) => (t.length > 140 ? t.slice(0, 140) + " …" : t);
+  const aend = (t) => (/^no code changes/i.test(t) ? "Code unverändert" : t);
+  const liste = $("rewind-liste");
+  antwort.eintraege.map((e, i) => ({ e, i })).reverse().forEach(({ e, i }) => {
+    liste.appendChild(rewindKnopf(kuerzen(e.text), aend(e.aenderung), () => rewindWaehlen(n - i)));
+  });
+}
+async function rewindWaehlen(zurueck) {
+  const name = encodeURIComponent(aktuelleSitzung.name);
+  $("rewind-text").textContent = "Einen Moment …";
+  $("rewind-liste").replaceChildren();
+  let a;
+  try {
+    a = await (await api(`/sessions/${name}/rewind/waehlen`, { method: "POST", body: JSON.stringify({ zurueck }) })).json();
+  } catch (err) {
+    rewindOffen = false;
+    $("rewind-text").textContent = err.message || "Das ging gerade nicht.";
+    return;
+  }
+  $("rewind-titel").textContent = "Was soll passieren?";
+  $("rewind-text").textContent = `Zurück vor die Nachricht „${a.nachricht.slice(0, 120)}“. Alles danach wird entfernt.`;
+  a.optionen.forEach((o) => {
+    const nein = /^never mind/i.test(o.original);
+    $("rewind-liste").appendChild(rewindKnopf(o.text, "", async () => {
+      try {
+        const r = await (await api(`/sessions/${name}/rewind/ausfuehren`, { method: "POST", body: JSON.stringify({ nr: o.nr }) })).json();
+        rewindOffen = false;
+        $("rewind-blatt").hidden = true;
+        melde(r.getan ? "Zurückgespult. Die Nachricht steht wieder im Eingabefeld." : "Nichts geändert.");
+      } catch (err) {
+        melde(err.message || "Das ging gerade nicht.");
+      }
+    }, !nein && /^restore/i.test(o.original)));
+  });
+}
+// Zweimal Esc kurz hintereinander öffnet das Zurückspulen, so wie in Claude Code.
+let letztesEsc = 0;
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const jetzt = Date.now();
+  const zweites = jetzt - letztesEsc < 600;
+  letztesEsc = jetzt;
+  if (!zweites || !aktuelleSitzung) return;
+  const k = $("knopf-abbrechen-arbeit");
+  if ((k && !k.hidden) || [...document.querySelectorAll(".blatt")].some((b) => !b.hidden)) return;
+  if (e.target.id === "verlauf-suchfeld") return;
+  rewindOeffnen();
+});
