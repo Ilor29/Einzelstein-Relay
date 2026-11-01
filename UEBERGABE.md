@@ -19,18 +19,16 @@ gebaut, nur Entwürfe und Prüfungen (Baubuch-Eintrag 01.11. „Entwurf Monitor-
 
 ## Beschlüsse
 01.11. 16:12 „5. Ja“ (Bauplan als Seite); 16:17 „2./3./4. Deine Empfehlung“ = Ja: Versuch Nachrichten zwischen Karten,
-Monitor-Leiste nach der englischen Oberfläche, SSH-Anleitung (steht im Mockup). Roli: englische Oberfläche zuerst
-zurückstellen? Er sagte 15:52 „wenn das englische erstmal zurück“ (Auslegung: Monitor-Ansicht soll vorgezogen werden,
-nachfragen!).
+Monitor-Leiste nach der englischen Oberfläche, SSH-Anleitung (steht im Mockup). **01.11. 16:27 „1. Ja“: Die Monitor-Ansicht kommt VOR der englischen Oberfläche** (Roli 15:52: „wenn das englische erstmal zurück“).
 
 ## Nächster Schritt
 1. Versuch: können Karten sich gegenseitig anschreiben (/list-agents, SendMessage) in tmux-Karten? Mit Test-Karten, nichts an echten.
 2. Rolis Nummern der Bausteine von der Bauplan-Seite abwarten, dann bauen (Reihenfolge: 10 Versuch, 3, 2, 1, 6, 7).
-3. Englische Oberfläche: Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md, Reihenfolge mit Roli klären.
+3. Englische Oberfläche danach: Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md.
 
 ## Offen bei Roli
 Frage 10 der Kaira-Karte (Dienstzugang, Kartenwechsel) hängt am Versuch 1; Anmeldung läuft 03.11. ab (/login);
 Handyprobe Whisper-Diktat, Aussprachetest Runde 2 (https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/).
 
 ## Rolis letzter Wortlaut
-01.11. 16:23 (Screenshot des Mockups am Handy, „Mockup geht nur am Rechner oder“).
+01.11. 16:27 „1. Ja“ (Monitor-Ansicht vor englischer Oberfläche).
