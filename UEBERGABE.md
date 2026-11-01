@@ -18,6 +18,15 @@ stimme_*, diktat_*, tempo_*, geraete_marke). Alles committet (ff2ba04), auf GitH
 4. Englische Piper-Stimme, Browser-Diktat en-US, Whisper mit language.
 5. Playwright in beiden Sprachen, automatische Suche nach deutschem Rest, VERSION hoch, READMEs anpassen.
 
+## Anfrage der Kaira-Karte (Kaira-Assistent 12, 01.11. nach 13:53, Rolis „36./37. Ja“ dort)
+Roli will Kaira als Chefin über alle Karten (Aufträge nach seiner Bestätigung weitergeben, letzte Antwort als
+Einzeiler zurück). Ich habe geantwortet, nichts gebaut: Bausteine gibt es (POST /api/sessions/{name}/senden,
+GET .../verlauf, .../kontext, POST /api/sessions zum Starten), aber require_auth ist ein Geräte-Cookie, ein
+Dienstzugang und ein Einzeiler fehlen. Den automatischen Kartenwechsel bei 200.000 Token gibt es nicht.
+Frage 10 an Roli (unbeantwortet): beides bauen, Empfehlung Ja, erst nach der englischen Oberfläche, mit
+eigenem Schlüssel nur für senden und lesen (Schlüssel in schluessel_katalog.py eintragen, Bitwarden-Regel),
+Kartenwechsel erst nach Bestätigung in der App.
+
 ## Offen bei Roli
 Handyprobe Whisper-Diktat, Urteil zu Kaira und Aussprachetest Runde 2
 (https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/), Anmeldung /login am Montag 03.11.
@@ -29,4 +38,4 @@ Beenden mit fuser -k 8799/tcp. Testskript Sprachwahl: /tmp/spr.py (Playwright au
 `wait_for_function` geht wegen CSP nicht.
 
 ## Rolis letzter Wortlaut
-01.11. 13:50 „9. Ja“
+01.11. 13:50 „9. Ja“ (Frage 10 steht offen)
