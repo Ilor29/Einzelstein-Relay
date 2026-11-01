@@ -778,3 +778,8 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Befund:** Der Bauplan führt Baustein 3 als ungebaut, aber die rechte Spalte „Zur Hand“ (ab dreiSpalten, index.html) hat schon den Block „Diese Karte“ mit Füllbalken, Kontext, Cache und Modell; dazu den Kontextbalken im Kopf, das Verbrauchsblatt mit Token von/bis und Prozent, die 200.000-Token-Regel (neueKarte) und den Übergabe-Knopf ab 100.000. Die Zahlen kommen aus der Mitschrift (verbrauch.py), nicht vom Schirm.
 **Aufteilung nach Nachrichten, Werkzeugen, Skills:** an einer Test-Karte (Haiku, tmux `-L ctxtest`) /context ausprobiert. Die Ausgabe ist ein langer Baum mit hunderten Zeilen je Skill und Fachkraft, läuft in das echte Terminal der Karte und schiebt deren Schirm. Als Anzeige zu fragil und zu schwer, deshalb bleibt es bei der Gesamtzahl (wie im Bauplan als Rückfall vorgesehen). Test-Karte beendet, Ordner gelöscht.
 **Ergebnis:** Baustein 3 gilt als erledigt, kein neuer Code, keine neue Version. Nächster ist Baustein 2 (Aufgabenliste mit Haken).
+
+## 01.11.2026: Baustein 2 (Aufgabenliste mit Haken) geprüft, Quelle fehlt
+**Auslöser:** Roli 01.11. 17:05 „5. Ja“ (erst das Protokoll prüfen, ob die Liste dort steht).
+**Befund:** In den 40 jüngsten Mitschriften aller Karten (und in der Suche über alle) kommt kein Aufruf TodoWrite, TaskCreate oder TaskUpdate vor; es gibt auch keinen Ordner ~/.claude/todos oder tasks. Die Claude-Code-Version 2.1.316 führt hier offenbar keine solche Liste, die die App auslesen könnte. Vom Schirm lesen wäre die einzige Quelle und zu fragil. Nichts gebaut, keine neue Version.
+**Folge:** Baustein 2 ruht, bis eine Karte nachweislich eine Liste führt. Weiter mit Baustein 1 (Änderungen der Karte per git diff).
