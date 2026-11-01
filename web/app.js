@@ -628,7 +628,28 @@ async function ladeListe() {
 
   gruppe("Wartet auf dich", wartend);
   gruppe("Angeheftet", angeheftet);
-  gruppe("Zuletzt benutzt", eigene);
+  // Abschnitte je Projekt (Monitor-Baustein 6, Roli 01.11.2026 „8. Deine Empfehlung“):
+  // Karten aus demselben Ordner stehen zusammen, sobald es mindestens zwei sind.
+  // Einzelne bleiben in „Zuletzt benutzt“, damit die Liste nicht zerfasert.
+  const projektName = (s) => (s.cwd || "").replace(/\/+$/, "").split("/").pop();
+  const jeProjekt = new Map();
+  for (const s of eigene) {
+    const n = projektName(s);
+    if (!n) continue;
+    if (!jeProjekt.has(n)) jeProjekt.set(n, []);
+    jeProjekt.get(n).push(s);
+  }
+  const eigeneRest = [];
+  const projektGruppen = [];
+  for (const s of eigene) {
+    const n = projektName(s);
+    const mit = n && jeProjekt.get(n);
+    if (mit && mit.length >= 2) {
+      if (!projektGruppen.some(([t]) => t === n)) projektGruppen.push([n, mit]);
+    } else eigeneRest.push(s);
+  }
+  for (const [titel, eintraege] of projektGruppen) gruppe(titel, eintraege);
+  gruppe("Zuletzt benutzt", eigeneRest);
   // Die Ruhenden, mit der Speicher-Summe im Kopf: Man soll sehen, dass sich
   // das Schlafenlegen lohnt — auf dem kleinen Server zählt jedes Megabyte.
   const gespart = schlafende.reduce((summe, s) => summe + (s.gespartMb || 0), 0);
