@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 199
+VERSION = 200
 
 
 @app.get("/api/version")
@@ -1498,7 +1498,7 @@ async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
 
     # Häppchenweise lesen und bei MAX_ZIP abbrechen, damit niemand den Speicher
     # mit einer Riesendatei füllt. Erst danach entscheidet der Inhalt, welche
-    # Grenze gilt: ZIP bis 200 MB, alles andere bis 30 MB.
+    # Grenze gilt: für jede Datei 200 MB.
     teile, gelesen = [], 0
     while stueck := await datei.read(1024 * 1024):
         gelesen += len(stueck)
@@ -1506,30 +1506,16 @@ async def session_datei(name: str, datei: UploadFile = File(...)) -> dict:
             raise HTTPException(413, "Die Datei ist zu groß (mehr als 200 MB).")
         teile.append(stueck)
     inhalt = b"".join(teile)
-    ist_zip = inhalt.startswith(ZIP_KOPF)
-    if len(inhalt) > MAX_DATEI and not ist_zip:
-        raise HTTPException(
-            413, "Die Datei ist zu groß (mehr als 30 MB, nur ZIP-Archive und Apps dürfen bis 200 MB)."
-        )
-
+    # Seit 01.11.2026 (Roli „alles, was ich reinlade, wäre erlaubt“, mp4 wurde abgelehnt):
+    # keine Positivliste mehr, jede Datei wird angenommen, nur die Größe zählt.
+    # Abgelegt wird sie unter einem von uns vergebenen Namen; von der Endung bleiben
+    # höchstens acht Buchstaben und Ziffern übrig, damit nichts Seltsames im Namen steht.
+    # Ausgeführt wird hier nichts.
+    if not inhalt:
+        raise HTTPException(400, "Die Datei ist leer.")
     endung = Path(datei.filename or "").suffix.lower()
-    if endung in APP_ENDUNGEN and not ist_zip:
-        raise HTTPException(400, f'Die Datei heißt „{endung}", ist innen aber kein App-Paket.')
-    if endung not in DOK_ENDUNGEN and endung not in APP_ENDUNGEN:
-        # Zweite Chance: in die Datei schauen. Text und ZIP nehmen wir auch
-        # mit fremder oder fehlender Endung an — Skill-Dateien zum Beispiel.
-        erraten = _bild_erkannt(inhalt) or _endung_erraten(inhalt)
-        if erraten and erraten in {e for _, e in BILD_SIGNATUREN} | {".webp", ".heic"} and len(inhalt) > MAX_BILD:
-            raise HTTPException(413, "Das Bild ist zu groß (mehr als 20 MB).")
-        if not erraten:
-            was = f'Die Endung „{endung}"' if endung else "Eine Datei ohne Endung mit unlesbarem Inhalt"
-            raise HTTPException(
-                400,
-                f"{was} nehme ich nicht an. Erlaubt sind PDF, Word, Markdown, "
-                "Text, Tabellen, ZIP-Archive und ähnliche Dokumente — sowie "
-                "alles, was innen drin Text oder ein ZIP ist.",
-            )
-        endung = erraten
+    if not re.fullmatch(r"\.[a-z0-9]{1,8}", endung):
+        endung = _bild_erkannt(inhalt) or _endung_erraten(inhalt) or ".bin"
 
     sitzung = [s for s in tmux.list_sessions() if s.name == name][0]
     arbeitsordner = Path(sitzung.cwd)
