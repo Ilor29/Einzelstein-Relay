@@ -2531,3 +2531,13 @@ body.drei-spalten #ansicht-liste .kopf h1 { flex: none; margin-right: auto; }
 .zh-wert span:last-child { font-family: var(--mono); font-size: .78rem; text-align: right; color: var(--schrift-leise); }
 /* Links ist es eng: vom Verbindungsstand bleibt nur der Punkt, das Wort steht im Titel-Tooltip. */
 body.drei-spalten #verbindung { font-size: 0; gap: 0; }
+
+/* Antwort-Vorschlag über dem Eingabefeld (Baustein 12): grauer Zettel, Wort statt Farbe */
+.antwort-vorschlag {
+  display: block; width: 100%; text-align: left; margin: 0 0 .35rem;
+  padding: .45rem .75rem; border-radius: 14px;
+  border: 1px dashed var(--linie); background: transparent; color: var(--schrift-leise);
+  font: inherit; font-size: .9rem; cursor: pointer;
+}
+.antwort-vorschlag[hidden] { display: none; }
+.antwort-vorschlag:active { background: var(--erhoben); }

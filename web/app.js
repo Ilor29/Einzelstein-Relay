@@ -6871,11 +6871,46 @@ new MutationObserver(eigeneAntwortenAbgleichen).observe($("verlauf") || document
     }
     alle.forEach((a, i) => a.classList.toggle("juengste", i === ziel));
     zurHandAuffrischen();
+    vorschlagAuffrischen();
   };
   new MutationObserver(() => { if (!wartet) { wartet = true; requestAnimationFrame(mark); } })
     .observe(verlauf, { childList: true });
   mark();
 })();
+
+// --- Antwort-Vorschlag über dem Eingabefeld (Monitor-Baustein 12) -----------------
+// Roli 01.11.2026 „7. Deine Empfehlung“, Vorbild: der graue Antworttext in der Claude-Oberfläche.
+// Aus den offenen Fragen der jüngsten Antwort wird je Frage der Satz gebildet, den Claude
+// selbst als Empfehlung nennt (Ja oder Nein am Anfang), sonst „Deine Empfehlung“. Nichts wird
+// je von selbst gesendet: Ein Tipp trägt die Zeilen ins Feld ein, dort lassen sie sich ändern.
+function vorschlagBilden() {
+  const reihen = [...document.querySelectorAll("#verlauf .antwort.juengste .wahl-reihe[data-frage]")];
+  const teile = [];
+  for (const r of reihen) {
+    const nr = r.querySelector("[data-nr]")?.dataset.nr;
+    if (!nr) continue;
+    const m = r.dataset.frage.match(/Meine Empfehlung:\s*\**\s*(Ja|Nein)\b/i);
+    const satz = m ? (m[1][0].toUpperCase() + m[1].slice(1).toLowerCase()) : "Deine Empfehlung";
+    teile.push([nr, satz]);
+  }
+  return teile;
+}
+function vorschlagAuffrischen() {
+  const knopf = $("antwort-vorschlag");
+  if (!knopf) return;
+  const teile = vorschlagBilden();
+  const leer = !$("eingabe").value.trim();
+  if (!teile.length || !leer) { knopf.hidden = true; return; }
+  knopf.dataset.teile = JSON.stringify(teile);
+  knopf.textContent = "Vorschlag: " + teile.map(([n, t]) => `${n}. ${t}`).join(", ") + "  ›";
+  knopf.hidden = false;
+}
+$("antwort-vorschlag")?.addEventListener("click", () => {
+  for (const [nr, satz] of JSON.parse($("antwort-vorschlag").dataset.teile || "[]")) waehle(Number(nr), satz, null, true);
+  vorschlagAuffrischen();
+  $("eingabe").focus();
+});
+$("eingabe")?.addEventListener("input", vorschlagAuffrischen);
 
 // --- Übergabe vorbereiten (Knopf im Verbrauchs-Blatt) ---------------------------
 // Roli 10.10.2026 18:44 „bei Nummer 20 ja bitte Übergabe vorbereiten“.
