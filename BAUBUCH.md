@@ -772,3 +772,9 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Ergebnis:** Karten in tmux können sich gegenseitig anschreiben (ListAgents, SendMessage), beide Richtungen. Die Schaltzentrale aus dem Desktop-Spickzettel ist damit in tmux ohne eigene Oberfläche schon nutzbar. Die Relay-App könnte die Liste der Karten und ihren Zustand (idle/busy) für die Monitor-Ansicht aus denselben Daten ziehen.
 **Vorbehalt:** Eine Karte in anderem Berechtigungsmodus hält Nachrichten bis zur Freigabe zurück (laut Werkzeugbeschreibung). Die Test-Karte lief im Automodus. Ob Rolis echte Karten (Kaira-Assistent 12 usw.) Nachrichten ohne Rückfrage annehmen, ist nicht geprüft; dafür wurde absichtlich keine echte Karte angeschrieben.
 **Aufgeräumt:** tmux-Server sendtest beendet, /tmp/k_send gelöscht.
+
+## 01.11.2026: Baustein 3 (Kontextkarte) geprüft, besteht schon, nichts gebaut
+**Auslöser:** Roli 01.11. 16:46 „3. Deine Empfehlung“ (Monitor-Bausteine in der Reihenfolge 3, 2, 1, 6, 7 bauen).
+**Befund:** Der Bauplan führt Baustein 3 als ungebaut, aber die rechte Spalte „Zur Hand“ (ab dreiSpalten, index.html) hat schon den Block „Diese Karte“ mit Füllbalken, Kontext, Cache und Modell; dazu den Kontextbalken im Kopf, das Verbrauchsblatt mit Token von/bis und Prozent, die 200.000-Token-Regel (neueKarte) und den Übergabe-Knopf ab 100.000. Die Zahlen kommen aus der Mitschrift (verbrauch.py), nicht vom Schirm.
+**Aufteilung nach Nachrichten, Werkzeugen, Skills:** an einer Test-Karte (Haiku, tmux `-L ctxtest`) /context ausprobiert. Die Ausgabe ist ein langer Baum mit hunderten Zeilen je Skill und Fachkraft, läuft in das echte Terminal der Karte und schiebt deren Schirm. Als Anzeige zu fragil und zu schwer, deshalb bleibt es bei der Gesamtzahl (wie im Bauplan als Rückfall vorgesehen). Test-Karte beendet, Ordner gelöscht.
+**Ergebnis:** Baustein 3 gilt als erledigt, kein neuer Code, keine neue Version. Nächster ist Baustein 2 (Aufgabenliste mit Haken).
