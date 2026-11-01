@@ -838,3 +838,10 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Auslöser:** Roli 01.11. „22. Ja“ und 20:46 „1. Ja“ (die 59 Standbilder ansehen, Nachtrag in den Bauplan).
 **Ergebnis:** Alle 59 Bilder (fünf Übersichtsblätter) durchgesehen. Neu: Baustein 17 (Cache-Uhr und Kontingent-Leiste), Baustein 18 (Kontext nach Posten). Fork, Spalten der Schaltzentrale, Hintergrundaufgaben-Fenster und /doctor-Karte als Hinweise bei den Bausteinen 4, 10, 9, 14. Sonst deckt sich das Video mit dem Spickzettel. Nichts in der App geändert.
 **Nicht geprüft:** ob /context in tmux lesbaren Text liefert; ob das Kontingent aus den Protokollen zu holen ist.
+
+## 01.11.2026: V205, Baustein 13: Tastenkürzel am Rechner
+**Auslöser:** Roli 01.11. 20:47 „2. Ja“ (Baustein 13 bauen).
+**Lösung:** Ein Tastendruck-Hörer am Seitenende von `web/app.js`; jedes Kürzel tippt den vorhandenen Knopf an. Esc stoppt die Arbeit (Knopf „Abbrechen“, nur wenn kein Blatt offen und nicht im Suchfeld), Strg K öffnet die Verlaufssuche, Strg D das Diktat, Strg Umschalt D springt zu den Änderungen in „Zur Hand“ (mit kurzem Rahmen), Strg / zeigt das neue Blatt „Tastenkürzel“ (`#kuerzel-blatt` in `index.html`, Stil am Ende von `styles.css`). Server nur VERSION 205. Strg Enter (Warteschlange) und Esc Esc (Zurückspulen) fehlen absichtlich, sie gehören zu Baustein 5, weil die Relay bei Arbeit das Senden sperrt.
+**Fehler unterwegs:** `offsetParent` ist bei fest positionierten Blöcken leer, darum galt „Zur Hand“ als unsichtbar; jetzt `getClientRects`.
+**Geprüft:** Testserver 8799 (Piper-Port 5015), Playwright 1500x900: Strg / öffnet und Esc schließt das Blatt, Strg K öffnet die Suche, Esc schließt sie, Strg Umschalt D markiert den Änderungen-Block, Esc bei sichtbarem Abbrechen-Knopf löst genau einen Klick aus (im Test abgefangen), keine Konsolenfehler. Ausgerollt, /api/version 205.
+**Nicht geprüft:** Mac (Befehlstaste ist miterfasst, aber nicht probiert), ob ein Browser Strg D oder Strg K trotz preventDefault selbst behält (Firefox).

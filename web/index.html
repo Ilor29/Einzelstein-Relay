@@ -639,6 +639,25 @@
   <!-- Alles, was man an eine Nachricht hängen kann — in einem Blatt statt in
        einer Knopfreihe. Oben die drei Wege zu einer Datei als Kacheln, darunter
        die Skill-Bibliothek als Zeile. -->
+  <!-- Tastenkürzel am Rechner (Monitor-Baustein 13). Strg und / öffnet die Liste. -->
+  <div id="kuerzel-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="kuerzel-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="kuerzel-schliessen" class="knopf-blank" aria-label="Schließen">✕</button>
+        <h2>Tastenkürzel</h2>
+      </div>
+      <dl class="kuerzel-liste">
+        <dt><kbd>Esc</kbd></dt><dd>Antwort stoppen, während Claude arbeitet</dd>
+        <dt><kbd>Strg</kbd> <kbd>K</kbd></dt><dd>Im Verlauf suchen</dd>
+        <dt><kbd>Strg</kbd> <kbd>D</kbd></dt><dd>Diktat starten oder beenden</dd>
+        <dt><kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>D</kbd></dt><dd>Zu den Änderungen dieser Karte springen</dd>
+        <dt><kbd>Enter</kbd></dt><dd>Senden (Umschalt Enter macht einen Absatz)</dd>
+        <dt><kbd>Strg</kbd> <kbd>/</kbd></dt><dd>Diese Liste zeigen</dd>
+      </dl>
+    </div>
+  </div>
+
   <div id="anhang-blatt" class="blatt" hidden>
     <div class="blatt-schatten" id="anhang-schatten"></div>
     <div class="blatt-inhalt">

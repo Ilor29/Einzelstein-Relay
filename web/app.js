@@ -7201,3 +7201,35 @@ function zurHandKorb(fragen) {
     zurHandAuffrischen();
   });
 })();
+
+// --- Tastenkürzel am Rechner (Monitor-Baustein 13, Roli 01.11.2026 „2. Ja“) ---
+// Nur Kürzel, die der Browser nicht dringend selbst braucht. Am Handy gibt es keine
+// Tastatur, dort bleibt alles beim Alten. Jedes Kürzel tippt den vorhandenen Knopf an.
+function kuerzelBlatt(auf) { $("kuerzel-blatt").hidden = !auf; }
+$("kuerzel-schatten").addEventListener("click", () => kuerzelBlatt(false));
+$("kuerzel-schliessen").addEventListener("click", () => kuerzelBlatt(false));
+document.addEventListener("keydown", (e) => {
+  const sichtbar = (id) => { const k = $(id); return k && !k.hidden && k.getClientRects().length > 0; };
+  const blattOffen = [...document.querySelectorAll(".blatt")].some((b) => !b.hidden);
+  if (e.key === "Escape") {
+    if (!$("kuerzel-blatt").hidden) { kuerzelBlatt(false); return; }
+    if (blattOffen || e.target.id === "verlauf-suchfeld") return;
+    if (sichtbar("knopf-abbrechen-arbeit")) { e.preventDefault(); $("knopf-abbrechen-arbeit").click(); }
+    return;
+  }
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const taste = e.key.toLowerCase();
+  if (taste === "/") { e.preventDefault(); kuerzelBlatt($("kuerzel-blatt").hidden); return; }
+  if (blattOffen) return;
+  if (taste === "k" && !e.shiftKey && sichtbar("knopf-suche")) {
+    e.preventDefault(); $("knopf-suche").click();
+  } else if (taste === "d" && !e.shiftKey && sichtbar("knopf-diktat")) {
+    e.preventDefault(); $("knopf-diktat").click();
+  } else if (taste === "d" && e.shiftKey && sichtbar("zur-hand")) {
+    e.preventDefault();
+    const b = $("zh-aend-block");
+    b.scrollIntoView({ block: "center", behavior: "smooth" });
+    b.classList.add("zh-blitz");
+    setTimeout(() => b.classList.remove("zh-blitz"), 1200);
+  }
+});

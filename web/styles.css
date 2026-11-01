@@ -2551,3 +2551,10 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .zh-vorschau-rahmen[hidden] { display: none; }
 
 .befehle-vorschlag-kopf { font-size: .95rem; margin: 1.2rem 0 .3rem; }
+
+/* Tastenkürzel-Blatt und Blitz beim Springen zu den Änderungen (Baustein 13) */
+.kuerzel-liste { display: grid; grid-template-columns: max-content 1fr; gap: 10px 16px; margin: 12px 4px 20px; align-items: center; }
+.kuerzel-liste dt { margin: 0; white-space: nowrap; }
+.kuerzel-liste dd { margin: 0; }
+.kuerzel-liste kbd { font: inherit; font-size: 0.85em; padding: 2px 7px; border: 1px solid currentColor; border-radius: 5px; opacity: 0.85; }
+.zh-blitz { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 6px; transition: outline-color 0.3s; }
