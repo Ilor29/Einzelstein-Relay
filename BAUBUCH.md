@@ -817,3 +817,7 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Lösung App:** In „Zur Hand“ (nur am breiten Rechner) der Block „Vorschau“: Auswahlliste der Seiten, „Neu laden“, „Eigenes Fenster“ und ein Rahmen (iframe, sandbox mit Skripten, gleicher Herkunft und Formularen, kein Referrer). Die gewählte Seite merkt sich das Gerät (`vorschau_seite`). Kein Anklicken und Kommentieren (das ist Baustein 11).
 **Geprüft:** Testserver 8799 (Piper-Port 5015) mit gesetzter Basis, Playwright 1500x900: Block sichtbar, Wahl „relay-monitor-bauplan“ lädt die Seite im Rahmen (Titel stimmt), „Neu laden“ hängt einen Zähler an, `frame-src` steht in der Kopfzeile, keine Konsolenfehler; Piper auf 5005 unberührt.
 **Nicht geprüft:** echtes Handy (Block dort versteckt), Seiten mit eigener Anmeldung oder mit `X-Frame-Options` im Rahmen (würden leer bleiben, „Eigenes Fenster“ hilft dann), Lea und Lorenz (haben die Basis nicht gesetzt).
+
+## 01.11.2026: Beschluss Reihenfolge, Englisch ganz zum Schluss
+**Auslöser:** Roli 01.11. 19:29 „wieso willst du dann englisch machen, da macht so kein sinn bitte erst wenn alles steht und geändert worden ist. dann machen wir die englische version“.
+**Folge:** Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md ruhen, bis die Monitor-Bausteine fertig sind. Meine Frage 12 („Englisch als Nächstes“) war falsch gestellt. Es bleiben der Videoabgleich (Frage 13) und die Bausteine 4, 5, 8, 9, 11.
