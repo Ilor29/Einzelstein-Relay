@@ -1,7 +1,7 @@
 # Übergabe Hetzner-App (Relay), 01.11.2026 20:50 (Karte Hetzner-App 8)
 
 ## Stand
-Relay V203 läuft und ist gesichert. Heute gebaut (Monitor-Ansicht nach der Claude Desktop App):
+Relay V204 läuft und ist gesichert. Heute gebaut (Monitor-Ansicht nach der Claude Desktop App):
 V199 Änderungen der Karte, V200 Büroklammer nimmt jede Datei (200 MB), V201 Kartenliste nach Projektordner,
 V202 Antwort-Vorschlag über dem Eingabefeld, V203 Vorschau neben dem Chat (Webspace-Adresse in
 ~/.hetzner-app/umgebung als HETZNER_APP_VORSCHAU_BASIS). Baubuch, Register, Bauplan-Seite sind aktuell.
@@ -13,8 +13,8 @@ englische-oberflaeche-erst-zum-schluss). 19:30 „15. Ja“: Spickzettel gegen B
 Das Video selbst liegt nicht auf dem Server; verglichen wurden Spickzettel-PDF und die Auswertung der YouTube-Bibliothek
 (/opt/yt-auswertung/auswertungen/2026-11-01-claude-desktop-app-…txt), beides deckt sich mit den Bausteinen.
 
-## Nächster Schritt (Rolis Antworten auf 16 bis 18 abwarten)
-1. Baustein 14 (Schnellbefehle /doctor, /skill-doctor, /insights und die acht Prompts vom Spickzettel).
+## Nächster Schritt (Roli „16.–18. Ja“, 22. Ja)
+1. Gebaut: Baustein 14 (V204). Danach: die 59 Standbilder der Video-Auswertung ansehen (Frage 22 „Ja“, Ort: /opt/yt-auswertung/web/qmuqhNZAoSzO/bilder/…) und Nachtrag in den Bauplan.
 2. Baustein 13 (Tastenkürzel am Rechner).
 3. Bausteine 4 (Kartenmenü), 5 (Zurückspulen, Kurzfassung), 8 (Dateibaum), 9 (Hintergrundaufgaben).
 4. Ganz am Ende: 15 (Ausgabestil), 16 (zwei Karten), dann englische Oberfläche (PLAN-ENGLISCHE-OBERFLAECHE.md Schritt 2 bis 7).

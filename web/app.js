@@ -2577,7 +2577,62 @@ function eigeneBefehleZeichnen() {
 }
 
 // Die Liste im Verwalten-Blatt — jede Zeile mit einem Kreuz zum Löschen.
+// Vorschläge vom Spickzettel „Claude Desktop App“ (Monitor-Baustein 14, Roli 01.11.2026 „16. Ja“).
+// /advisor fehlt absichtlich: In Claude Code 2.1.316 gibt es ihn hier nicht (Probe 01.11.). Die
+// Aufträge zu Schaltzentrale und Untersessions sind auf unsere Karten in tmux umformuliert.
+const VORSCHLAG_BEFEHLE = [
+  { label: "/doctor", text: "/doctor", hilfe: "Prüft Einstellungen, CLAUDE.md und Skills auf Veraltetes und Widersprüche." },
+  { label: "/skill-doctor", text: "/skill-doctor", hilfe: "Zeigt je Skill, wie viel Kontext er belegt und wie oft er genutzt wird." },
+  { label: "/insights", text: "/insights", hilfe: "Bericht darüber, wie du Claude Code nutzt und wo es hakt." },
+  { label: "/recap", text: "/recap", hilfe: "Fasst zusammen, wo die Karte steht, zum Beispiel nach einer Pause." },
+  { label: "Karten-Überblick", text: "Sieh mit ListAgents nach, welche Karten gerade laufen, und sag mir kurz, wo etwas auf mich wartet.", hilfe: "Die Schaltzentrale aus dem Spickzettel, auf unsere Karten zugeschnitten." },
+  { label: "In Teile zerlegen", text: "Zerleg das in einzelne Aufgaben und starte für jede einen Unteragenten. Fass mir am Ende die Ergebnisse zusammen.", hilfe: "Große Aufgabe mit mehreren Teilen, Untersitzungen als Unteragenten." },
+  { label: "Ergebnis prüfen", text: "Öffne das Ergebnis im Browser, klick dich einmal durch und prüf es auch in Handybreite. Behebe, was nicht funktioniert.", hilfe: "Claude testet selbst, was er gebaut hat." },
+  { label: "Git einrichten", text: "Richte in diesem Ordner Git ein, damit ich im Bereich Änderungen Zeile für Zeile sehe, was du machst.", hilfe: "Ohne Git bleibt der Block „Änderungen“ leer." },
+  { label: "Kurz und ohne Fachwörter", text: "Antworte ab jetzt kurz und erkläre jeden Fachbegriff in einem Satz.", hilfe: "Ausgabestil für diese Karte." },
+];
+
+function befehlVorschlaegeZeichnen() {
+  const ziel = $("befehle-vorschlaege");
+  if (!ziel) return;
+  ziel.textContent = "";
+  const vorhanden = new Set(eigeneBefehleLesen().map((b) => b.label));
+  const offen = VORSCHLAG_BEFEHLE.filter((v) => !vorhanden.has(v.label));
+  if (!offen.length) {
+    const p = document.createElement("p");
+    p.className = "hinweis";
+    p.textContent = "Alle Vorschläge sind schon in deinem Menü.";
+    ziel.appendChild(p);
+    return;
+  }
+  for (const v of offen) {
+    const zeile = document.createElement("div");
+    zeile.className = "befehl-zeile";
+    const text = document.createElement("div");
+    text.className = "befehl-text";
+    const name = document.createElement("strong");
+    name.textContent = v.label;
+    const hilfe = document.createElement("div");
+    hilfe.className = "hinweis";
+    hilfe.textContent = v.hilfe;
+    text.append(name, hilfe);
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "knopf-blank";
+    knopf.textContent = "Hinzufügen";
+    knopf.setAttribute("aria-label", `${v.label} ins Menü legen`);
+    knopf.addEventListener("click", () => {
+      eigeneBefehleSchreiben([...eigeneBefehleLesen(), { label: v.label, text: v.text, leiste: false }]);
+      befehleListeZeichnen();
+      eigeneBefehleZeichnen();
+    });
+    zeile.append(text, knopf);
+    ziel.appendChild(zeile);
+  }
+}
+
 function befehleListeZeichnen() {
+  befehlVorschlaegeZeichnen();
   const liste = $("befehle-liste");
   liste.textContent = "";
   const befehle = eigeneBefehleLesen();
