@@ -1,43 +1,41 @@
-# Übergabe Hetzner-App (Relay), 31.10.2026 12:40 (Karte Hetzner-App 3, Kontext rund 155k)
+# Übergabe Hetzner-App (Relay), 01.11.2026 01:55 (Karte Hetzner-App 4)
 
 ## Stand
-Relay V197 ausgerollt und auf GitHub. In dieser Karte gebaut, alles in Baubuch und Register:
-- V195: Tasten-Rätsel gelöst. Antwort-Tasten unter nummerierten Fragen blieben nur unter den
-  letzten drei Antworten stehen; jetzt bleiben sie, bis Roli nach der Frage etwas schreibt.
-- V196: Satzzeichen hinter Lautschrift in [[ ]] kommt vor die Klammern (Hinweis der Kaira-Karte).
-- V197: Eigenes Diktat mit Whisper (small) als zweite Wahl in Einstellungen, Abschnitt „Diktat“
-  (Google bleibt Vorgabe). Server: hetzner_app/diktat.py und whisper_worker.py (Python aus
-  ~/werkzeuge/whisper/.venv, Arbeiter bleibt warm, 10 Minuten Leerlauf), POST/GET /api/diktat.
-  Aufnahme per Tipp, zweiter Tipp erkennt, Kreuz verwirft. Wortschatz-Hinweis aus Kairas aussprache.txt.
-- Aussprachetest für Kaira: Seite ~/seiten/kaira-aussprachetest/ (189 Wörter), Rolis Falschliste
-  (61 Wörter) ging an die Kaira-Karte, die hat sie als Lautschrift eingetragen und Runde 2 gebaut:
-  https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/ (Roli hat sie noch nicht abgehakt).
+Relay V197 läuft, nichts Neues an der App gebaut. In dieser Karte:
+- GitHub-Auftritt: README.md und README.en.md auf Stand V197 (Antwort-Tasten, Nebenfrage, Ordnersuche,
+  eigene Stimmen, optionales Whisper-Diktat), Repo-Beschreibung zweisprachig und acht Themen auf GitHub.
+  Kaira steht nicht mit Namen drin (Fremde bekommen die Stimme nicht), Roli weiß das.
+- Mockup englische Oberfläche: https://seiten-roli.65-21-246-222.sslip.io/relay-englisch-mockup/
+  (abgenommen, Roli „7. Ja“).
+- Plan: PLAN-ENGLISCHE-OBERFLAECHE.md im Projektordner (Umfang, Bauweise, Aufwand 1,5 bis 3 Stunden,
+  Risiken). Bau noch nicht freigegeben.
+Alles committet und auf GitHub, Baubuch und Register nachgetragen.
 
-## Beschlüsse 31.10. (Rolis Wortlaut)
-- 11:24 „20. Ja“ Tasten-Rätsel zuerst (gebaut). 11:33 „21. Ja, und bitte auch ein test mit den
-  gängigsten englischen wörtern“ (gebaut). 11:59 „Ja“ auf Frage 22: Whisper-Diktat mit Modell small
-  und Wortschatz als Hinweis (gebaut). Frühere Beschlüsse 10 und 11 siehe Zweitgehirn
-  „02 Projekte/Einzelstein Relay.md“.
+## Beschlüsse 31.10./01.11. (Rolis Wortlaut)
+- 31.10. 16:11 „1. Ja“ (GitHub-Auftritt als Nächstes), 16:12 „2. Nein“ (Kaira darf im README stehen;
+  trotzdem nicht namentlich, siehe oben), 16:46 „1. Ja“ (nur Auftritt, Oberfläche später).
+- 01.11. 01:35 „3. Ja“ (englische Oberfläche planen), „4. Was ist fremde?“ (geklärt: andere Server als
+  Roli, Lea, Lorenz). 01:37 „5. Deine Empfehlung“ (Whisper NICHT in setup.sh), „6. Mokup“ (erst Mockup).
+  01:43 „7. Ja, anmeldung mache ich montag“ (Mockup abgenommen; /login am Montag 03.11.).
 
-## Offen (Nummern laufen weiter, zuletzt 23)
-- 18: Roli soll sich neu anmelden (/login), Claude Code meldete „login expires in 3 days“.
-- 23: Frage an Roli, ob der zweisprachige GitHub-Auftritt (Beschluss 11) als Nächstes drankommt;
-  meine Empfehlung: erst nach seiner Handyprobe vom Diktat.
-- Nicht am echten Handy geprüft: Whisper-Diktat (Mikrofon-Erlaubnis, Aufnahmeformat Chrome Android,
-  Freisprech-Modus ohne Stille-Erkennung), Kaira-Vorlesen, Nebenfrage-Zettel, neue Antwort-Tasten.
-- Rolis Urteil zum Klang von Kaira und zu Aussprachetest Runde 2 steht aus; falsche Wörter kommen
-  als kopierte Liste, die geht an die Kaira-Karte (Kaira-Assistent), nicht in die Relay.
-- Das Tour-Skript kennt das Diktat noch nicht (Wahl in den Einstellungen, kein Tour-Schritt).
+## Offen (Nummern laufen weiter, zuletzt 8)
+- 8: Frage an Roli, ob der Bau der englischen Oberfläche beginnt (Schritt 1: Gerüst und Sprachwahl);
+  meine Empfehlung: erst nach seiner Handyprobe vom Whisper-Diktat.
+- Bei Roli: Handyprobe Whisper-Diktat (V197), Urteil zum Klang von Kaira und zum Aussprachetest
+  Runde 2 (https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/ , falsche Wörter als
+  Liste an die Kaira-Karte), Anmeldung /login am Montag.
+- Nicht am echten Handy geprüft: Whisper-Diktat, Kaira-Vorlesen, Nebenfrage-Zettel, Antwort-Tasten.
+- Tour-Skript kennt das Diktat noch nicht.
 
 ## Nächster Schritt
-Rolis Antwort auf 23 abwarten. Danach GitHub-Auftritt zweisprachig (Aufwand und Modell vorher nennen;
-ohne „Claude“ im Namen, Hinweis aufs eigene Abo, Kaira bleibt draußen).
+Rolis Antwort auf 8 abwarten. Bei Ja: PLAN-ENGLISCHE-OBERFLAECHE.md lesen, Schritt 1 bauen
+(web/texte.js mit t(), data-t in index.html, Abschnitt „Language“ in den Einstellungen, Vorgabe Deutsch),
+englische Texte selbst schreiben, Umstellen der 173 Stellen in app.js an den Umsetzer (Sonnet).
 
 ## Testhinweise
-Testserver: /tmp/k192/srv.py (Port 8799, ohne Piper-Start; mit HETZNER_TTS_PORT=5015 für Stimmen).
-Beenden mit `fuser -k 8799/tcp`. Playwright aus ~/werkzeuge/browser/.venv; Fake-Mikrofon mit
-`--use-fake-device-for-media-stream --use-file-for-fake-audio-capture=<wav>` (Beispiel /tmp/k195/dik.py).
-Hinweis: `wait_for_function` geht wegen der CSP nicht, mit evaluate abfragen.
+Testserver: /tmp/k192/srv.py (Port 8799, Anmeldung ausgehängt, ohne Piper-Start; mit HETZNER_TTS_PORT=5015
+für Stimmen). Beenden mit `fuser -k 8799/tcp`. Playwright aus ~/werkzeuge/browser/.venv, Tour-Schalter
+vorbelegen. Mockup-Skripte in /tmp/k201/. `wait_for_function` geht wegen CSP nicht, mit evaluate abfragen.
 
 ## Rolis letzter Wortlaut
-11:59 „Ja“ (auf Frage 22)
+01.11. 01:43 „7. Ja, anmeldung mache ich montag“
