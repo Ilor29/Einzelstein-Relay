@@ -13,13 +13,13 @@ Baubuch, Register und Bauplan-Seite (~/seiten/relay-monitor-bauplan/) sind aktue
 01.11. 20:46 „1. Ja“: Standbilder ansehen, Nachtrag in den Bauplan (erledigt). 20:47 „2. Ja“: Baustein 13 bauen (erledigt).
 
 ## Rolis letzter Wortlaut
-„[01.11. 20:47] 2. Ja“ (zu Baustein 13). Frage 3 an ihn ist offen.
+„[01.11. 22:58] 3. Ja“ (Baustein 4 bauen). Noch nicht begonnen, das ist der erste Stein der neuen Karte.
 
 ## Nächster Schritt
 Baustein 4 (Kartenmenü: Umbenennen, Fork, Als ungelesen markieren, In Abschnitt verschieben, Archivieren), danach 5 (Zurückspulen mit Esc Esc, Kurzfassung), 8 (Dateibaum), 9 (Hintergrundaufgaben), dann 17 (Cache-Leiste unter dem Eingabefeld; der Cache steht schon in Zur Hand), 18 (Kontext nach Posten, vorher /context in tmux ausprobieren), zuletzt 15, 16 und die englische Oberfläche (PLAN-ENGLISCHE-OBERFLAECHE.md Schritt 2 bis 7).
 
 ## Offen bei Roli
-3. Soll ich Baustein 4 bauen? (Empfehlung Ja.) Dazu aus früher: Auswertung „Claude Desktop App neu gebaut“ (tmp-87) ins Zweitgehirn und/oder umsetzen; Anmeldung läuft 03.11. ab (/login); Handyprobe Whisper-Diktat und der neuen Kürzel-Blätter; Aussprachetest Runde 2; Frage 7/8 der Kaira-Karte.
+Frage 3 ist mit „Ja“ beantwortet. Dazu aus früher: Auswertung „Claude Desktop App neu gebaut“ (tmp-87) ins Zweitgehirn und/oder umsetzen; Anmeldung läuft 03.11. ab (/login); Handyprobe Whisper-Diktat und der neuen Kürzel-Blätter; Aussprachetest Runde 2; Frage 7/8 der Kaira-Karte.
 
 ## Fallen
 Testserver mit HETZNER_TTS_PORT=5015 und PYTHONPATH=. starten, Beenden mit fuser -k 8799/tcp 5015/tcp. Playwright liegt unter ~/werkzeuge/browser/.venv (nicht im Projekt-.venv). Bei fest positionierten Blöcken ist offsetParent leer, Sichtbarkeit mit getClientRects prüfen.
