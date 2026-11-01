@@ -1,34 +1,41 @@
-# Übergabe Hetzner-App (Relay), 01.11.2026 16:40 (Karte Hetzner-App 5, Fortsetzung)
+# Übergabe Hetzner-App (Relay), 01.11.2026 17:45 (Karte Hetzner-App 7, Fortsetzung)
 
 ## Stand
-Relay V198 läuft (Gerüst englische Oberfläche, Sprachwahl in den Einstellungen). Seitdem nichts in der App
-gebaut, nur Entwürfe und Prüfungen (Baubuch-Eintrag 01.11. „Entwurf Monitor-Ansicht“, committet).
+Relay V199 läuft und ist ausgerollt. Neu: Monitor-Baustein 1, Block „Änderungen dieser Karte“ in der rechten
+Spalte „Zur Hand“ (nur am breiten Rechner): git diff je Datei, Plus/Minus mit Vorzeichen, aufklappbar,
+Geheimdateien (.env, Schlüssel, Token) nur mit Namen. Dateien: hetzner_app/aenderungen.py, Endpunkte
+/api/sessions/{name}/aenderungen und …/datei, Block in web/index.html, app.js (zurHandAenderungen), styles.css.
+Baubuch und Register sind nachgetragen (Baubuch „V199“, Register 01.11. 17:25), alles committet (6966623) und gepusht.
 
-## Neu seit der letzten Übergabe
-- Rolis Auslöser: Spickzettel „Claude Desktop App“ (Julian Ivanov, PDF) und Video, Link
-  https://yt.65-21-246-222.sslip.io/qmuqhNZAoSzO/2026-11-01-claude-desktop-app-neu-gebaut-zehn-neue-funktionen-fur-claud.html
-  (Text und 58 Bilder; Bilder liegen in /tmp/vb, gehen verloren). Roli will diese Funktionen am Monitor/Arbeitslaptop nutzen.
-- Offizielle Doku (Agent): fast alles gibt es auch im Terminal als Befehl, nur Sitzungsleiste und geteilte Ansicht
-  sind Desktop-only. Desktop-App kann Umgebung „SSH“ (laut Doku, unerprobt). „Schaltzentrale“ heißt in der Doku
-  Cross-Session-Messaging (/list-agents), in tmux unbelegt.
-- /advisor gibt es hier NICHT (Probe-Sitzung: nur Skill „model-usage-advisor“; Notiz 15.10.: nur Plattform auf AWS).
-  Alternative: Sonnet-Karte holt für schwere Teile einen Opus-Unteragenten, oder /model von Hand.
-- Fertig und im Browser geprüft: Bauplan (elf Bausteine) https://seiten-roli.65-21-246-222.sslip.io/relay-monitor-bauplan/
-  und klickbares Mockup mit Tour und SSH-Anleitung https://seiten-roli.65-21-246-222.sslip.io/relay-monitor-mockup/
-  (Rolis Handy-Screenshot 16:23 zeigte die Spalten untereinander: behoben, am Handy jetzt Reiter Karten/Chat/Leiste).
+## Befunde dieser Karte
+- Versuch Nachrichten zwischen Karten (Baustein 10) geglückt: ListAgents/SendMessage laufen in tmux in beide
+  Richtungen (Test-Karte Haiku). Offen: ob Karten in anderem Berechtigungsmodus Nachrichten bis zur Freigabe
+  zurückhalten; echte Karten nicht angeschrieben. Kaira-Assistent 12 wurde informiert.
+- Baustein 3 (Kontextkarte) bestand schon (Block „Diese Karte“, Kontextbalken, Verbrauchsblatt, 200k-Regel). /context
+  als Aufteilung ist zu fragil (hunderte Zeilen, schiebt das echte Terminal), bleibt bei der Gesamtzahl.
+- Baustein 2 (Aufgabenliste) hat keine Quelle: in keiner Mitschrift ein TodoWrite/TaskCreate. Ruht.
+- Fehler von mir: Testserver ohne HETZNER_TTS_PORT=5015 hat den echten Piper verdrängt; Dienst neu gestartet,
+  läuft wieder. Testserver immer mit HETZNER_TTS_PORT=5015 starten.
+- Der Bauplan unter seiten-roli …/relay-monitor-bauplan/ ist in Baustein 2 und 3 überholt, noch nicht angepasst.
 
 ## Beschlüsse
-01.11. 16:12 „5. Ja“ (Bauplan als Seite); 16:17 „2./3./4. Deine Empfehlung“ = Ja: Versuch Nachrichten zwischen Karten,
-Monitor-Leiste nach der englischen Oberfläche, SSH-Anleitung (steht im Mockup). **01.11. 16:27 „1. Ja“: Die Monitor-Ansicht kommt VOR der englischen Oberfläche** (Roli 15:52: „wenn das englische erstmal zurück“).
+01.11. 16:27 „1. Ja“: Monitor-Ansicht vor englischer Oberfläche. 16:38 „1. Ja, 2. Ja“: Versuch und Reihenfolge.
+16:46 „3./4. Deine Empfehlung“: Baustein 3 angehen, Kaira informieren. 17:05 „5. Ja“: Baustein 2 prüfen.
+17:11 „6. Ja“: Baustein 1 bauen (jetzt V199).
 
 ## Nächster Schritt
-1. Versuch: können Karten sich gegenseitig anschreiben (/list-agents, SendMessage) in tmux-Karten? Mit Test-Karten, nichts an echten.
-2. Rolis Nummern der Bausteine von der Bauplan-Seite abwarten, dann bauen (Reihenfolge: 10 Versuch, 3, 2, 1, 6, 7).
-3. Englische Oberfläche danach: Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md.
+1. Rolis Antwort auf Frage 7 abwarten (Antwort-Vorschlag im Eingabefeld als Baustein 12 in den Bauplan) und Frage 8.
+2. Bei Ja: Baustein 6 (Kartenliste mit Abschnitten und Statuspunkt, Wort plus Form, nie nur Farbe), dann 7 (Vorschau).
+3. Bauplan-Seite an die Befunde anpassen (Baustein 2 ruht, 3 besteht, 10 erledigt, 1 gebaut).
+4. Englische Oberfläche danach: Schritt 2 bis 7 aus PLAN-ENGLISCHE-OBERFLAECHE.md.
 
 ## Offen bei Roli
-Frage 10 der Kaira-Karte (Dienstzugang, Kartenwechsel) hängt am Versuch 1; Anmeldung läuft 03.11. ab (/login);
-Handyprobe Whisper-Diktat, Aussprachetest Runde 2 (https://seiten-roli.65-21-246-222.sslip.io/kaira-aussprachetest-2/).
+7. Antwort-Vorschlag (Screenshot „Archiv der Lücken“: vorgeschlagener Antworttext im Eingabefeld mit Pfeil,
+   Rolis Satz „Was ich auch gut finde die antwort unter ootional auswählen“) als Baustein 12 aufnehmen? Empfehlung Ja.
+   Meine Deutung (Vorschlag annehmen oder überschreiben) ist nicht bestätigt, Bild liegt nach 14 Tagen nicht mehr da.
+8. Mit Baustein 6 weitermachen? Empfehlung Ja.
+Außerdem: Anmeldung läuft 03.11. ab (/login); Frage 10 der Kaira-Karte hängt am Versuch (jetzt möglich);
+Handyprobe Whisper-Diktat; Aussprachetest Runde 2.
 
 ## Rolis letzter Wortlaut
-01.11. 16:27 „1. Ja“ (Monitor-Ansicht vor englischer Oberfläche).
+01.11. 17:11 „6. Ja“ und „Was ich auch gut finde die antwort unter ootional auswählen“ (mit Screenshot).
