@@ -47,15 +47,10 @@ def kaira_fenster_adresse() -> str:
 
 
 def _rahmen_herkuenfte() -> list[str]:
-    """Herkünfte, die die App einbetten darf (Vorschau und Kaira-Fenster)."""
-    from urllib.parse import urlsplit
+    """Herkünfte, die die App einbetten darf (nur die Vorschau; Kaira öffnet in eigenem Fenster)."""
     out = []
     if vorschau.herkunft():
         out.append(vorschau.herkunft())
-    k = kaira_fenster_adresse()
-    if k:
-        t = urlsplit(k)
-        out.append(f"{t.scheme}://{t.netloc}")
     return out
 
 
@@ -260,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 214
+VERSION = 215
 
 
 @app.get("/api/version")

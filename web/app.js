@@ -7488,67 +7488,21 @@ async function dateiOeffnen(rel, e) {
 $("datei-schatten").addEventListener("click", () => { $("datei-blatt").hidden = true; });
 $("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden = true; });
 
-// Kaira-Knopf: schwebendes, verschiebbares Fenster mit der Kaira-Seite (nur wenn der Server eine Adresse kennt).
-(function kairaFenster() {
-  const fenster = $("kaira-fenster");
-  document.body.append(fenster);   // außerhalb der Ansichten, damit es überall sichtbar bleibt
-  const rahmen = $("kaira-rahmen"), kopf = $("kaira-kopf");
+// Kaira-Knopf: öffnet die Kaira-Seite in einem eigenen Fenster (am Handy ein neuer Tab). Als Rahmen in der
+// App ging es nicht: das Anmelde-Cookie des Werkstatt-Tors kommt im Rahmen nicht an (Roli 02.11. 16:11, 16:14 „1. Ja“).
+(function kairaKnopf() {
   const knoepfe = [$("knopf-kaira"), $("knopf-kaira-liste")];
   let adresse = "";
-  const speichern = () => {
-    try {
-      localStorage.setItem("kaira_fenster_v1", JSON.stringify({
-        offen: !fenster.hidden, links: fenster.offsetLeft, oben: fenster.offsetTop,
-        breit: fenster.offsetWidth, hoch: fenster.offsetHeight }));
-    } catch {}
-  };
-  const einpassen = () => {
-    const b = Math.min(fenster.offsetWidth || 340, window.innerWidth - 8);
-    const h = Math.min(fenster.offsetHeight || 460, window.innerHeight - 8);
-    fenster.style.width = b + "px"; fenster.style.height = h + "px";
-    fenster.style.left = Math.max(4, Math.min(fenster.offsetLeft, window.innerWidth - b - 4)) + "px";
-    fenster.style.top = Math.max(4, Math.min(fenster.offsetTop, window.innerHeight - 48)) + "px";
-  };
-  const auf = () => {
+  knoepfe.forEach((k) => k.addEventListener("click", () => {
     if (!adresse) return;
-    if (!rahmen.src) rahmen.src = adresse;
-    fenster.hidden = false; einpassen(); speichern();
-    knoepfe.forEach((k) => k.classList.add("an"));
-  };
-  const zu = () => {
-    fenster.hidden = true; speichern();
-    knoepfe.forEach((k) => k.classList.remove("an"));
-  };
-  knoepfe.forEach((k) => k.addEventListener("click", () => (fenster.hidden ? auf() : zu())));
-  $("kaira-schliessen").addEventListener("click", zu);
-  // Verschieben am Kopf (Maus und Finger)
-  let zug = null;
-  kopf.addEventListener("pointerdown", (e) => {
-    if (e.target.closest("button")) return;
-    zug = { dx: e.clientX - fenster.offsetLeft, dy: e.clientY - fenster.offsetTop };
-    kopf.setPointerCapture(e.pointerId);
-    rahmen.style.pointerEvents = "none";
-  });
-  kopf.addEventListener("pointermove", (e) => {
-    if (!zug) return;
-    fenster.style.left = Math.max(4, Math.min(e.clientX - zug.dx, window.innerWidth - 80)) + "px";
-    fenster.style.top = Math.max(4, Math.min(e.clientY - zug.dy, window.innerHeight - 48)) + "px";
-  });
-  const loslassen = () => { if (!zug) return; zug = null; rahmen.style.pointerEvents = ""; speichern(); };
-  kopf.addEventListener("pointerup", loslassen);
-  kopf.addEventListener("pointercancel", loslassen);
-  if (window.ResizeObserver) new ResizeObserver(() => { if (!fenster.hidden) speichern(); }).observe(fenster);
-  window.addEventListener("resize", () => { if (!fenster.hidden) einpassen(); });
+    const w = window.open(adresse, "kaira-fenster", "popup=yes,width=400,height=680");
+    if (w) w.focus();
+  }));
   (async () => {
     let d;
     try { d = await (await api("/kaira-fenster")).json(); } catch { return; }
     if (!d || !d.url) return;
     adresse = d.url;
     knoepfe.forEach((k) => { k.hidden = false; });
-    let alt = {};
-    try { alt = JSON.parse(localStorage.getItem("kaira_fenster_v1") || "{}"); } catch {}
-    if (alt.breit) { fenster.style.width = alt.breit + "px"; fenster.style.height = alt.hoch + "px"; }
-    if (alt.links != null) { fenster.style.left = alt.links + "px"; fenster.style.top = alt.oben + "px"; }
-    if (alt.offen) auf();
   })();
 })();
