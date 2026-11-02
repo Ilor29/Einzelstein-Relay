@@ -3291,6 +3291,7 @@ $("knopf-diktat").addEventListener("click", () => {
       const letztes = e.results[e.results.length - 1];
       const stueck = letztes[0].transcript;
       zuletztGehoert = Date.now();
+      autoSendePlanen();
 
       if (letztes.isFinal) {
         fertig += stueck.trim() + " ";
@@ -3338,6 +3339,7 @@ $("knopf-diktat").addEventListener("click", () => {
 
   // Nochmal tippen — oder Absenden — heißt: aufhören.
   hoertStoppen = () => {
+    autoSendeAbbrechen();
     willHoeren = false;
     fertig = "";           // nichts aufheben, was gleich wieder auftauchen könnte
 
@@ -5024,6 +5026,40 @@ $("vl-schliessen").addEventListener("click", stille);
 // Claude arbeitet, die Antwort kommt gesprochen zurück, das Mikrofon steht schon
 // offen. Abgeschickt wird weiterhin bewusst mit Senden, damit ein Verhörer nicht
 // ungefragt bei Claude landet.
+
+// Absenden nach Sprechpause (Roli 02.11.2026 10:49 „nach 4 Sekunden“): Im Freisprech-Modus geht
+// das Gesprochene von selbst raus, wenn vier Sekunden lang nichts mehr dazukommt. Unten läuft
+// sichtbar ein Zähler, „Stopp“ oder jedes Tippen ins Feld hält ihn an. Leeres Feld sendet nie.
+let autoSendeZeit = null;
+function autoSendePause() {
+  const n = Number(localStorage.getItem("sendePause"));
+  return n >= 2 && n <= 30 ? n : 4;
+}
+function autoSendeAbbrechen() {
+  clearInterval(autoSendeZeit);
+  autoSendeZeit = null;
+  $("auto-sende").hidden = true;
+}
+function autoSendePlanen() {
+  autoSendeAbbrechen();
+  if (!freisprech || imTerminal) return;
+  const ende = Date.now() + autoSendePause() * 1000;
+  autoSendeZeit = setInterval(() => {
+    if (!freisprech || !$("eingabe").value.trim()) { autoSendeAbbrechen(); return; }
+    const rest = Math.ceil((ende - Date.now()) / 1000);
+    if (rest <= 0) {
+      autoSendeAbbrechen();
+      $("eingabe-formular").requestSubmit();
+      return;
+    }
+    if (rest <= 3) {
+      $("auto-sende-text").textContent = `Sende in ${rest} …`;
+      $("auto-sende").hidden = false;
+    }
+  }, 300);
+}
+$("auto-sende-stopp").addEventListener("click", autoSendeAbbrechen);
+$("eingabe").addEventListener("input", (e) => { if (e.isTrusted) autoSendeAbbrechen(); });
 
 function freisprechAnzeigen() {
   $("knopf-freisprech").classList.toggle("an", freisprech);

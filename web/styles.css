@@ -2565,3 +2565,4 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .rewind-klein { opacity: 0.65; }
 /* Kontext, Cache und Modell stehen oben fest und rollen nicht mit (Roli 02.11.2026 10:20 „9. Ja“). */
 .zh-kontext.zh-fest { flex: none; width: auto; margin: .7rem .7rem 0; }
+#auto-sende[hidden] { display: none; }
