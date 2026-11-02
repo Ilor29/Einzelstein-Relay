@@ -2427,6 +2427,7 @@ mark.treffer.aktuell { background: var(--akzent); color: #fff; }
 /* Schnellwahl direkt unter der jeweiligen Frage (nur in der jüngsten Antwort). */
 .antwort .schnellwahl { display: none; }
 .antwort.juengste .schnellwahl { display: flex; margin: .1rem 0 .6rem; }
+.antwort.juengste .schnellwahl.erledigt { display: none; }
 .wahl-reihe { align-items: center; gap: .4rem; flex-wrap: wrap; }
 .wahl-taste {
   min-height: 44px; padding: 0 .9rem; border-radius: 999px;

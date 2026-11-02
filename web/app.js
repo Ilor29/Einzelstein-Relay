@@ -6912,21 +6912,30 @@ new MutationObserver(eigeneAntwortenAbgleichen).observe($("verlauf") || document
   let wartet = false;
   const mark = () => {
     wartet = false;
-    // Die jüngste Antwort MIT Fragen, solange Roli danach nichts geschrieben hat.
-    // Früher galt „unter den letzten drei Antworten“: Schrieb Claude nach der Frage
-    // noch drei Zwischentexte (Werkzeuglauf), verschwanden die Tasten, obwohl Roli
-    // noch nicht geantwortet hatte (Roli 31.10.2026 10:46, Tasten-Rätsel 15/16).
+    // Tasten bleiben unter jeder Frage, auf die Roli noch nicht geantwortet hat
+    // (Roli 02.11.2026 10:29: schrieb er zwischendurch etwas anderes, verschwanden
+    // die Tasten, obwohl die Frage offen war). Beantwortet heißt: In einer späteren
+    // Nachricht von ihm steht eine Zeile „N. …“ mit der Nummer der Frage.
     const alle = [...verlauf.querySelectorAll(".antwort")];
-    let ziel = -1;
-    for (let i = alle.length - 1; i >= 0; i--) {
-      if (alle[i].querySelector(".schnellwahl")) { ziel = i; break; }
-    }
-    if (ziel >= 0) {
-      for (let n = alle[ziel].nextElementSibling; n; n = n.nextElementSibling) {
-        if (n.classList.contains("gesagt")) { ziel = -1; break; }
+    alle.forEach((a) => {
+      const reihen = [...a.querySelectorAll(".schnellwahl")];
+      if (!reihen.length) { a.classList.remove("juengste"); return; }
+      const nummern = new Set();
+      for (let n = a.nextElementSibling; n; n = n.nextElementSibling) {
+        if (!n.classList.contains("gesagt")) continue;
+        for (const m of (n.textContent || "").matchAll(/(?:^|\n)\s*(?:\[[^\]]*\]\s*)?(\d{1,3})\.\s/g)) nummern.add(m[1]);
       }
-    }
-    alle.forEach((a, i) => a.classList.toggle("juengste", i === ziel));
+      let offen = 0;
+      for (const r of reihen) {
+        const nr = r.querySelector(".wahl-taste[data-nr]")?.dataset.nr;
+        if (!nr) continue;
+        const erledigt = nummern.has(nr);
+        r.classList.toggle("erledigt", erledigt);
+        if (!erledigt) offen++;
+      }
+      for (const r of reihen) if (!r.querySelector(".wahl-taste[data-nr]")) r.classList.toggle("erledigt", offen < 2);
+      a.classList.toggle("juengste", offen > 0);
+    });
     zurHandAuffrischen();
     vorschlagAuffrischen();
   };
