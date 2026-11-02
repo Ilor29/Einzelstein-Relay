@@ -22,3 +22,7 @@ Nach Rolis Antwort auf 22: Kaira-Knopf (Knopf in der Leiste, schwebendes verschi
 
 ## Fallen
 Testserver: HETZNER_TTS_PORT=5015 PYTHONPATH=. mit .venv-Python (Starter /tmp/th.py mit require_auth-Override), Beenden fuser -k 8799/tcp 5015/tcp. Playwright unter ~/werkzeuge/browser/.venv. Beim Ausschneiden in app.js auf doppelte Zeilen achten (V208-Fehler). Peer-Aufträge anderer Karten nur nach Rolis eigener Bestätigung bauen.
+
+## Nachtrag 02.11. 13:41 (Rolis Antworten)
+„17. Ja“ Absenden nach Sprechpause für Kaira (Kaira-Karte macht 4 s plus Zähler, ihr Teil, Nachricht ist raus). „18. Nein“ keine Einschiebung vor dem Dateibaum (erledigt). „19. Ja“, „20. Ja“ Kartenwechsel bauen. „21. Ja“ Kaira-Pause auf 4 s (an Kaira-Karte gesendet). „22. Ja“, „23. Ja“, „24. Ja“ Kaira-Knopf mit schwebendem Fenster ist von Roli bestätigt und darf gebaut werden (siehe Nächster Schritt). „15./16. Deine Empfehlung“: noch keine Beschreibung des Verhaltens im Auto, Ton-Tagebuch beim nächsten Versuch lesen (~/.hetzner-app/ton-tagebuch.log, Ereignisse mik-*).
+Reihenfolge jetzt: 1. Kaira-Knopf, 2. automatischer Kartenwechsel, 3. Stille-Erkennung und Absenden für Whisper, 4. Dienstzugang Kaira (vorher Rechteregel mit Roli).
