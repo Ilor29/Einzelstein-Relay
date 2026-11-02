@@ -2573,3 +2573,19 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .zh-baum { max-height: 22rem; overflow: auto; }
 .datei-inhalt { white-space: pre-wrap; padding: .8rem; overflow: auto; max-height: 70vh; }
 .datei-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .82rem; line-height: 1.45; margin: 0; }
+
+/* Kaira-Fenster (schwebend, verschiebbar, in der Größe änderbar) */
+.kaira-fenster {
+  position: fixed; left: 12px; top: 80px; width: 340px; height: 460px;
+  min-width: 240px; min-height: 240px; max-width: calc(100vw - 8px); max-height: calc(100vh - 8px);
+  display: flex; flex-direction: column; resize: both; overflow: hidden; z-index: 60;
+  background: var(--erhoben); border: 1px solid var(--linie); border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+}
+.kaira-fenster[hidden] { display: none; }
+.kaira-kopf {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 12px;
+  cursor: grab; touch-action: none; user-select: none; border-bottom: 1px solid var(--linie);
+}
+.kaira-titel { flex: 1; font-weight: 600; }
+.kaira-rahmen { flex: 1; width: 100%; border: 0; background: #fff; min-height: 0; }

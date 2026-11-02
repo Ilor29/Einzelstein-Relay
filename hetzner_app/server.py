@@ -38,6 +38,27 @@ WEB_DIR = Path(__file__).parent.parent / "web"
 COOKIE = "hetzner_app_anmeldung"
 
 
+def kaira_fenster_adresse() -> str:
+    """Adresse des Kaira-Fensters (nur https), oder leer. Gesetzt über HETZNER_APP_KAIRA_FENSTER."""
+    from urllib.parse import urlsplit
+    roh = os.environ.get("HETZNER_APP_KAIRA_FENSTER", "").strip()
+    t = urlsplit(roh)
+    return roh if t.scheme == "https" and t.netloc else ""
+
+
+def _rahmen_herkuenfte() -> list[str]:
+    """Herkünfte, die die App einbetten darf (Vorschau und Kaira-Fenster)."""
+    from urllib.parse import urlsplit
+    out = []
+    if vorschau.herkunft():
+        out.append(vorschau.herkunft())
+    k = kaira_fenster_adresse()
+    if k:
+        t = urlsplit(k)
+        out.append(f"{t.scheme}://{t.netloc}")
+    return out
+
+
 def _csp_bauen() -> str | None:
     """Die Content-Security-Policy — zweites Netz gegen XSS.
 
@@ -69,7 +90,7 @@ def _csp_bauen() -> str | None:
         "object-src 'none'",
         "base-uri 'none'",
         "frame-ancestors 'none'",
-    ] + ([f"frame-src {vorschau.herkunft()}"] if vorschau.herkunft() else []))
+    ] + ([f"frame-src {' '.join(_rahmen_herkuenfte())}"] if _rahmen_herkuenfte() else []))
 
 
 CSP = _csp_bauen()
@@ -239,12 +260,18 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 212
+VERSION = 213
 
 
 @app.get("/api/version")
 def version() -> dict:
     return {"version": VERSION}
+
+
+@app.get("/api/kaira-fenster")
+def kaira_fenster(_: None = Depends(require_auth)) -> dict:
+    """Adresse für den Kaira-Knopf; ohne Einstellung gibt es keinen Knopf."""
+    return {"url": kaira_fenster_adresse()}
 
 
 @app.get("/api/aufgabe")
