@@ -3152,8 +3152,40 @@ async function whisperDiktat(knopf, feld) {
   const MAX_MS = 150000;        // der Server nimmt höchstens 180 Sekunden
   const frist = setTimeout(() => zustand.fertig(), MAX_MS);
 
+  // Stille-Erkennung (Roli 02.11.2026 „11. Ja“): Hat man gesprochen und danach 2,5 Sekunden
+  // geschwiegen, endet die Aufnahme von selbst. Kommt in den ersten 12 Sekunden gar keine Sprache,
+  // wird verworfen. Der Pegel wird alle 100 ms gemessen; als Sprache gilt, was deutlich über dem
+  // leisesten bisherigen Pegel (Grundrauschen) liegt, mindestens 0,02.
+  let wache = null, kontext = null;
+  try {
+    const AK = window.AudioContext || window.webkitAudioContext;
+    if (AK) {
+      kontext = new AK();
+      const analyse = kontext.createAnalyser();
+      analyse.fftSize = 1024;
+      kontext.createMediaStreamSource(strom).connect(analyse);
+      const werte = new Float32Array(analyse.fftSize);
+      const start = Date.now();
+      let boden = 0.05, gesprochen = false, letzteSprache = start;
+      wache = setInterval(() => {
+        analyse.getFloatTimeDomainData(werte);
+        let q = 0; for (const v of werte) q += v * v;
+        const pegel = Math.sqrt(q / werte.length);
+        const jetzt = Date.now();
+        // Grundrauschen = leisester Pegel bisher (steigt langsam wieder, höchstens 0,05)
+        boden = Math.min(0.05, boden * 1.01, pegel + 1e-4);
+        const schwelle = Math.max(0.02, boden * 3);
+        if (pegel > schwelle) { gesprochen = true; letzteSprache = jetzt; }
+        if (gesprochen && jetzt - letzteSprache >= 2500) zustand.fertig();
+        else if (!gesprochen && jetzt - start >= 12000) zustand.abbrechen();
+      }, 100);
+    }
+  } catch { /* ohne Stille-Erkennung: man tippt wie bisher zum Beenden */ }
+
   const aufraeumen = () => {
     clearTimeout(frist);
+    clearInterval(wache);
+    try { kontext?.close(); } catch { /* egal */ }
     strom.getTracks().forEach((t) => t.stop());
     knopf.classList.remove("hoert");
     $("knopf-diktat-weg").hidden = true;
@@ -3195,6 +3227,7 @@ async function whisperDiktat(knopf, feld) {
       feldAnpassen();
       feld.scrollTop = feld.scrollHeight;
       entwurfMerken();
+      autoSendePlanen(2);   // Freisprech: nach kurzer Frist mit Zähler und Stopp absenden
     } catch {
       melde("Das Diktat ließ sich gerade nicht erkennen. Nimm es nochmal auf.");
     } finally {
@@ -3208,7 +3241,7 @@ async function whisperDiktat(knopf, feld) {
   hoertVerwerfen = () => { zustand.abbrechen(); feld.value = vorher.trimEnd(); feldAnpassen(); };
   $("knopf-diktat-weg").hidden = false;
   knopf.classList.add("hoert");
-  feld.placeholder = "Ich höre zu … zum Beenden nochmal tippen";
+  feld.placeholder = "Ich höre zu … zum Beenden nochmal tippen oder kurz schweigen";
   rec.start();
 }
 
@@ -5040,10 +5073,10 @@ function autoSendeAbbrechen() {
   autoSendeZeit = null;
   $("auto-sende").hidden = true;
 }
-function autoSendePlanen() {
+function autoSendePlanen(sekunden) {
   autoSendeAbbrechen();
   if (!freisprech || imTerminal) return;
-  const ende = Date.now() + autoSendePause() * 1000;
+  const ende = Date.now() + (sekunden || autoSendePause()) * 1000;
   autoSendeZeit = setInterval(() => {
     if (!freisprech || !$("eingabe").value.trim()) { autoSendeAbbrechen(); return; }
     const rest = Math.ceil((ende - Date.now()) / 1000);
