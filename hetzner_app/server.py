@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import aenderungen, befehle, bibliothek, dateibaum, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau, zurueckspulen
+from . import aenderungen, befehle, bibliothek, dateibaum, diktat, geraete, hintergrund, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau, zurueckspulen
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -255,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 216
+VERSION = 217
 
 
 @app.get("/api/version")
@@ -2163,6 +2163,24 @@ def _karten_ordner(name: str) -> str:
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
     return next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
+
+
+@app.get("/api/sessions/{name}/befehle-laufend", dependencies=[Depends(require_auth)])
+def session_befehle_laufend(name: str) -> dict:
+    """Laufende Shell-Befehle der Karte mit Laufzeit (Monitor-Baustein 9, nur lesen)."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    return {"befehle": hintergrund.aufgaben(name)}
+
+
+@app.post("/api/sessions/{name}/befehle-laufend/{pid}/stopp", dependencies=[Depends(require_auth)])
+def session_befehl_stopp(name: str, pid: int) -> dict:
+    """Beendet einen laufenden Befehl dieser Karte. Fremde Prozesse werden abgelehnt."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    if not hintergrund.stoppen(name, pid):
+        raise HTTPException(409, "Dieser Befehl läuft nicht mehr oder gehört nicht zu dieser Karte.")
+    return {"ok": True}
 
 
 @app.get("/api/sessions/{name}/dateien", dependencies=[Depends(require_auth)])

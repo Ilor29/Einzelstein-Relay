@@ -7119,8 +7119,73 @@ function zurHandAuffrischen() {
   if ($("zur-hand").hidden) return;
   zurHandKontext();
   zurHandAenderungen();
+  zurHandBefehle();
   zurHandDateien();
   zurHandVorschau();
+}
+
+// Laufende Befehle der Karte (Baustein 9): Liste aus der Prozessliste, Stopp mit Rückfrage.
+let befehleFuer = "", befehleZuletzt = 0, befehleAbdruck = "";
+function laufzeitText(s) {
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.floor(s / 60)} min ${s % 60} s`;
+  return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
+}
+async function zurHandBefehle(erzwingen) {
+  if ($("zur-hand").hidden || !aktuelleSitzung) return;
+  const name = aktuelleSitzung.name;
+  if (!erzwingen && befehleFuer === name && Date.now() - befehleZuletzt < 4000) return;
+  if (befehleFuer !== name) befehleAbdruck = "";
+  befehleFuer = name;
+  befehleZuletzt = Date.now();
+  let d;
+  try { d = await (await api(`/sessions/${encodeURIComponent(name)}/befehle-laufend`)).json(); }
+  catch { return; }
+  if (aktuelleSitzung?.name !== name) return;
+  // Laufzeit ändert sich ständig; verglichen wird nur, was sich in der Liste selbst ändert.
+  const abdruck = name + d.befehle.map((b) => b.pid + b.befehl).join("|");
+  const ziel = $("zh-befehle-liste");
+  const summe = $("zh-befehle-summe");
+  if (abdruck === befehleAbdruck) {
+    d.befehle.forEach((b) => {
+      const z = ziel.querySelector(`[data-pid="${b.pid}"] .zh-bef-zeit`);
+      if (z) z.textContent = laufzeitText(b.sekunden);
+    });
+    return;
+  }
+  befehleAbdruck = abdruck;
+  ziel.replaceChildren();
+  summe.textContent = d.befehle.length ? String(d.befehle.length) : "";
+  if (!d.befehle.length) {
+    ziel.innerHTML = '<p class="zh-leer">Gerade läuft kein Befehl.</p>';
+    return;
+  }
+  for (const b of d.befehle) {
+    const box = document.createElement("div");
+    box.className = "zh-bef";
+    box.dataset.pid = b.pid;
+    const text = document.createElement("code");
+    text.className = "zh-bef-text";
+    text.textContent = b.befehl;
+    const zeit = document.createElement("span");
+    zeit.className = "zh-bef-zeit";
+    zeit.textContent = laufzeitText(b.sekunden);
+    const stopp = document.createElement("button");
+    stopp.type = "button";
+    stopp.className = "zh-klein";
+    stopp.textContent = "Stopp";
+    stopp.setAttribute("aria-label", `Befehl beenden: ${b.befehl.slice(0, 60)}`);
+    stopp.addEventListener("click", async () => {
+      if (!confirm(`Diesen Befehl beenden?\n\n${b.befehl.slice(0, 200)}`)) return;
+      stopp.disabled = true;
+      try {
+        await api(`/sessions/${encodeURIComponent(name)}/befehle-laufend/${b.pid}/stopp`, { method: "POST" });
+      } catch { /* läuft vielleicht schon nicht mehr; die Liste zeigt es gleich */ }
+      zurHandBefehle(true);
+    });
+    box.append(text, zeit, stopp);
+    ziel.append(box);
+  }
 }
 
 // Änderungen der Karte (Baustein 1 der Monitor-Ansicht): Git-Stand des Kartenordners.
