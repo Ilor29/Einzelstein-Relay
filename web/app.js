@@ -3308,6 +3308,7 @@ $("knopf-diktat").addEventListener("click", () => {
     };
 
     erkennung.onerror = (e) => {
+      tonEreignis("mik-erkennung-fehler", { fehler: e.error });
       if (e.error === "not-allowed") {
         willHoeren = false;
         alert("Ohne Zugriff aufs Mikrofon kann ich nicht zuhören. Erlaube es in den Browser-Einstellungen.");
@@ -5041,9 +5042,15 @@ async function mikrofonAufmachen() {
   // Steht noch ein Rest aus, ist der Vortrag nicht durch, sondern von einem
   // Anruf abgeschnitten. Dann läuft gerade ein Gespräch — da ist ein
   // aufgehendes Mikrofon das Letzte, was jemand gebrauchen kann.
+  const bed = { freisprech, imTerminal, hoert: !!hoert, spricht, rest: !!restText, sichtbar: document.visibilityState };
   if (freisprech && !imTerminal && !hoert && !spricht && !restText &&
       document.visibilityState === "visible") {
-    try { $("knopf-diktat").click(); } catch { /* dann von Hand */ }
+    tonEreignis("mik-versuch", bed);
+    try { $("knopf-diktat").click(); } catch (e) { tonEreignis("mik-fehler", { was: String(e) }); }
+    // Eineinhalb Sekunden später nachsehen, ob das Mikrofon wirklich offen ist.
+    setTimeout(() => tonEreignis("mik-ergebnis", { offen: !!hoert }), 1500);
+  } else {
+    tonEreignis("mik-uebersprungen", bed);   // Roli 02.11.2026 „14. Ja“: warum das Mikrofon nicht aufging
   }
 }
 
