@@ -3763,11 +3763,47 @@ async function aktualisiereKontextBalken() {
   const tokens = typeof k.benutzt === "number" ? ` · ${tokenKurz(k.benutzt)} benutzt` : "";
   $("kontext-text").textContent =
     `Kontext ${frei}% frei${tokens}${neueKarte ? " · neue Karte" : ""}`;
+  cacheUhrStand = k.cache && typeof k.cache.rest_s === "number"
+    ? { name: fuer, warm: !!k.cache.warm, rest: k.cache.rest_s, kaltSeit: k.cache.kalt_seit_s || 0,
+        gross: kontextGroesse.benutzt >= CACHE_WARNUNG_AB, ts: Date.now() }
+    : null;
+  cacheUhrZeichnen();
   const cache = cacheKurz(k.cache);
   $("cache-text").textContent = cache;
   $("cache-text").classList.toggle("warnung", cache.startsWith("⚠"));
   balken.hidden = false;
 }
+
+// Cache-Uhr unter dem Eingabefeld (Monitor-Baustein 17): Der Stand kommt mit dem Kontext-Abruf,
+// die Sekunden zählt die App selbst weiter. Zustand immer auch als Wort und Zeichen, nie nur Farbe.
+let cacheUhrStand = null;
+function minSek(s) {
+  s = Math.max(0, Math.round(s));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function cacheUhrZeichnen() {
+  const el = $("cache-uhr");
+  if (!el) return;
+  const st = cacheUhrStand;
+  if (!st || !aktuelleSitzung || aktuelleSitzung.name !== st.name) { el.hidden = true; return; }
+  const vergangen = (Date.now() - st.ts) / 1000;
+  let text, warnung = false;
+  if (st.warm && st.rest - vergangen > 0) {
+    const rest = st.rest - vergangen;
+    if (rest <= 300 && st.gross) { text = `⚠ Cache läuft in ${minSek(rest)} ab, jetzt ist eine Übergabe günstig`; warnung = true; }
+    else text = `Cache warm, noch ${minSek(rest)}`;
+  } else {
+    const seit = (st.warm ? 0 : st.kaltSeit) + vergangen;
+    text = st.gross
+      ? `⚠ Cache kalt seit ${dauerKurz(seit)}, der nächste Zug ist teuer`
+      : `Cache kalt seit ${dauerKurz(seit)}`;
+    warnung = st.gross;
+  }
+  el.textContent = text;
+  el.classList.toggle("warnung", warnung);
+  el.hidden = false;
+}
+setInterval(cacheUhrZeichnen, 1000);
 
 // --- Prompt-Cache: wie lange die Karte noch warm ist --------------------------
 // Anthropic hält den Verlauf eine Stunde (manchmal fünf Minuten) als
