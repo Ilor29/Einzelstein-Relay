@@ -6994,52 +6994,8 @@ function uebergabeKnopf() {
 // reinzunehmen“, beschlossen 01:36, Mockup abgenommen 10:04 „78. Ja“. Die Spalte
 // zeigt nur, was die App schon weiß: die offenen Fragen der jüngsten Antwort mit
 // denselben Tasten wie im Verlauf, den Entscheidungskorb und den Kontext-Stand.
-let zurHandAbdruck = "";
 function zurHandAuffrischen() {
   if ($("zur-hand").hidden) return;
-  const reihen = [...document.querySelectorAll("#verlauf .antwort.juengste .wahl-reihe[data-frage]")];
-  const abdruck = (aktuelleSitzung?.name || "") + "|" + reihen.map((r) => r.dataset.frage).join("|");
-  if (abdruck !== zurHandAbdruck) {
-    zurHandAbdruck = abdruck;
-    const ziel = $("zur-hand-fragen");
-    ziel.replaceChildren();
-    for (const r of reihen) {
-      const nr = r.querySelector("[data-nr]")?.dataset.nr;
-      if (!nr) continue;
-      const roh = r.dataset.frage.replace(/^\s*\d{1,3}\.\s+/, "");
-      const teil = roh.split(/\s*Meine Empfehlung:\s*/);
-      const f = document.createElement("div");
-      f.className = "zh-frage";
-      const t = document.createElement("div");
-      t.className = "zh-frage-text";
-      const n = document.createElement("span");
-      n.className = "zh-nr";
-      n.textContent = nr + ".";
-      t.append(n, " " + teil[0].replace(/\*\*/g, ""));
-      f.append(t);
-      if (teil[1]) {
-        const e = document.createElement("div");
-        e.className = "zh-empf";
-        e.textContent = "Empfehlung: " + teil.slice(1).join(" ").replace(/\*\*/g, "");
-        f.append(e);
-      }
-      f.append(baueWahlReihe(Number(nr), document));
-      ziel.append(f);
-    }
-    if (!ziel.children.length) {
-      const leer = document.createElement("p");
-      leer.className = "zh-leer";
-      leer.textContent = "Gerade keine offene Frage in dieser Karte.";
-      ziel.append(leer);
-    }
-    $("zur-hand-fragen-zahl").textContent = reihen.length || "";
-    // Schon gewählte Antworten aus dem Eingabefeld wieder als Haken zeigen.
-    const gewaehlt = {};
-    for (const z of $("eingabe").value.split("\n")) { const m = z.match(/^(\d+)\.\s(.*)$/); if (m) gewaehlt[m[1]] = m[2]; }
-    ziel.querySelectorAll(".wahl-taste[data-nr]").forEach((k) => {
-      if (gewaehlt[k.dataset.nr] === k.dataset.satz) { k.classList.add("an"); k.textContent = "✓ " + k.textContent; }
-    });
-  }
   zurHandKontext();
   zurHandAenderungen();
   zurHandVorschau();
@@ -7199,7 +7155,6 @@ function zurHandKorb(fragen) {
     if (!BREIT.matches) stoppeListe();
     else if (!listeOffen) { listeOffen = true; ladeListe().then(listenTaktPlanen); }
     zeige("sitzung");
-    zurHandAbdruck = "";
     zurHandAuffrischen();
   });
 })();

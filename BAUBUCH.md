@@ -862,3 +862,9 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Fehler unterwegs:** Stand in der Eingabezeile ein Entwurf (etwa die zurückgespulte Nachricht), hängte der erste Versuch „/rewind“ hinten an und schickte alles als Nachricht ab. Jetzt wird der Entwurf vorher geleert.
 **Geprüft:** Testserver 8799 (Piper-Port 5015) mit Probekarte: Liste, Wahl, „Doch nicht“ (nichts geändert), echtes Zurücksetzen (Gespräch endet bei „Sag nur ok“, Nachricht wieder im Feld), Abbrechen über ✕, Esc Esc, Kurzfassung; keine Konsolenfehler. Probekarte und Wegwerf-Ordner gelöscht. Ausgerollt, /api/version 207.
 **Nicht geprüft:** Codeänderungen im Verlauf (die Zeile „N files changed“ wird nur durchgereicht, nicht ausgewertet), sehr lange Nachrichten oder mehr als eine Bildschirmseite Nachrichten (nur die sichtbaren werden angeboten), echtes Handy.
+
+## 02.11.2026: V208, Zur Hand: Kontext oben fest, doppelte Fragen entfernt
+**Auslöser:** Roli 02.11. 10:15 „ich würde bevorzugen, dass wir Kontext, Cache und Modell oben fest haben … ob wir die offenen Fragen dieser Karte doppelt brauchen“, 10:20 „9. Ja“.
+**Lösung:** Der Block „Diese Karte“ (Kontext, Cache, Modell) steht jetzt über dem Rollbereich der rechten Spalte und rollt nicht mit. Der Block „Offene Fragen dieser Karte“ ist samt Code und Stilen entfernt, denn dieselben Fragen stehen im Chat mit den Antwort-Tasten. Reihenfolge nun: Diese Karte, Entscheidungskorb, Änderungen, Vorschau.
+**Fehler unterwegs:** Mein erster Schnitt in app.js erwischte wegen einer gleichlautenden Zeile in vorschlagBilden zu viel (100 Zeilen weg, Konsole meldete „zurHandAuffrischen is not defined“). Zurückgenommen, Schnitt auf die Funktion eingegrenzt.
+**Geprüft:** Testserver 8799, Playwright 1500x900: Block oben fest, vier Überschriften in der richtigen Reihenfolge, Screenshot angesehen, keine Konsolenfehler. Ausgerollt, /api/version 208. **Nicht geprüft:** Handy (Spalte ist dort versteckt).
