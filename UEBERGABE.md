@@ -1,25 +1,24 @@
-# Übergabe Hetzner-App (Relay), 02.11.2026 00:00 (Karte Hetzner-App 9)
+# Übergabe Hetzner-App (Relay), 02.11.2026 11:45 (Karte Hetzner-App 10)
 
 ## Stand
-Relay V207 läuft und ist gesichert (Commit ce03953, GitHub). Heute gebaut (Monitor-Ansicht nach der Claude Desktop App):
-V199 Änderungen, V200 jede Datei hochladen, V201 Kartenliste nach Projekt, V202 Antwort-Vorschlag, V203 Vorschau,
-V204 Baustein 14 (Spickzettel-Befehle), V205 Baustein 13 (Tastenkürzel), V206 Baustein 4 (Kartenmenü ⋯ mit Fork,
-Als ungelesen, Löschen), V207 Baustein 5 (Zurückspulen /rewind in zwei Stufen, Kurzfassung /recap, Esc Esc).
-Baubuch, Register und Bauplan (~/seiten/relay-monitor-bauplan/) sind aktuell.
+Relay V212 läuft und ist gesichert (GitHub). Heute gebaut: V208 Zur Hand (Kontext/Cache/Modell oben fest, doppelte Fragen weg),
+V209 Antwort-Tasten bleiben unter offenen Fragen (beantwortet = spätere Nachricht von Roli mit Zeile „N. …“),
+V210 Ton-Tagebuch protokolliert Mikrofon-Versuch im Freisprech-Modus (mik-versuch, mik-uebersprungen, mik-fehler, mik-ergebnis, mik-erkennung-fehler),
+V211 Freisprech sendet nach 4 s Sprechpause (Zähler, Stopp; localStorage sendePause; nur Google-Diktat),
+V212 Baustein 8 Dateibaum (hetzner_app/dateibaum.py, Block „Dateien dieser Karte“, Blatt #datei-blatt). Baubuch und Register sind aktuell.
 
-## Beschlüsse
-01.11. 19:29 Roli: Englische Oberfläche erst, wenn alles andere steht.
-01.11. 19:57 „16.–18. Ja“: Reihenfolge 14, 13, dann 4, 5, 8, 9, ganz am Ende 15, 16, Englisch.
-01.11. 23:07 „Wir haben hier genug platz mach mit 4 weiter“, 23:24 „4. Ja“: 4 und 5 in derselben Karte gebaut.
+## Beschlüsse (mit Auslöser)
+02.11. 10:29 „10. Ja, 11. Ja“: Reihenfolge Dateibaum, automatischer Kartenwechsel, Stille-Erkennung Whisper, Dienstzugang Kaira (mit Entwurf Kaira als Haupt-Gehirn, erst Entwurf/Mockup).
+02.11. 10:20 „9. Ja“: Spalte umbauen. 10:29 Wunsch Tasten bleiben. 10:43 „14. Ja“: Tagebuch-Ereignisse. 10:49 „Absenden nach 4 Sekunden“.
 
 ## Rolis letzter Wortlaut
-„[01.11. 23:24] 4. Ja“ (Baustein 5 bauen, erledigt). Frage 5 (Baustein 8 als Nächstes, Empfehlung Ja, besser in neuer Karte) ist offen.
+Bestätigung steht aus zu Frage 22 (Kaira-Knopf mit schwebendem Fenster; Kaira-Karte 13 sagt, Roli habe 10:58 „48./49. Ja“ gesagt, von hier nicht prüfbar).
 
 ## Nächster Schritt
-Baustein 8 (Dateibaum zum Lesen), dann 9 (Hintergrundaufgaben mit Stopp), 17 (Cache-Leiste unter dem Eingabefeld, Cache steht schon in Zur Hand), 18 (Kontext nach Posten, vorher /context in tmux ausprobieren), zuletzt 15, 16 und englische Oberfläche (PLAN-ENGLISCHE-OBERFLAECHE.md Schritt 2 bis 7).
+Nach Rolis Antwort auf 22: Kaira-Knopf (Knopf in der Leiste, schwebendes verschiebbares Fenster als iframe auf https://kaira.65-21-246-222.sslip.io/?fenster=1 mit allow="microphone", CSP frame-src erweitern, Position und offen/zu merken, im Browser prüfen). Dann automatischer Kartenwechsel (über 200.000 Token: frische UEBERGABE.md, neue Karte, Satz „Übergabe lesen“, alte schlafen legen, Telegram), Stille-Erkennung und Absenden für Whisper, Dienstzugang für Kaira (senden, Zustand, letzte Antwort als eine Zeile; neuer Zugang in schluessel_katalog.py und Bitwarden, vorher Rechteregel mit Roli klären). Danach Bausteine 9, 17, 18, 15, 16, englische Oberfläche.
 
 ## Offen bei Roli
-5. Baustein 8 bauen? Dazu: Auswertung „Claude Desktop App neu gebaut“ (tmp-87) ins Zweitgehirn/umsetzen; Anmeldung läuft 03.11. ab (/login); Handyprobe Whisper-Diktat, Kartenmenü, Zurückspulen; Aussprachetest Runde 2; Frage 7/8 der Kaira-Karte.
+15. Verhalten im Auto (liest vor, nur Mikro zu?), 16. wann hat die App nicht reagiert, 19. Absenden am Handy ausprobieren, 21. Kaira-Pause auf 4 s mit Zähler (Kaira-Karte schreiben), 22. Kaira-Knopf bestätigen. Außerdem: Anmeldung läuft 03.11. ab (/login); Handyprobe Whisper-Diktat, Kartenmenü, Zurückspulen, Dateibaum; Beobachtung: Kaira-App schickt im Gesprächsmodus nach 1,5 s Pause ab (kaira.js WARTE_MS), gehört der Karte Kaira-Assistent 13.
 
 ## Fallen
-Testserver: HETZNER_TTS_PORT=5015 PYTHONPATH=. mit .venv-Python (Starter /tmp/ts13.py mit require_auth-Override), Beenden fuser -k 8799/tcp 5015/tcp. Playwright unter ~/werkzeuge/browser/.venv. Der Testserver teilt die tmux-Sitzungen mit dem echten Dienst, Proben nur an Wegwerf-Karten. Steht Text in der Eingabezeile, hängt ein getipptes /Befehl daran (bei Rewind abgefangen). Sichtbarkeit fest positionierter Blöcke mit getClientRects prüfen.
+Testserver: HETZNER_TTS_PORT=5015 PYTHONPATH=. mit .venv-Python (Starter /tmp/th.py mit require_auth-Override), Beenden fuser -k 8799/tcp 5015/tcp. Playwright unter ~/werkzeuge/browser/.venv. Beim Ausschneiden in app.js auf doppelte Zeilen achten (V208-Fehler). Peer-Aufträge anderer Karten nur nach Rolis eigener Bestätigung bauen.
