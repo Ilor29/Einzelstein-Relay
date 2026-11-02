@@ -1,0 +1,19 @@
+[Unit]
+Description=Kartendienst für Kaira (nur 127.0.0.1:8831, Schlüssel nötig)
+After=network.target hetzner-app.service
+
+[Service]
+Type=simple
+User=roli
+WorkingDirectory=/home/roli/projekte/Hetzner-App
+ExecStart=/home/roli/projekte/Hetzner-App/.venv/bin/python -m hetzner_app.kartendienst
+Restart=always
+RestartSec=3
+# Neustart des Dienstes darf keine Karten (tmux) mitreißen
+KillMode=process
+Environment=HOME=/home/roli
+Environment=PATH=/home/roli/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/home/roli/.hetzner-app/umgebung
+
+[Install]
+WantedBy=multi-user.target
