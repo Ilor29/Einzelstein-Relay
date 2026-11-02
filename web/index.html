@@ -680,6 +680,16 @@
   </div>
 
   <!-- Tastenkürzel am Rechner (Monitor-Baustein 13). Strg und / öffnet die Liste. -->
+  <div id="datei-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="datei-schatten"></div>
+    <div class="blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="datei-schliessen" class="knopf-blank" aria-label="Schließen">✕</button>
+        <h2 id="datei-titel">Datei</h2>
+      </div>
+      <div id="datei-inhalt" class="datei-inhalt" translate="no"></div>
+    </div>
+  </div>
   <div id="kuerzel-blatt" class="blatt" hidden>
     <div class="blatt-schatten" id="kuerzel-schatten"></div>
     <div class="blatt-inhalt">
@@ -1337,6 +1347,10 @@
     <section class="zh-block" id="zh-aend-block">
       <h2><span>Änderungen dieser Karte</span><span id="zh-aend-summe"></span></h2>
       <div id="zh-aend-liste"></div>
+    </section>
+    <section class="zh-block" id="zh-dateien-block">
+      <h2><span>Dateien dieser Karte</span></h2>
+      <div id="zh-dateien-baum" class="zh-baum"></div>
     </section>
     <section class="zh-block" id="zh-vorschau-block" hidden>
       <h2><span>Vorschau</span></h2>

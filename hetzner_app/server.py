@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import aenderungen, befehle, bibliothek, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau, zurueckspulen
+from . import aenderungen, befehle, bibliothek, dateibaum, diktat, geraete, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau, zurueckspulen
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -239,7 +239,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 211
+VERSION = 212
 
 
 @app.get("/api/version")
@@ -2135,6 +2135,24 @@ def session_aenderung_datei(name: str, pfad: str = Query(..., max_length=500)) -
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
     ordner = next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
     return aenderungen.datei_diff(ordner, pfad)
+
+
+def _karten_ordner(name: str) -> str:
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    return next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
+
+
+@app.get("/api/sessions/{name}/dateien", dependencies=[Depends(require_auth)])
+def session_dateien(name: str, pfad: str = Query("", max_length=500)) -> dict:
+    """Ordner und Dateien im Arbeitsordner der Karte (nur lesen, nie nach draußen)."""
+    return dateibaum.liste(_karten_ordner(name), pfad)
+
+
+@app.get("/api/sessions/{name}/dateien/inhalt", dependencies=[Depends(require_auth)])
+def session_datei_inhalt(name: str, pfad: str = Query(..., max_length=500)) -> dict:
+    """Inhalt einer Datei als Text. Dateien mit Zugangsdaten liefern nie Inhalt."""
+    return dateibaum.lesen(_karten_ordner(name), pfad)
 
 
 @app.get("/api/sessions/{name}/kontext", dependencies=[Depends(require_auth)])

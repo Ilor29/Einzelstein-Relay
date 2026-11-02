@@ -2566,3 +2566,10 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 /* Kontext, Cache und Modell stehen oben fest und rollen nicht mit (Roli 02.11.2026 10:20 „9. Ja“). */
 .zh-kontext.zh-fest { flex: none; width: auto; margin: .7rem .7rem 0; }
 #auto-sende[hidden] { display: none; }
+/* Dateibaum (Baustein 8) */
+.zh-baumzeile { display: block; }
+.zh-baumknopf { background: none; border: 0; color: inherit; font: inherit; font-size: .85rem; padding: .22rem 0; text-align: left; cursor: pointer; width: 100%; overflow-wrap: anywhere; }
+.zh-baumknopf:hover { color: var(--akzent, #e8a07a); }
+.zh-baum { max-height: 22rem; overflow: auto; }
+.datei-inhalt { white-space: pre-wrap; padding: .8rem; overflow: auto; max-height: 70vh; }
+.datei-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .82rem; line-height: 1.45; margin: 0; }

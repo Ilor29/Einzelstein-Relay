@@ -7050,6 +7050,7 @@ function zurHandAuffrischen() {
   if ($("zur-hand").hidden) return;
   zurHandKontext();
   zurHandAenderungen();
+  zurHandDateien();
   zurHandVorschau();
 }
 
@@ -7222,6 +7223,7 @@ document.addEventListener("keydown", (e) => {
   const blattOffen = [...document.querySelectorAll(".blatt")].some((b) => !b.hidden);
   if (e.key === "Escape") {
     if (!$("kuerzel-blatt").hidden) { kuerzelBlatt(false); return; }
+    if (!$("datei-blatt").hidden) { $("datei-blatt").hidden = true; return; }
     if (blattOffen || e.target.id === "verlauf-suchfeld") return;
     if (sichtbar("knopf-abbrechen-arbeit")) { e.preventDefault(); $("knopf-abbrechen-arbeit").click(); }
     return;
@@ -7381,3 +7383,74 @@ document.addEventListener("keydown", (e) => {
   if (e.target.id === "verlauf-suchfeld") return;
   rewindOeffnen();
 });
+
+
+// --- Dateibaum zum Lesen (Monitor-Baustein 8, Roli 02.11.2026 „11. Ja“) -----------------
+// Rechte Spalte: Ordner des Kartenordners klappen beim Antippen auf, eine Datei öffnet ein Blatt
+// (Markdown gesetzt, sonst als Text). Nur lesen. Der Server liefert nie Inhalt von Zugangsdaten.
+let baumFuer = "";
+function baumZeile(e, pfad, tiefe) {
+  const z = document.createElement("div");
+  z.className = "zh-baumzeile";
+  z.style.paddingLeft = (tiefe * 0.9) + "rem";
+  const k = document.createElement("button");
+  k.type = "button";
+  k.className = "zh-baumknopf";
+  k.textContent = (e.ordner ? "▸ " : "· ") + e.name + (e.geheim ? "  (geschützt)" : "");
+  z.append(k);
+  const kinder = document.createElement("div");
+  kinder.hidden = true;
+  const box = document.createElement("div");
+  box.append(z, kinder);
+  k.addEventListener("click", async () => {
+    const rel = pfad ? pfad + "/" + e.name : e.name;
+    if (e.ordner) {
+      if (!kinder.hidden) { kinder.hidden = true; k.textContent = "▸ " + e.name; return; }
+      k.textContent = "▾ " + e.name;
+      kinder.hidden = false;
+      if (!kinder.dataset.geladen) { kinder.dataset.geladen = "1"; await baumFuellen(kinder, rel, tiefe + 1); }
+    } else {
+      dateiOeffnen(rel, e);
+    }
+  });
+  return box;
+}
+async function baumFuellen(ziel, rel, tiefe) {
+  const name = aktuelleSitzung?.name;
+  if (!name) return;
+  let d;
+  try { d = await (await api(`/sessions/${encodeURIComponent(name)}/dateien?pfad=${encodeURIComponent(rel)}`)).json(); }
+  catch { ziel.textContent = "Nicht lesbar."; return; }
+  ziel.replaceChildren();
+  if (!d.ok || !d.eintraege.length) {
+    const l = document.createElement("p"); l.className = "zh-leer"; l.textContent = "Leer."; ziel.append(l); return;
+  }
+  for (const e of d.eintraege) ziel.append(baumZeile(e, rel, tiefe));
+  if (d.gekuerzt) { const l = document.createElement("p"); l.className = "zh-leer"; l.textContent = "Liste gekürzt."; ziel.append(l); }
+}
+function zurHandDateien() {
+  if ($("zur-hand").hidden || !aktuelleSitzung) return;
+  if (baumFuer === aktuelleSitzung.name) return;
+  baumFuer = aktuelleSitzung.name;
+  baumFuellen($("zh-dateien-baum"), "", 0);
+}
+async function dateiOeffnen(rel, e) {
+  const name = aktuelleSitzung?.name;
+  if (!name) return;
+  $("datei-titel").textContent = rel;
+  const ziel = $("datei-inhalt");
+  ziel.replaceChildren();
+  $("datei-blatt").hidden = false;
+  if (e.geheim) { ziel.textContent = "Diese Datei kann Zugangsdaten enthalten, ihr Inhalt wird nie angezeigt."; return; }
+  let d;
+  try { d = await (await api(`/sessions/${encodeURIComponent(name)}/dateien/inhalt?pfad=${encodeURIComponent(rel)}`)).json(); }
+  catch { ziel.textContent = "Konnte die Datei nicht laden."; return; }
+  if (!d.ok) { ziel.textContent = "Datei nicht gefunden."; return; }
+  if (d.geheim) { ziel.textContent = "Diese Datei kann Zugangsdaten enthalten, ihr Inhalt wird nie angezeigt."; return; }
+  if (d.binaer) { ziel.textContent = `Keine Textdatei (${d.groesse} Bytes), wird nicht angezeigt.`; return; }
+  if (/\.md$/i.test(rel)) { schreibe(ziel, d.text); }
+  else { const pre = document.createElement("pre"); pre.className = "datei-text"; pre.textContent = d.text; ziel.append(pre); }
+  if (d.gekuerzt) { const h = document.createElement("p"); h.className = "zh-leer"; h.textContent = "Nur der Anfang der Datei ist zu sehen."; ziel.append(h); }
+}
+$("datei-schatten").addEventListener("click", () => { $("datei-blatt").hidden = true; });
+$("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden = true; });
