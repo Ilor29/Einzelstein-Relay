@@ -1137,10 +1137,15 @@ $("verlauf").addEventListener("scroll", () => {
 // (Text · Werkzeug · Text …). Die Werkzeug-Stücke fliegen hier ohnehin raus —
 // dann gehören die übrigen Text-Stücke zusammen und bekommen EINEN Lautsprecher
 // und EINEN Kopieren-Knopf, statt dass man jedes Bruchstück einzeln anhören muss.
+// Schalter "Verlauf mit Arbeitsschritten" (Baustein 15): gemerkt auf dem Gerät.
+function arbeitsschritteAn() {
+  try { return localStorage.getItem("verlauf_arbeit") === "1"; } catch { return false; }
+}
 function zusammenfassen(bloecke) {
   const raus = [];
+  const mitArbeit = arbeitsschritteAn();
   for (const b of bloecke) {
-    if (b.typ === "werkzeug") continue;
+    if (b.typ === "werkzeug" && !mitArbeit) continue;
     const letzter = raus[raus.length - 1];
     if (b.typ === "claude" && letzter && letzter.typ === "claude") {
       // Ans Laufende anhängen — mit Leerzeile, damit Absätze erhalten bleiben.
@@ -5371,6 +5376,7 @@ $("knopf-einstellungen").addEventListener("click", async () => {
 
   ladeSpracheWahl();
   ladeTempo();
+  ladeVerlaufWahl();
   ladeDiktatWahl();
   ladeGeraete();
 });
@@ -5402,6 +5408,30 @@ const TEMPO_NAMEN = {
   normal: ["Normal", "das eingebaute Tempo der Stimme"],
   flott: ["Flott", "spart Zeit bei langen Antworten"],
 };
+
+// Die Wahl, ob der Verlauf Claudes Werkzeugschritte als graue Zeilen zeigt.
+function ladeVerlaufWahl() {
+  const wahl = $("verlauf-wahl");
+  wahl.replaceChildren();
+  const arten = [
+    ["0", "Nur das Gespräch", "Fragen und Antworten, sonst nichts"],
+    ["1", "Mit Arbeitsschritten", "dazwischen graue Zeilen: Lesen, Bearbeiten, Befehl"],
+  ];
+  for (const [wert, name, sub] of arten) {
+    const el = document.createElement("div");
+    el.className = "ordner" + ((wert === "1") === arbeitsschritteAn() ? " gewaehlt" : "");
+    el.innerHTML = `<span class="punkt-wahl"></span><span class="stimme-name"></span><span class="sub"></span>`;
+    el.querySelector(".stimme-name").textContent = name;
+    el.querySelector(".sub").textContent = sub;
+    el.addEventListener("click", () => {
+      try { localStorage.setItem("verlauf_arbeit", wert); } catch { /* nur für diese Sitzung */ }
+      wahl.querySelectorAll(".ordner").forEach((o) => o.classList.remove("gewaehlt"));
+      el.classList.add("gewaehlt");
+      if (typeof verlaufZeichnen === "function") verlaufZeichnen();
+    });
+    wahl.append(el);
+  }
+}
 
 // Die Wahl des Diktats (Google oder eigener Server). Nur sichtbar, wenn der
 // Server das eigene Diktat kann (Whisper eingerichtet); gemerkt auf dem Gerät.
