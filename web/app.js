@@ -7291,12 +7291,74 @@ async function zurHandVorschau() {
     return o;
   }));
   const rahmen = $("zh-vorschau-rahmen"), auf = $("zh-vorschau-auf");
+  // Kommentiermodus (Baustein 11, Roli 04.11.2026): Der Webspace hängt bei ?kommentieren=1
+  // ein Hilfsskript an, das Antippen per postMessage meldet (deploy/seiten_auslieferer.py).
+  let kommentieren = false, komm = [];
+  const schalter = $("zh-komm-schalter"), kommBlock = $("zh-komm-block"), kommListe = $("zh-komm-liste");
   const zeigen = (name, neu) => {
-    if (!name) { rahmen.hidden = true; auf.hidden = true; rahmen.removeAttribute("src"); return; }
-    const url = `${d.basis}/${encodeURIComponent(name)}/` + (neu ? `?neu=${Date.now()}` : "");
+    if (!name) { rahmen.hidden = true; auf.hidden = true; schalter.hidden = true; rahmen.removeAttribute("src"); return; }
+    const teile = [];
+    if (neu) teile.push(`neu=${Date.now()}`);
+    if (kommentieren) teile.push("kommentieren=1");
+    const url = `${d.basis}/${encodeURIComponent(name)}/` + (teile.length ? "?" + teile.join("&") : "");
     rahmen.src = url; rahmen.hidden = false;
     auf.href = `${d.basis}/${encodeURIComponent(name)}/`; auf.hidden = false;
+    schalter.hidden = false;
   };
+  const kommZeichnen = () => {
+    kommListe.replaceChildren(...komm.map((k) => {
+      const li = document.createElement("li");
+      const ziel = document.createElement("code");
+      ziel.className = "zh-komm-ziel";
+      ziel.textContent = `${k.selektor}${k.text ? ` („${k.text.slice(0, 60)}“)` : ""}`;
+      const feld = document.createElement("textarea");
+      feld.value = k.kommentar; feld.placeholder = "Was soll hier anders werden?";
+      feld.addEventListener("input", () => { k.kommentar = feld.value; });
+      const weg = document.createElement("button");
+      weg.type = "button"; weg.className = "zh-klein"; weg.textContent = "Entfernen";
+      weg.addEventListener("click", () => { komm = komm.filter((x) => x !== k); kommZeichnen(); });
+      li.append(ziel, feld, weg);
+      return li;
+    }));
+  };
+  const kommText = () => {
+    const mit = komm.filter((k) => k.kommentar.trim());
+    if (!mit.length) return "";
+    const kopf = `Kommentare zur Seite „${wahl.value}“ aus der Vorschau (${mit.length}):`;
+    return kopf + "\n" + mit.map((k, i) =>
+      `${i + 1}. Element ${k.selektor}${k.text ? ` mit dem Text „${k.text.slice(0, 80)}“` : ""}: ${k.kommentar.trim()}`).join("\n");
+  };
+  schalter.addEventListener("click", () => {
+    kommentieren = !kommentieren;
+    schalter.setAttribute("aria-pressed", String(kommentieren));
+    schalter.textContent = "Kommentieren: " + (kommentieren ? "an" : "aus");
+    kommBlock.hidden = !kommentieren;
+    if (wahl.value) zeigen(wahl.value);
+  });
+  window.addEventListener("message", (e) => {
+    if (!kommentieren || e.source !== rahmen.contentWindow) return;
+    let herkunft = ""; try { herkunft = new URL(d.basis).origin; } catch { /* ohne Basis nichts annehmen */ }
+    if (e.origin !== herkunft || !e.data || e.data.typ !== "relay-kommentar") return;
+    const sel = String(e.data.selektor || "").slice(0, 300);
+    if (!sel) return;
+    komm.push({ selektor: sel, text: String(e.data.text || "").slice(0, 200), kommentar: "" });
+    kommZeichnen();
+    kommListe.querySelector("li:last-child textarea")?.focus();
+  });
+  $("zh-komm-leeren").addEventListener("click", () => { komm = []; kommZeichnen(); });
+  $("zh-komm-feld").addEventListener("click", () => {
+    const t = kommText();
+    if (!t) { melde("Noch kein Kommentar geschrieben."); return; }
+    chipInsFeld(t);
+  });
+  $("zh-komm-senden").addEventListener("click", async () => {
+    const t = kommText();
+    if (!t) { melde("Noch kein Kommentar geschrieben."); return; }
+    if (!aktuelleSitzung || imTerminal) return;
+    if (beschaeftigt) { melde("Claude arbeitet noch, gleich wieder frei."); return; }
+    try { await sendeInSitzung(t); komm = []; kommZeichnen(); melde("Kommentare gesendet."); }
+    catch (err) { melde(err.message); }
+  });
   const gemerkt = localStorage.getItem("vorschau_seite") || "";
   if (gemerkt && d.seiten.some((x) => x.name === gemerkt)) { wahl.value = gemerkt; zeigen(gemerkt); }
   wahl.addEventListener("change", () => { localStorage.setItem("vorschau_seite", wahl.value); zeigen(wahl.value); });

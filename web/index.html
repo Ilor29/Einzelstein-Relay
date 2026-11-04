@@ -1385,6 +1385,16 @@
         <select id="zh-vorschau-wahl" aria-label="Seite für die Vorschau wählen"></select>
         <button type="button" id="zh-vorschau-neu" class="zh-klein" aria-label="Vorschau neu laden">Neu laden</button>
         <a id="zh-vorschau-auf" class="zh-klein" target="_blank" rel="noopener noreferrer" hidden>Eigenes Fenster</a>
+        <button type="button" id="zh-komm-schalter" class="zh-klein" aria-pressed="false" hidden>Kommentieren: aus</button>
+      </div>
+      <div id="zh-komm-block" hidden>
+        <p class="zh-komm-hinweis">Tippe in der Seite ein Element an und schreibe dazu, was sich ändern soll.</p>
+        <ol id="zh-komm-liste" class="zh-komm-liste"></ol>
+        <div class="zh-komm-knoepfe">
+          <button type="button" id="zh-komm-senden" class="zh-klein">An die Karte senden</button>
+          <button type="button" id="zh-komm-feld" class="zh-klein">Ins Eingabefeld legen</button>
+          <button type="button" id="zh-komm-leeren" class="zh-klein">Leeren</button>
+        </div>
       </div>
       <iframe id="zh-vorschau-rahmen" class="zh-vorschau-rahmen" title="Vorschau der gewählten Seite"
               sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="no-referrer" hidden></iframe>

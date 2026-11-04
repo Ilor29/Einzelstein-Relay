@@ -2593,3 +2593,12 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .cache-uhr { font-size: .72rem; color: var(--schrift-schwach); padding: .1rem .5rem .3rem; font-variant-numeric: tabular-nums; }
 .cache-uhr[hidden] { display: none; }
 .cache-uhr.warnung { color: var(--wartet); font-weight: 600; }
+
+/* Kommentiermodus der Vorschau (Baustein 11) */
+.zh-komm-hinweis { font-size: .8rem; color: var(--schrift-leise); margin: 0 0 .4rem; }
+.zh-komm-liste { margin: 0 0 .5rem; padding-left: 1.2rem; display: grid; gap: .5rem; }
+.zh-komm-liste li { font-size: .8rem; }
+.zh-komm-ziel { color: var(--schrift-leise); word-break: break-all; display: block; margin-bottom: .2rem; }
+.zh-komm-liste textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: .85rem; min-height: 3rem; padding: .35rem; background: var(--erhoben); color: var(--schrift); border: 1px solid var(--linie); border-radius: 8px; }
+.zh-komm-knoepfe { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+#zh-komm-schalter[aria-pressed="true"] { background: var(--akzent, #e8825a); color: #1a1a1a; }
