@@ -25,3 +25,6 @@ Antwort auf die Baustein-11-Frage abwarten. Bei Ja: Teil 1 Auslieferer mit Hilfs
 
 ## Fallen
 Testserver: HETZNER_TTS_PORT=5015 PYTHONPATH=. mit .venv-Python, Starter /tmp/kaira_test.py (require_auth-Override, Port 8799; falls weg, neu schreiben), Beenden fuser -k 8799/tcp 5015/tcp. Playwright unter ~/werkzeuge/browser/.venv; am Handy-Format liegt der Einstellungen-Knopf nur in der Liste, Tests am breiten Format (1500x900). Probekarten nur auf eigenem tmux-Socket oder mit Namen „Probe-…“, danach auch den Eintrag in ~/.hetzner-app/sitzungen.json entfernen (Sicherung vorher). Echte Karten nie ansprechen. Tor und Caddy gehören dem Brain. GitHub meldet gelegentlich Serverfehler beim Push, wiederholen.
+
+## Nachtrag 04.11. (Anfrage von Medienwerk 160)
+Medienwerk 160 meldet Rolis Wunsch (02.11. 20:18 „185. Ja“, 04.11. 13:01 „207. Ja“): Karte „Medienwerk“ mit festem Platz ganz oben in der Kartenliste, auch nach Kartenwechsel. Befund: Anheften (pinned) gibt es und wird beim Kartenwechsel vererbt, aber Angeheftete sind nach letzter Aktivität sortiert (state.py, Sortierung nach pinned, dann lastActivity), Wartende rutschen darüber. Es fehlt eine feste Reihenfolge unter den Angehefteten (z. B. nach Ordner „Medienwerk“, nicht nach Kartenname). Noch nichts gebaut, Antwort ging per Nachricht an Medienwerk 160. Vor dem Bau Rolis Bestätigung holen.
