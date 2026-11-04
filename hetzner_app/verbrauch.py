@@ -79,6 +79,110 @@ def kontext(cwd: str) -> dict | None:
         return None
 
 
+# --- API-Gegenwert (Roli 04.11.2026, „46. Ja“) ----------------------------------
+#
+# Was dieselbe Sitzung über die Schnittstelle zum Listenpreis gekostet hätte.
+# Das ist nicht die Abo-Rechnung, nur ein Vergleichswert. Gerechnet wird aus den
+# Token-Zahlen der ganzen Mitschrift. Die Preise sind dieselben wie auf der
+# Token-Seite im LEIT//PULS (leitstand/token-bauen.py, PREISE): Dollar je
+# Million Token (Eingabe, Ausgabe, Cache lesen); Cache anlegen kostet 1,25-fach
+# (5 Minuten) oder 2-fach (1 Stunde) der Eingabe. Unbekannte Modelle zählen
+# nicht mit und werden als Anzahl gemeldet. Bei neuen Modellen hier nachtragen.
+_PREISE = {
+    "claude-fable-5-1": (10.0, 50.0, 0.25), "claude-fable-5": (10.0, 50.0, 1.0),
+    "claude-opus-5-5": (4.0, 20.0, 0.20), "claude-opus-5": (5.0, 25.0, 0.5),
+    "claude-opus-4-8": (5.0, 25.0, 0.5),
+    "claude-sonnet-5-5": (2.0, 10.0, 0.20), "claude-sonnet-5": (2.0, 10.0, 0.20),
+    "claude-haiku-5-5": (0.10, 0.50, 0.01), "claude-haiku-4-5-20251001": (1.0, 5.0, 0.10),
+}
+# Der Dollarkurs liegt als Datei bereit, wenn der LEIT//PULS ihn holt. Fehlt sie
+# (zum Beispiel auf einem anderen Server), zeigt die App den Betrag in Dollar.
+_KURS_DATEI = Path.home() / ".claude" / "kurs-usd-eur.json"
+_gegenwert_cache: dict[str, tuple[tuple, dict | None]] = {}
+
+
+def _dollar(modell: str, u: dict) -> float | None:
+    preis = _PREISE.get(modell)
+    if not preis:
+        return None
+    ein, aus, lesen = preis
+    c = u.get("cache_creation") or {}
+    if c:
+        anlegen = ((c.get("ephemeral_5m_input_tokens") or 0) * 1.25
+                   + (c.get("ephemeral_1h_input_tokens") or 0) * 2.0)
+    else:
+        anlegen = (u.get("cache_creation_input_tokens") or 0) * 1.25
+    return ((u.get("input_tokens") or 0) * ein + anlegen * ein
+            + (u.get("cache_read_input_tokens") or 0) * lesen
+            + (u.get("output_tokens") or 0) * aus) / _MILLION
+
+
+def _kurs() -> float | None:
+    try:
+        eur = json.loads(_KURS_DATEI.read_text()).get("rate")
+        return eur if isinstance(eur, (int, float)) and 0.5 < eur < 1.5 else None
+    except (OSError, ValueError):
+        return None
+
+
+def _gegenwert_lesen(datei: Path) -> dict | None:
+    gesehen: set[str] = set()
+    usd = 0.0
+    unbekannt = 0
+    zuege = 0
+    with open(datei, encoding="utf-8", errors="replace") as h:
+        for zeile in h:
+            if '"usage"' not in zeile:
+                continue
+            try:
+                d = json.loads(zeile)
+            except ValueError:
+                continue
+            if d.get("type") != "assistant":
+                continue
+            nachricht = d.get("message") or {}
+            u = nachricht.get("usage") or {}
+            if not u:
+                continue
+            kennung = nachricht.get("id")
+            if kennung:          # dieselbe Antwort steht oft mehrfach in der Mitschrift
+                if kennung in gesehen:
+                    continue
+                gesehen.add(kennung)
+            zuege += 1
+            wert = _dollar(nachricht.get("model") or "", u)
+            if wert is None:
+                unbekannt += 1
+            else:
+                usd += wert
+    if not zuege:
+        return None
+    return {"usd": usd, "zuege": zuege, "unbekannt": unbekannt}
+
+
+def gegenwert(cwd: str) -> dict | None:
+    """API-Gegenwert der jüngsten Sitzung in diesem Ordner: {"usd", "eur" (oder None), "kurs", "zuege", "unbekannt"}."""
+    try:
+        dateien = list(_projekt_ordner(cwd).glob("*.jsonl"))
+        if not dateien:
+            return None
+        datei = max(dateien, key=lambda p: p.stat().st_mtime)
+        st = datei.stat()
+        schluessel = (str(datei), st.st_size, st.st_mtime_ns)
+        alt = _gegenwert_cache.get(cwd)
+        if alt and alt[0] == schluessel:
+            wert = alt[1]
+        else:
+            wert = _gegenwert_lesen(datei)
+            _gegenwert_cache[cwd] = (schluessel, wert)
+        if not wert:
+            return None
+        kurs = _kurs()
+        return {**wert, "kurs": kurs, "eur": wert["usd"] * kurs if kurs else None}
+    except OSError:
+        return None
+
+
 # --- Prompt-Cache -------------------------------------------------------------
 #
 # Anthropic hält den vorderen, unveränderten Teil einer Unterhaltung als

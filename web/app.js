@@ -3721,6 +3721,30 @@ async function oeffneVerbrauchsBlatt() {
     for (const limit of daten.limits || []) {
       liste.appendChild(verbrauchZeile(limit.name, limit.prozent, resetText(limit.reset)));
     }
+    // Was diese Sitzung über die Schnittstelle zum Listenpreis gekostet hätte
+    // (Roli 04.11.2026). Nur ein Vergleichswert, deshalb mit Erklärung dabei.
+    if (daten.gegenwert) {
+      const g = daten.gegenwert;
+      const betrag = g.eur != null
+        ? `${g.eur.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+        : `${g.usd.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Dollar`;
+      const zeile = document.createElement("div");
+      zeile.className = "verbrauch-zeile";
+      const kopf = document.createElement("div");
+      kopf.className = "verbrauch-kopf";
+      const name = document.createElement("span");
+      name.textContent = "Wert ohne Abo";
+      const wert = document.createElement("span");
+      wert.className = "verbrauch-wert";
+      wert.textContent = betrag;
+      kopf.append(name, wert);
+      const hinweis = document.createElement("div");
+      hinweis.className = "verbrauch-hinweis";
+      hinweis.textContent = "So viel hätte diese Sitzung über die Schnittstelle zum Listenpreis gekostet. Nicht deine Rechnung."
+        + (g.unbekannt ? ` ${g.unbekannt} Antworten mit unbekanntem Modell sind nicht eingerechnet.` : "");
+      zeile.append(kopf, hinweis);
+      liste.appendChild(zeile);
+    }
     if (!liste.children.length) {
       liste.textContent = "Dazu ist gerade nichts bekannt.";
     }

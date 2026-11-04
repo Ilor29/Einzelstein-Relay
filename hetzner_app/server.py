@@ -255,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 220
+VERSION = 221
 
 
 @app.get("/api/version")
@@ -2132,6 +2132,7 @@ def session_verbrauch(name: str) -> dict:
     return {
         "kontext": verbrauch.kontext(ordner) if ordner else None,
         "limits": verbrauch.limits(),
+        "gegenwert": verbrauch.gegenwert(ordner) if ordner else None,
     }
 
 
