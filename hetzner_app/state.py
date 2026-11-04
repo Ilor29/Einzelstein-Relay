@@ -32,6 +32,10 @@ SLEEPING = "sleeping"  # schlafen gelegt — Terminal beendet, Gespräch auf der
 CRASHED = "crashed"    # Terminal weg, ohne dass wir es beendet haben — Gespräch auf der Platte
 
 
+# Ordner, deren angeheftete Karte immer ganz oben steht.
+FESTE_ORDNER = ["Medienwerk"]
+
+
 @dataclass
 class Meta:
     pinned: bool = False
@@ -672,5 +676,9 @@ def overview() -> list[dict]:
         })
 
     # Angeheftetes zuerst, darin das zuletzt Benutzte oben.
-    result.sort(key=lambda s: (not s["pinned"], -s["lastActivity"]))
+    # Angeheftete Karten aus FESTE_ORDNER stehen noch davor (Roli 04.11.2026).
+    def _fest(s):
+        ordner = (s.get("cwd") or "").rstrip("/").rsplit("/", 1)[-1]
+        return FESTE_ORDNER.index(ordner) if s["pinned"] and ordner in FESTE_ORDNER else len(FESTE_ORDNER)
+    result.sort(key=lambda s: (_fest(s), not s["pinned"], -s["lastActivity"]))
     return result

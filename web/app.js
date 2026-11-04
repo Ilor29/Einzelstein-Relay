@@ -472,6 +472,9 @@ function karte(sitzung) {
 // Entscheidungskorb (Roli 10.10.2026 22:20 „37. Ja“): offene Fragen der Karten, oben in der
 // Liste, mit denselben Tasten wie unter den Fragen im Verlauf. Ein Tipp schickt die Antwort
 // sofort an die Karte, die gefragt hat.
+// Ordner, deren angeheftete Karte immer ganz oben steht (Reihenfolge = Rang).
+const FESTE_ORDNER = ["Medienwerk"];
+
 function korbKasten(fragen) {
   const kasten = document.createElement("div");
   kasten.className = "korb";
@@ -576,8 +579,16 @@ async function ladeListe() {
   // dafür ist die Gruppe da (Rolis Wunsch 08.09.). Geklingelt wird deshalb
   // NICHT: Das entscheidet allein der Zustand, siehe melden.py.
   const brauchtDich = (s) => s.state === "waiting" || s.ungelesen;
-  const wartend = aktive.filter(brauchtDich);
-  const rest = aktive.filter((s) => !brauchtDich(s));
+  // Fester Platz ganz oben (Roli 04.11.2026 „210. Ja“): Eine angeheftete Karte
+  // aus einem der FESTE_ORDNER steht über allem, auch über „Wartet auf dich“.
+  // Festgemacht am Ordner, nicht am Namen, damit es Kartenwechsel und Schlaf überlebt.
+  const ordnerName = (s) => (s.cwd || "").replace(/\/+$/, "").split("/").pop();
+  const festOben = aktive
+    .filter((s) => s.pinned && FESTE_ORDNER.includes(ordnerName(s)))
+    .sort((a, b) => FESTE_ORDNER.indexOf(ordnerName(a)) - FESTE_ORDNER.indexOf(ordnerName(b)) || b.lastActivity - a.lastActivity);
+  const nichtFest = aktive.filter((s) => !festOben.includes(s));
+  const wartend = nichtFest.filter(brauchtDich);
+  const rest = nichtFest.filter((s) => !brauchtDich(s));
 
   const angeheftet = rest.filter((s) => s.pinned);
   // Die schlafen gelegten in ihre eigene Gruppe — zwischen den zuletzt
@@ -626,6 +637,7 @@ async function ladeListe() {
     });
   };
 
+  gruppe("Fest oben", festOben);
   gruppe("Wartet auf dich", wartend);
   gruppe("Angeheftet", angeheftet);
   // Abschnitte je Projekt (Monitor-Baustein 6, Roli 01.11.2026 „8. Deine Empfehlung“):
@@ -6828,6 +6840,46 @@ $("knopf-tour").addEventListener("click", () => {
       e.preventDefault();
     }, { passive: false });
   });
+
+  // Pfeile und Ziehen mit der Maus an der Schnellbefehl-Reihe (Roli 04.11.2026:
+  // „am Laptop wird die Reihe abgeschnitten, ich kann nicht scrollen").
+  const cr = document.querySelector("#schnellbefehle .chip-reihe");
+  const pl = $("chip-pfeil-links"), pr = $("chip-pfeil-rechts");
+  if (cr && pl && pr) {
+    const pfeileAufdaten = () => {
+      const mehr = cr.scrollWidth > cr.clientWidth + 2;
+      pl.hidden = !(mehr && cr.scrollLeft > 2);
+      pr.hidden = !(mehr && cr.scrollLeft + cr.clientWidth < cr.scrollWidth - 2);
+    };
+    cr.addEventListener("scroll", pfeileAufdaten, { passive: true });
+    window.addEventListener("resize", pfeileAufdaten);
+    new MutationObserver(pfeileAufdaten).observe(cr, { childList: true, subtree: true });
+    if (window.ResizeObserver) new ResizeObserver(pfeileAufdaten).observe(cr);
+    pl.addEventListener("click", () => cr.scrollBy({ left: -cr.clientWidth * 0.7, behavior: "smooth" }));
+    pr.addEventListener("click", () => cr.scrollBy({ left: cr.clientWidth * 0.7, behavior: "smooth" }));
+    let zug = null, gezogen = false;
+    cr.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      zug = { x: e.clientX, start: cr.scrollLeft }; gezogen = false;
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!zug) return;
+      const dx = e.clientX - zug.x;
+      if (!gezogen && Math.abs(dx) < 6) return;
+      gezogen = true; cr.classList.add("zieht");
+      cr.scrollLeft = zug.start - dx;
+    });
+    window.addEventListener("pointerup", () => {
+      if (zug && gezogen) {
+        // Den Klick, der dem Ziehen folgt, schlucken, sonst sendet das Loslassen einen Befehl.
+        const schlucken = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+        cr.addEventListener("click", schlucken, { capture: true, once: true });
+        setTimeout(() => cr.removeEventListener("click", schlucken, { capture: true }), 0);
+      }
+      zug = null; cr.classList.remove("zieht");
+    });
+    pfeileAufdaten();
+  }
 
   document.addEventListener("wheel", (e) => {
     const ziel = e.target;

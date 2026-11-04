@@ -286,6 +286,16 @@ body.eng .sitzung-info { display: none; }
   white-space: nowrap;
 }
 .chip:active { background: var(--erhoben-2); }
+/* Pfeile an der Chip-Reihe: nur am Rechner (Maus), nur wenn etwas abgeschnitten ist. */
+.chip-pfeil { display: none; flex: none; width: 2rem; height: 2.75rem; border-radius: 1rem;
+  background: var(--erhoben); border: 1px solid var(--linie); color: var(--schrift);
+  font-size: 1.4rem; line-height: 1; padding: 0; cursor: pointer; }
+.chip-pfeil:hover { background: var(--erhoben-2); }
+@media (hover: hover) and (pointer: fine) {
+  .chip-pfeil:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; }
+  .chip-reihe { cursor: grab; }
+  .chip-reihe.zieht { cursor: grabbing; user-select: none; }
+}
 
 /* Der Zauberstab und sein Menü. Das Menü klappt nach OBEN auf. */
 .befehle-wand-wrap { position: relative; flex: none; }
