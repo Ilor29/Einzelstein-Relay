@@ -7135,19 +7135,24 @@ new MutationObserver(eigeneAntwortenAbgleichen).observe($("verlauf") || document
     // die Tasten, obwohl die Frage offen war). Beantwortet heißt: In einer späteren
     // Nachricht von ihm steht eine Zeile „N. …“ mit der Nummer der Frage.
     const alle = [...verlauf.querySelectorAll(".antwort")];
-    alle.forEach((a) => {
+    // Nur die beiden jüngsten Antworten halten Fragen offen. Ältere gelten als überholt, auch wenn
+    // er sie frei und ohne Nummer beantwortet hat (Roli 07.11.2026: „ältere sind dabei“).
+    alle.forEach((a, idx) => {
+      const zuAlt = idx < alle.length - 2;
       const reihen = [...a.querySelectorAll(".schnellwahl")];
       if (!reihen.length) { a.classList.remove("juengste"); return; }
       const nummern = new Set();
       for (let n = a.nextElementSibling; n; n = n.nextElementSibling) {
-        if (!n.classList.contains("gesagt")) continue;
+        // Auch Fotos mit Unterschrift sind Antworten von ihm (Roli 07.11.2026: Antwort per Foto
+        // „16. Schau Bild an …“ galt nicht als beantwortet, die Tasten blieben liegen).
+        if (!n.classList.contains("gesagt") && !n.classList.contains("foto")) continue;
         for (const m of (n.textContent || "").matchAll(/(?:^|\n)\s*(?:\[[^\]]*\]\s*)?(\d{1,3})\.\s/g)) nummern.add(m[1]);
       }
       let offen = 0;
       for (const r of reihen) {
         const nr = r.querySelector(".wahl-taste[data-nr]")?.dataset.nr;
         if (!nr) continue;
-        const erledigt = nummern.has(nr);
+        const erledigt = zuAlt || nummern.has(nr);
         r.classList.toggle("erledigt", erledigt);
         if (!erledigt) offen++;
       }
@@ -7168,7 +7173,7 @@ new MutationObserver(eigeneAntwortenAbgleichen).observe($("verlauf") || document
 // selbst als Empfehlung nennt (Ja oder Nein am Anfang), sonst „Deine Empfehlung“. Nichts wird
 // je von selbst gesendet: Ein Tipp trägt die Zeilen ins Feld ein, dort lassen sie sich ändern.
 function vorschlagBilden() {
-  const reihen = [...document.querySelectorAll("#verlauf .antwort.juengste .wahl-reihe[data-frage]")];
+  const reihen = [...document.querySelectorAll("#verlauf .antwort.juengste .wahl-reihe[data-frage]:not(.erledigt)")];
   const teile = [];
   for (const r of reihen) {
     const nr = r.querySelector("[data-nr]")?.dataset.nr;
