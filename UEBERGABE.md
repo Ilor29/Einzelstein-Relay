@@ -1,33 +1,59 @@
-# Übergabe Hetzner-App (Relay), 03.11.2026 23:00 (Karte Hetzner-App 12)
+# Übergabe Hetzner-App (Relay), 08.11.2026, Hetzner-App (Relay, Einzelstein-Fernbedienung)
 
-## Stand
-Relay V218 läuft und ist gesichert (GitHub). Seit der letzten Übergabe gebaut:
-V217 Baustein 9: Block „Laufende Befehle“ in der rechten Spalte mit Laufzeit und Stopp (hetzner_app/hintergrund.py, nur direkte Befehle des claude-Prozesses der Karte, fremde Prozesse abgelehnt).
-V218 Baustein 15: Schalter „Verlauf“ in den Einstellungen, „Mit Arbeitsschritten“ zeigt Werkzeugzeilen grau (Standard aus, je Gerät in localStorage verlauf_arbeit).
-Nicht gebaut, bewusst: Baustein 18 (Kontext nach Posten, /context stört den Schirm der Karte), Stil-Anzeige (Klarschrift ist per Plugin force-for-plugin erzwungen, /output-style meldet trotzdem „default“, Anzeige wäre falsch).
-Baubuch und Register sind aktuell. Nichts Ungesichertes im Arbeitsordner.
+Version: v01
+Date: 2026-11-08
+Owner/User: Roli
+Prepared by: Claude (Karte Hetzner-App 13)
 
-## Beschlüsse (mit Auslöser)
-02.11. 20:14 „1. Nein“ Baustein 18 nicht mit Abfrage an ruhenden Karten, „2. Ja“ Baustein 9.
-03.11. 22:27 „1. Ja, läuft alles“ Handyprobe Absenden nach Stille bestanden, Baustein 15 angehen.
-03.11. 22:29 „1. Ja“ nur Stil-Anzeige, „2. Ja“ danach Transkript-Ansicht; 22:32 „1. Ja“ Stil-Anzeige streichen, Transkript-Ansicht bauen.
-03.11. 22:48 „1. Ja“ Baustein 11 angehen (meine Empfehlung war Nein, er wollte es trotzdem).
+## 1. Project Goal
+Web-App plus FastAPI-Dienst, mit der Roli Claude-Code-Sitzungen (tmux auf dem Server) vom Handy bedient, mit Vorlesen und Diktat. Wahrheit liegt in BAUBUCH.md und ~/projekte/Brain/REGISTER.md.
 
-## Rolis letzter Wortlaut
-„[03.11. 22:48] 1. Ja“ (Baustein 11 angehen). Danach kam von mir die Rückfrage zu Weg A, noch nicht beantwortet.
+## 2. Current Status
+Relay V223 läuft und ist auf GitHub gesichert, Arbeitsordner sauber. Hinweis: Es gibt zwei Commits mit dem Titel „V221“ (meiner: Antwort-Tasten aufräumen; ein fremder: Verbrauchsblatt mit Euro-Wert). Die laufende Version ist 223, daher kein Schaden, aber beim Nachlesen beachten.
 
-## Offen bei Roli
-1. Frage zu Baustein 11 ist offen: Soll ich den Auslieferer für den Webspace (Dienst seiten-roli, heute python http.server auf 8803) umbauen, der im Kommentiermodus (?kommentieren=1) ein Hilfsskript anhängt, das per postMessage meldet, was angetippt wurde? Empfehlung: Ja, zuerst nur für Rolis Webspace. Weg B (Relay liefert Seiten selbst aus) ist abgelehnt (Sicherheit). Plan und Begründung stehen im Baubuch unter „Baustein 11“.
-Außerdem: Verhalten im Auto (Ton-Tagebuch ~/.hetzner-app/ton-tagebuch.log, Ereignisse mik-*). Die Anmeldung lief am 03.11. ab, falls /login nötig war, ist das erledigt oder steht noch aus.
+## 3. What Changed in This Session
+- V219: Pfeilknöpfe und Maus-Ziehen an der Schnellbefehl-Reihe; fester Platz „Fest oben“ für die angeheftete Karte im Ordner Medienwerk.
+- Baustein 11 Teil 1: deploy/seiten_auslieferer.py ersetzt python http.server im Dienst seiten-roli und hängt bei ?kommentieren=1 das Hilfsskript deploy/kommentier-hilfe.js an.
+- V220: Baustein 11 Teil 2: Kommentiermodus in der Vorschau (Schalter, Sammelliste, Senden an die Karte oder ins Eingabefeld).
+- V221: Antwort-Tasten und Vorschlag räumen sich auf (Foto-Antworten zählen, Vorschlag ohne erledigte Fragen, nur die zwei jüngsten Antworten halten Fragen offen).
+- V222: Kontext-Balken in der Zeile des Modus, Cache-Hinweis oben entfällt.
+- V223: Knopf „Nachgeschobenes jetzt senden“ (Strg+X Strg+S per tmux, nur wenn der Hinweis „to send now“ auf dem Schirm steht).
+- Claude-Code-Neuerungen durchgesehen: Selbst-Zusammenfassung ruhender Karten ist an, bisher nirgends eingetreten.
 
-## Nächster Schritt
-Antwort auf die Baustein-11-Frage abwarten. Bei Ja: Teil 1 Auslieferer mit Hilfsskript und Versuch an einer Probeseite (Caddy und Tor nie anfassen), Teil 2 Sammelliste und Senden in der App, Teil 3 Feinheiten. Danach spät: 16 zwei Karten nebeneinander, Englisch zum Schluss. Baustein 2 ruht (keine Quelle).
+## 4. Decisions Made
+- Fester Platz Medienwerk, am Ordner festgemacht (Roli 04.11. „210. Ja“, „2. Ja“).
+- Pfeile und Ziehen an der Chip-Reihe (04.11. „1. Ja“).
+- Baustein 11 Weg A, zuerst nur Rolis Webspace (04.11. „3. Ja“, „4. Ja"); Teil 3 und Auslieferer für Lea und Lorenz bleiben liegen (04.11. „5. und 6. Deine Empfehlung“).
+- Grenze zwei Antworten für offene Fragen bleibt (07.11. „7. Ja“). Überstimmt teilweise den Beschluss vom 02.11.
+- Kopfzeile kompakter (08.11. 09:33).
+- Knopf Jetzt senden bauen, Selbst-Zusammenfassung nachsehen, Remote Control liegen lassen (08.11. „9. Ja, 10. Ja, 11. Ja“).
 
-## Fallen
-Testserver: HETZNER_TTS_PORT=5015 PYTHONPATH=. mit .venv-Python, Starter /tmp/kaira_test.py (require_auth-Override, Port 8799; falls weg, neu schreiben), Beenden fuser -k 8799/tcp 5015/tcp. Playwright unter ~/werkzeuge/browser/.venv; am Handy-Format liegt der Einstellungen-Knopf nur in der Liste, Tests am breiten Format (1500x900). Probekarten nur auf eigenem tmux-Socket oder mit Namen „Probe-…“, danach auch den Eintrag in ~/.hetzner-app/sitzungen.json entfernen (Sicherung vorher). Echte Karten nie ansprechen. Tor und Caddy gehören dem Brain. GitHub meldet gelegentlich Serverfehler beim Push, wiederholen.
+## 5. Important Files and Locations
+- hetzner_app/server.py (VERSION, Endpunkte wartend und jetzt-senden), hetzner_app/state.py (FESTE_ORDNER), web/app.js, web/index.html, web/styles.css: bearbeitet.
+- deploy/seiten_auslieferer.py, deploy/kommentier-hilfe.js: neu. Dienst seiten-roli nutzt sie; alte Unit gesichert in ~/.hetzner-app/seiten-roli.service.vorher.
+- ~/seiten/probe-kommentieren/: Probeseite für den Kommentiermodus.
+- BAUBUCH.md und Brain/REGISTER.md: aktuell bis V223.
 
-## Nachtrag 04.11. (Anfrage von Medienwerk 160)
-Medienwerk 160 meldet Rolis Wunsch (02.11. 20:18 „185. Ja“, 04.11. 13:01 „207. Ja“): Karte „Medienwerk“ mit festem Platz ganz oben in der Kartenliste, auch nach Kartenwechsel. Befund: Anheften (pinned) gibt es und wird beim Kartenwechsel vererbt, aber Angeheftete sind nach letzter Aktivität sortiert (state.py, Sortierung nach pinned, dann lastActivity), Wartende rutschen darüber. Es fehlt eine feste Reihenfolge unter den Angehefteten (z. B. nach Ordner „Medienwerk“, nicht nach Kartenname). Noch nichts gebaut, Antwort ging per Nachricht an Medienwerk 160. Vor dem Bau Rolis Bestätigung holen.
+## 6. Open Tasks
+- Verhalten im Auto testen (Diktat, Freisprechen, Ton-Tagebuch ~/.hetzner-app/ton-tagebuch.log, Ereignisse mik-*): Roli ist im Urlaub, frühestens um den 22.11.
+- Handyprobe für V219 bis V223 (alles nur im Testbrowser geprüft).
+- Baustein 16 zwei Karten nebeneinander; Englisch zum Schluss; Baustein 11 Teil 3 (Rahmen um Element, Springen, Kommentare merken); Auslieferer für Lea und Lorenz; Baustein 18 zurückgestellt; Baustein 2 ruht; Remote Control liegt.
+- „An die Karte senden“ im Kommentiermodus nie an einer echten Karte ausprobiert.
 
-## Auftrag bestätigt (04.11. 13:38, Roli „210. Ja“, über Medienwerk 160)
-Bauen, sobald die Folgekarte startet: Unter den angehefteten Karten der Relay-App gibt es eine feste Reihenfolge, die Karte im Ordner Medienwerk steht ganz oben. Muss halten bei Rückkehr aus dem Schlaf und bei Namenswechsel (Medienwerk 160 zu 161), also am Kartenordner festmachen, nicht am Namen. Roli heftet die Karte selbst an („209“). Ansatzpunkt: Sortierung in hetzner_app/state.py (pinned, dann lastActivity) und Abschnitt „Angeheftet“ in web/app.js; Wartende rutschen derzeit darüber, das mitbedenken. Der Auftrag ist damit freigegeben, die offene Frage dazu im Abschnitt „Nachtrag“ ist beantwortet.
+## 7. Known Issues / Risks
+- Doppelter Titel V221 im Git-Verlauf (siehe oben).
+- Kommentiermodus am Handy nicht verfügbar (rechte Spalte dort versteckt).
+- Die Zwei-Antworten-Grenze lässt ältere offene Fragen ohne Tasten, Nummer muss dann von Hand getippt werden.
+- Unklar, ob das Autoproblem mit dem Fix „unsichtbare Zeichen brauchen kein zweites Enter“ (Claude Code 2.1.319) zusammenhängt.
+
+## 8. Next Recommended Step
+Roli um Rückmeldung zur Handyprobe bitten, dann nach dem Urlaub das Auto testen. Davor nichts Neues aufbauen.
+
+## 9. Context for Future Claude Sessions
+Roli diktiert und lässt vorlesen: kurze ganze Sätze, Fragen als nummerierte Zeile mit Empfehlung und Fragezeichen, Nummern laufen im Gespräch fortlaufend (zuletzt 11), am Ende „Fertig.“. Testserver: Starter /tmp/kaira_test.py (Port 8799, Umgebung aus ~/.hetzner-app/umgebung laden für Vorschau), Beenden mit fuser -k 8799/tcp 5015/tcp. Playwright unter ~/werkzeuge/browser/.venv, Tour-Schalter vorbelegen. Probekarten nur auf eigenem tmux-Socket. Nach jeder App-Änderung VERSION hochzählen, Dienst neu starten, Baubuch, Register, Commit, Push (github main).
+
+## 10. Suggested Next Prompt
+```text
+Übergabe lesen
+```
+(Die Karte liest UEBERGABE.md, dann Baubuch-Ende und Register-Abschnitt Hetzner-App.)
