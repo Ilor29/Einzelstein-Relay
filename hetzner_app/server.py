@@ -255,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 222
+VERSION = 223
 
 
 @app.get("/api/version")
@@ -2372,6 +2372,43 @@ def session_abbrechen(name: str) -> dict:
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
     tmux.send_key(name, "Escape")
+    return {"ok": True}
+
+
+def _wartet_zum_senden(name: str) -> bool:
+    """Steht auf dem Schirm der Karte der Hinweis „ctrl+x ctrl+s to send now“?
+
+    Den zeigt Claude Code nur, solange nachgeschobene Nachrichten warten."""
+    try:
+        schirm = tmux.capture(name, lines=None)
+    except Exception:
+        return False
+    # Die letzten belegten Zeilen: bei kurzem Inhalt steht unter dem Eingabefeld viel Leere.
+    belegt = [z for z in schirm.splitlines() if z.strip()]
+    return "to send now" in "\n".join(belegt[-12:])
+
+
+@app.get("/api/sessions/{name}/wartend", dependencies=[Depends(require_auth)])
+def session_wartend(name: str) -> dict:
+    """Warten nachgeschobene Nachrichten, die man sofort senden könnte?"""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    return {"wartend": _wartet_zum_senden(name)}
+
+
+@app.post("/api/sessions/{name}/jetzt-senden", dependencies=[Depends(require_auth)])
+def session_jetzt_senden(name: str) -> dict:
+    """Nachgeschobene Nachrichten sofort senden (Strg+X Strg+S in Claude Code).
+
+    Unterbricht den laufenden Zug und schickt alle wartenden Nachrichten auf
+    einmal. Nur wenn der Hinweis auf dem Schirm steht, sonst täte die Taste
+    in einem anderen Zustand etwas Fremdes (Roli 08.11.2026 „9. Ja“)."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    if not _wartet_zum_senden(name):
+        raise HTTPException(409, "Es wartet gerade keine Nachricht.")
+    tmux.send_key(name, "C-x")
+    tmux.send_key(name, "C-s")
     return {"ok": True}
 
 

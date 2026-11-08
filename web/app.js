@@ -1849,6 +1849,7 @@ async function pruefeObClaudeArbeitet() {
     // Der Anhalten-Knopf folgt dem echten Zustand — anhalten kann man nur, was
     // wirklich läuft. Sperre und Anzeige folgen dem geglätteten "beschäftigt".
     $("knopf-abbrechen-arbeit").hidden = !arbeitet;
+    jetztSendenPruefen(arbeitet);
     sendeSperren(beschaeftigt);
     $("denkt").hidden = !beschaeftigt;
     zeigeSitzungInfo(jetzt);
@@ -1866,6 +1867,30 @@ async function pruefeObClaudeArbeitet() {
     // dann eben nicht
   }
 }
+
+// „Jetzt senden“: Wer während der Arbeit etwas nachschiebt, sieht die Nachricht in Claude Code
+// grau wartend. Der Knopf schickt sie sofort los (Strg+X Strg+S), unterbricht dabei den Zug.
+let jetztSendenZuletzt = 0;
+async function jetztSendenPruefen(arbeitet) {
+  const knopf = $("knopf-jetzt-senden");
+  if (!arbeitet || !aktuelleSitzung || imTerminal) { knopf.hidden = true; return; }
+  if (Date.now() - jetztSendenZuletzt < 2500) return;     // nicht bei jedem Takt den Schirm lesen
+  jetztSendenZuletzt = Date.now();
+  const fuer = aktuelleSitzung.name;
+  try {
+    const d = await (await api(`/sessions/${encodeURIComponent(fuer)}/wartend`)).json();
+    if (aktuelleSitzung && aktuelleSitzung.name === fuer) knopf.hidden = !d.wartend;
+  } catch { knopf.hidden = true; }
+}
+$("knopf-jetzt-senden").addEventListener("click", async () => {
+  if (!aktuelleSitzung) return;
+  try {
+    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/jetzt-senden`, { method: "POST" });
+    $("knopf-jetzt-senden").hidden = true;
+    melde("Nachgeschobenes wird jetzt gesendet.");
+    setTimeout(ladeVerlauf, 800);
+  } catch (err) { melde(err.message); }
+});
 
 $("knopf-abbrechen-arbeit").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;

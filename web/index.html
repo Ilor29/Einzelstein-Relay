@@ -508,6 +508,11 @@
     <svg viewBox="0 0 24 24"><use href="#i-abbrechen"/></svg>
     Claude anhalten
   </button>
+  <!-- Erscheint nur, wenn nachgeschobene Nachrichten warten (Claude Code: ctrl+x ctrl+s). -->
+  <button id="knopf-jetzt-senden" class="abbrechen-leiste" hidden>
+    <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
+    Nachgeschobenes jetzt senden
+  </button>
   <!-- Claude fragt um Erlaubnis. Ohne diese Knöpfe stünde alles still. -->
   <div id="frage" class="frage" hidden>
     <p id="frage-text" class="frage-text"></p>
