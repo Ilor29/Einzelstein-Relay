@@ -3592,7 +3592,7 @@ function malInfoLeiste() {
   pille.classList.toggle("gesetzt", Boolean(bekannt));
 
   $("sitzung-info-text").textContent = _infoText;
-  $("sitzung-info").hidden = !bekannt && !_infoText;
+  $("sitzung-info").hidden = !bekannt && !_infoText && $("kontext-balken").hidden;
 }
 
 function zeigeSitzungInfo(jetzt) {
@@ -3756,7 +3756,7 @@ async function oeffneVerbrauchsBlatt() {
 // Die ganze Info-Zeile öffnet das Blatt — nicht nur der schmale Text. Nur die
 // Modus-Pille macht weiter ihr eigenes Ding (Berechtigungs-Modus umschalten).
 $("sitzung-info").addEventListener("click", (e) => {
-  if (e.target.closest("#knopf-modus")) return;
+  if (e.target.closest("#knopf-modus, #kontext-balken")) return;   // der Balken hat seinen eigenen Klick
   oeffneVerbrauchsBlatt();
 });
 // Der Kontext-Balken führt ins selbe Blatt — dort stehen die Zahlen dahinter.
@@ -3813,6 +3813,7 @@ async function aktualisiereKontextBalken() {
   $("cache-text").textContent = cache;
   $("cache-text").classList.toggle("warnung", cache.startsWith("⚠"));
   balken.hidden = false;
+  $("sitzung-info").hidden = false;
 }
 
 // Cache-Uhr unter dem Eingabefeld (Monitor-Baustein 17): Der Stand kommt mit dem Kontext-Abruf,

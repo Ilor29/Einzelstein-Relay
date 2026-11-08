@@ -229,6 +229,11 @@ html, body {
    „das alles so viel frisst, wenn ich was eintippen muss"). */
 body.eng .sitzung-info { display: none; }
 
+/* V222: Der Kontext-Balken steht in der Zeile des Modus, rechts davon (Roli 08.11.2026). */
+.sitzung-info .kontext-balken { flex: 1; min-width: 0; width: auto; padding: 0; background: none; border: 0; gap: .2rem; }
+.sitzung-info #sitzung-info-text { flex: none; }
+.cache-text { display: none; }
+
 /* Während geglättet wird, funkelt der Knopf im Akzent und lässt sich nicht
    nochmal drücken. */
 .knopf-diktat.laedt {
