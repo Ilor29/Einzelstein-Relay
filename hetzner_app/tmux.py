@@ -160,6 +160,30 @@ def exists(name: str) -> bool:
     return any(s.name == name for s in list_sessions())
 
 
+# Wie lange nach dem Start ein Fehlschlag noch als "Fortsetzen ging nicht"
+# gilt. "No conversation found" kommt nach ein, zwei Sekunden.
+_RUECKFALL_S = 20
+
+
+def _mit_rueckfall(erst: str, dann: str) -> str:
+    """Shell-Zeile: erst fortsetzen; nur wenn das SOFORT scheitert, frisch starten.
+
+    Bis V225 stand hier "resume || continue || frisch". Das || fragt aber nicht,
+    WANN der erste Claude mit Fehler endete: Stürzte er nach Stunden ab (etwa
+    Speichermangel), startete die Shell von selbst --continue, und das nimmt
+    das jüngste Gespräch des Ordners, also womöglich das der Nachbarkarte.
+    Jetzt gilt der Rückfall nur in den ersten Sekunden, und er geht immer auf
+    ein frisches Gespräch, nie auf --continue hinter einer bekannten Kennung.
+    Endet Claude später, endet das Terminal, und die Karte steht ehrlich als
+    abgestürzt in der Liste; Antippen setzt dann genau ihr Gespräch fort.
+    """
+    return (
+        f"t=$(date +%s); {erst}; r=$?; "
+        f"if [ $r -ne 0 ] && [ $(( $(date +%s) - t )) -lt {_RUECKFALL_S} ]; "
+        f"then {dann}; fi"
+    )
+
+
 def create(
     name: str,
     cwd: str,
@@ -191,9 +215,8 @@ def create(
     (gespraech, der Mitschrift-Dateiname) bekannt, wird GENAU dieses Gespräch
     fortgesetzt (--resume) — wichtig, sobald in einem Ordner mehrere Gespräche
     leben: --continue nähme blind das jüngste, auch ein fremdes. Ohne Kennung
-    bleibt --continue. Schlägt beides fehl (Gespräch gelöscht, Ordner leer),
-    steht der Rückfall dahinter: dann eben frisch. tmux reicht die eine
-    Befehlszeile an die Shell durch, darum funktioniert das ||.
+    bleibt --continue. Scheitert das Fortsetzen sofort (Gespräch gelöscht,
+    Ordner leer), startet ein frisches Gespräch, siehe _mit_rueckfall().
     """
     if exists(name):
         raise TmuxError(f"Eine Sitzung namens {name!r} läuft bereits.")
@@ -222,10 +245,10 @@ def create(
         # Codes eigener Ablage (UUID) — zur Sicherheit trotzdem nur Erlaubtes.
         sicher = "".join(c for c in gespraech if c.isalnum() or c == "-")
         if sicher:
-            befehl = f"{befehl} --resume {sicher} || {befehl} --continue || {befehl}"
+            befehl = _mit_rueckfall(f"{befehl} --resume {sicher}", befehl)
             kennung = sicher
         else:
-            befehl = f"{befehl} --continue || {befehl}"
+            befehl = _mit_rueckfall(f"{befehl} --continue", befehl)
 
     _run(
         "new-session",
