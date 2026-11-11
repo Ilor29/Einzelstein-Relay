@@ -255,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 226
+VERSION = 227
 
 
 @app.get("/api/version")
@@ -2301,6 +2301,17 @@ async def modus_wechseln(name: str) -> dict:
     """
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+
+    # Nie in einen offenen Dialog tippen. In einer Erlaubnisfrage schaltet
+    # Umschalt+Tab nicht den Modus, sondern verändert die Frage (aus „Yes"
+    # wird „Yes, and tell Claude what to do next"; mit Probekarte nachgestellt
+    # am 11.11.2026). Wegdrücken wäre hier falsch, das lehnte die Anfrage ab.
+    if await asyncio.to_thread(tmux.dialog_zustand, name) != "frei":
+        raise HTTPException(
+            409,
+            "Claude zeigt gerade eine Frage an. Erst die Frage beantworten, "
+            "dann lässt sich der Modus umschalten.",
+        )
 
     tmux.send_key(name, "BTab")
     await asyncio.sleep(0.4)

@@ -269,12 +269,8 @@ def frage(name: str) -> dict | None:
     except tmux.TmuxError:
         return None
 
-    # Arbeitet Claude noch, ist eine Auswahlliste auf dem Schirm bestenfalls
-    # ein Überbleibsel von vorhin.
-    if _ARBEITET.search(screen):
-        return None
-
-    zeilen = [_RAHMEN.sub("", z) for z in screen.splitlines()]
+    roh = screen.splitlines()
+    zeilen = [_RAHMEN.sub("", z) for z in roh]
 
     moeglichkeiten: list[dict] = []
     erste = -1
@@ -300,6 +296,15 @@ def frage(name: str) -> dict | None:
 
     # Eine einzelne Zeile "1. irgendwas" ist keine Auswahl.
     if len(moeglichkeiten) < 2 or not gewaehlt:
+        return None
+
+    # Arbeitet Claude noch, ist eine Auswahlliste auf dem Schirm bestenfalls
+    # ein Überbleibsel von vorhin. Der Arbeits-Hinweis steht dann UNTER der
+    # Liste (Kreisel und Fußzeile). Gesucht wird deshalb nur ab der ersten
+    # Antwort: Bis V226 galt der ganze Schirm, und ein Zitat von „esc to
+    # interrupt" in Claudes Text über der Frage nahm die Knöpfe weg
+    # (Durchsicht 11.11.2026, mit Probekarte nachgestellt).
+    if _ARBEITET.search("\n".join(roh[erste:])):
         return None
 
     # Die Frage steht über der ersten Antwort — die letzte Zeile mit Inhalt.
