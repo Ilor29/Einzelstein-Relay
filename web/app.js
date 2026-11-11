@@ -1599,6 +1599,7 @@ function markierungenEntfernen() {
 // Den Verlauf nach dem Suchwort durchkämmen und Treffer einpacken.
 // springen=true: danach zum ersten Treffer (ab dem sichtbaren Bereich) gehen.
 function verlaufDurchsuchen(springen = true) {
+  const alterIndex = suchIndex;   // beim stillen Auffrischen bleibt der Treffer derselbe
   markierungenEntfernen();
   suchTreffer = [];
   suchIndex = -1;
@@ -1635,11 +1636,13 @@ function verlaufDurchsuchen(springen = true) {
     if (erster < 0) erster = suchTreffer.length - 1;
     trefferZeigen(erster);
   } else {
-    trefferZeigen(suchIndex);
+    // Stilles Auffrischen (der Verlauf hat sich nur erweitert): Markierung
+    // behalten, nicht scrollen, das Mitlaufen nicht anhalten.
+    trefferZeigen(Math.min(Math.max(alterIndex, 0), suchTreffer.length - 1), false);
   }
 }
 
-function trefferZeigen(i) {
+function trefferZeigen(i, scrollen = true) {
   suchTreffer.forEach((m) => m.classList.remove("aktuell"));
   const stand = $("verlauf-suche-stand");
   if (!suchTreffer.length) {
@@ -1651,6 +1654,11 @@ function trefferZeigen(i) {
   const m = suchTreffer[suchIndex];
   m.classList.add("aktuell");
   stand.textContent = `${suchIndex + 1}/${suchTreffer.length}`;
+  if (!scrollen) return;
+  // Liegt der Treffer in einem zugeklappten Code-Block, erst aufklappen,
+  // sonst gibt es nichts zum Hinspringen.
+  const code = m.closest(".notiz.code");
+  if (code && code.querySelector("pre").hidden) code.click();
   folgeUnten = false;   // beim Springen nicht gleich wieder ans Ende gezogen werden
   m.scrollIntoView({ block: "center", behavior: "smooth" });
 }

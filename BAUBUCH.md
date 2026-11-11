@@ -1193,3 +1193,11 @@ Nachgesehen am laufenden Dienst: Piper ist nach dem Neustart mit der neuen Umgeb
 **Geprüft:** Playwright 1500x900, Testserver 8799, `/vorschau` abgebrochen, sechs Auffrischungen im Abstand von 200 ms: neuer Code eine Anfrage, alter Code sechs. Nach Erholung lädt die Liste. Keine Seitenfehler.
 **Fehler unterwegs:** Der erste Test rief zwanzig Mal gleichzeitig auf; das fängt die Sperre schon im alten Code ab, der Test bestand zum Schein. Erst Aufrufe nacheinander mit Pausen zeigen den Fehler.
 **Nicht geprüft:** Handy (die Spalte ist dort versteckt).
+
+## 11.11.2026: V241, Lupe stört das Mitlaufen nicht mehr und klappt Code-Treffer auf
+**Auslöser:** Roli 11.11. 22:32 „35. Ja“ (Befund 11 der Durchsicht).
+**Ursache:** Bei jedem Verlaufs-Update setzt die Lupe ihre Treffer neu und rief dabei `trefferZeigen(-1)` auf. Das wird zum letzten Treffer umgerechnet, scrollt dorthin und setzt `folgeUnten` auf falsch. Bei offener Lupe sprang die Ansicht also bei jeder neuen Zeile zum letzten Treffer, und das Mitlaufen am Ende war aus. Treffer in zugeklappten Code-Blöcken wurden mitgezählt, beim Hinspringen passierte aber nichts Sichtbares.
+**Lösung:** Beim stillen Auffrischen bleibt der bisherige Treffer markiert (Index gemerkt, begrenzt auf die neue Zahl), ohne Scrollen und ohne `folgeUnten` anzufassen (`trefferZeigen(i, scrollen)`). Beim bewussten Springen wird ein zugeklappter Code-Block mit dem Treffer erst aufgeklappt. Die Treffer im Code zählen weiter mit, damit man sie findet.
+**Geprüft:** Playwright 412x700, Testserver 8799, Scheinkarte mit langem Verlauf und einem Code-Block: Sprung zum Code-Treffer klappt auf, Auffrischen mit zwei neuen Blöcken lässt `folgeUnten` an und behält die Markierung. Alter Code: zwei Prüfungen fallen durch, die dritte besteht nur zufällig (er springt immer zum letzten Treffer). Keine Seitenfehler.
+**Fehler unterwegs:** Mein Test erwartete drei Treffer, es waren fünf (das Wort stand dreimal im ersten Block); der Scheinserver lieferte für „ältere Nachrichten“ ein falsches Format und erzeugte Seitenfehler.
+**Nicht geprüft:** Handy, Verhalten beim Mitlaufen mit Dauer-Streaming.
