@@ -768,6 +768,32 @@ document.querySelectorAll(".blatt").forEach((blatt, i) => {
 
 let fit = null;
 let steckdose = null;      // die WebSocket-Verbindung
+let steckdoseWartet = [];  // Eingaben, die kamen, während die Verbindung noch aufgebaut wird
+let steckdoseKarte = "";   // zu welcher Karte die Warteschlange gehört
+
+// Schickt Eingaben ins Terminal. Steht die Verbindung, geht es sofort. Wird sie
+// gerade erst aufgebaut, merkt sich die App die Eingabe und schickt sie beim
+// Öffnen nach (vorher warf `send` hier einen Fehler und die Eingabe war weg).
+// Ist die Verbindung zu oder weg, bleibt es bei false, damit der Aufrufer es
+// melden kann.
+function anSteckdose(daten) {
+  const s = steckdose;
+  if (!s) return false;
+  if (s.readyState === WebSocket.OPEN) { s.send(daten); return true; }
+  if (s.readyState === WebSocket.CONNECTING && steckdoseWartet.length < 500) {
+    steckdoseWartet.push(daten);
+    return true;
+  }
+  return false;
+}
+
+// Verbindung bewusst beenden (Karte verlassen oder wechseln): auch die
+// Warteschlange verwerfen, sonst landete alter Text in der nächsten Karte.
+function steckdoseWeg() {
+  steckdose?.close();
+  steckdose = null;
+  steckdoseWartet = [];
+}
 let aktuelleSitzung = null;
 // Ist diese Karte noch offen? Jede Anfrage merkt sich vorher den Kartennamen und
 // fragt danach hier nach: Wer inzwischen gewechselt hat, bekommt die Antwort der
@@ -798,7 +824,7 @@ function baueSondertasten() {
     knopf.className = "taste" + (taste.warm ? " warm" : "");
     knopf.textContent = taste.text;
     knopf.addEventListener("click", () => {
-      steckdose?.send(taste.sendet);
+      anSteckdose(taste.sendet);
       term?.focus();
     });
     leiste.append(knopf);
@@ -1973,8 +1999,7 @@ function ansichtWechseln() {
     fit.fit();
     verbinde(aktuelleSitzung.name);
   } else {
-    steckdose?.close();
-    steckdose = null;
+    steckdoseWeg();
     sitzungsTakt();
   }
 }
@@ -2001,7 +2026,7 @@ function baueTerminal() {
   term.loadAddon(fit);
   term.open($("terminal"));
   terminalStileSpiegeln();
-  term.onData((daten) => steckdose?.send(daten));
+  term.onData((daten) => { anSteckdose(daten); });
   baueSondertasten();
 }
 
@@ -2025,8 +2050,7 @@ function oeffneSitzung(sitzung) {
   // Breite Ansicht: man wechselt direkt von Karte zu Karte, ohne den Zurück-Knopf.
   // Was der Zurück-Knopf sonst aufräumt, geschieht dann hier.
   if (aktuelleSitzung && aktuelleSitzung.name !== sitzung.name) {
-    steckdose?.close();
-    steckdose = null;
+    steckdoseWeg();
     gesehenMelden(aktuelleSitzung.name);
   }
   if (BREIT.matches) {
@@ -2178,19 +2202,34 @@ if ("IntersectionObserver" in window) {
 
 function verbinde(name) {
   steckdose?.close();
+  setzeVerbindung(false);
+  if (steckdoseKarte !== name) steckdoseWartet = [];   // fremder Text bleibt nicht liegen
+  steckdoseKarte = name;
 
   const protokoll = location.protocol === "https:" ? "wss:" : "ws:";
   const { cols, rows } = term;
-  steckdose = new WebSocket(
+  const diese = new WebSocket(
     `${protokoll}//${location.host}/ws/${encodeURIComponent(name)}?cols=${cols}&rows=${rows}`
   );
-  steckdose.binaryType = "arraybuffer";
+  steckdose = diese;
+  diese.binaryType = "arraybuffer";
 
-  steckdose.addEventListener("open", () => setzeVerbindung(true));
-  steckdose.addEventListener("message", (e) => {
+  // Alte Verbindungen melden ihr Ende erst später (close kommt asynchron).
+  // Jede Meldung zählt nur, solange `diese` noch die aktuelle Verbindung ist,
+  // sonst verbände ein spätes close die frische Verbindung gleich wieder neu.
+  diese.addEventListener("open", () => {
+    if (steckdose !== diese) return;
+    setzeVerbindung(true);
+    const wartet = steckdoseWartet;
+    steckdoseWartet = [];
+    for (const d of wartet) diese.send(d);
+  });
+  diese.addEventListener("message", (e) => {
+    if (steckdose !== diese) return;
     term.write(new Uint8Array(e.data));
   });
-  steckdose.addEventListener("close", () => {
+  diese.addEventListener("close", () => {
+    if (steckdose !== diese) return;
     setzeVerbindung(false);
     // Verbindung weg — auf dem Handy passiert das ständig, sobald der
     // Bildschirm ausgeht. Die Sitzung läuft weiter, wir hängen uns nur
@@ -2200,7 +2239,9 @@ function verbinde(name) {
     // und ein unsichtbarer Terminal-Strom liefe samt Akku- und Datenverbrauch
     // weiter.
     if (imTerminal && aktuelleSitzung?.name === name && !$("ansicht-sitzung").hidden) {
-      setTimeout(() => verbinde(name), 1500);
+      setTimeout(() => {
+        if (steckdose === diese && imTerminal && aktuelleSitzung?.name === name) verbinde(name);
+      }, 1500);
     }
   });
 }
@@ -2237,8 +2278,9 @@ async function sendeInSitzung(text) {
     // verschluckt Claude Code das Enter gelegentlich — der Text bleibt dann
     // als Geist in der Eingabezeile stehen und kommt nie an (26.08., drei
     // Karten). Dieselbe Pause wie beim Senden aus der Lese-Ansicht.
-    steckdose?.send(text);
-    setTimeout(() => steckdose?.send("\r"), 350);
+    const diese = steckdose;
+    if (!anSteckdose(text)) { melde("Das Terminal ist nicht verbunden. Die Eingabe ging nicht raus."); return; }
+    setTimeout(() => { if (steckdose === diese) anSteckdose("\r"); }, 350);
     return;
   }
 
@@ -3623,8 +3665,7 @@ $("sitzung-name").addEventListener("click", async () => {
 
 let ungelesenBleibt = false;   // Kartenmenü: „Als ungelesen“ soll das Hinausgehen überleben
 $("knopf-zurueck").addEventListener("click", () => {
-  steckdose?.close();
-  steckdose = null;
+  steckdoseWeg();
   clearInterval(verlaufTakt);
   verlaufTakt = null;
   entwurfMerken();
@@ -6617,7 +6658,7 @@ $("neuskill-datei").addEventListener("change", async (e) => {
 window.addEventListener("resize", () => {
   if (!fit || $("ansicht-sitzung").hidden) return;
   fit.fit();
-  steckdose?.send(`\x00resize:${term.cols}:${term.rows}`);
+  if (steckdose?.readyState === WebSocket.OPEN) steckdose.send(`\x00resize:${term.cols}:${term.rows}`);
 });
 
 if ("serviceWorker" in navigator) {
