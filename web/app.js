@@ -1211,17 +1211,20 @@ function randZeigen() {
 
 async function ladeVerlauf() {
   if (!aktuelleSitzung || imTerminal) return;
+  const fuer = aktuelleSitzung.name;     // die Antwort gilt nur für diese Karte
 
   let bloecke;
   try {
     const optionen = taktOptionen();
     if (verlaufEtag) optionen.headers = { "If-None-Match": verlaufEtag };
     const antwort = await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verlauf`, optionen
+      `/sessions/${encodeURIComponent(fuer)}/verlauf`, optionen
     );
+    if (aktuelleSitzung?.name !== fuer) return;   // inzwischen andere Karte offen
     if (antwort.status === 304) return;         // nichts Neues
     verlaufEtag = antwort.headers.get("ETag") || "";
     bloecke = await antwort.json();
+    if (aktuelleSitzung?.name !== fuer) return;
   } catch {
     return;
   }
@@ -1674,15 +1677,17 @@ let offeneFrage = "";
 
 async function pruefeFrage() {
   if (!aktuelleSitzung || imTerminal) return;
+  const fuer = aktuelleSitzung.name;     // die Knöpfe gehören nur zu dieser Karte
 
   let frage;
   try {
     frage = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/frage`, taktOptionen()
+      `/sessions/${encodeURIComponent(fuer)}/frage`, taktOptionen()
     )).json();
   } catch {
     return;
   }
+  if (aktuelleSitzung?.name !== fuer) return;   // inzwischen andere Karte offen
 
   // Der Anmelde-Stand fährt in derselben Antwort huckepack mit (siehe
   // Server). Er hat seinen eigenen Kasten und stört die Rückfragen nicht.
@@ -1708,7 +1713,7 @@ async function pruefeFrage() {
       // Die erste Antwort ist die zustimmende — sie bekommt das Gewicht.
       knopf.className = m.nummer === 1 ? "frage-knopf ja" : "frage-knopf";
       knopf.textContent = m.text;
-      knopf.addEventListener("click", () => antworte(m.nummer));
+      knopf.addEventListener("click", () => antworte(m.nummer, fuer));
       return knopf;
     })
   );
@@ -1802,12 +1807,15 @@ $("anmelde-kopieren").addEventListener("click", async () => {
   }
 });
 
-async function antworte(nummer) {
+async function antworte(nummer, fuer) {
+  // Die Antwort geht an die Karte, in der die Frage stand, nie an die gerade
+  // offene (Durchsicht 11.11.).
+  if (aktuelleSitzung?.name !== fuer) return;
   const kasten = $("frage");
   kasten.hidden = true;
   offeneFrage = "";
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/antwort`, {
+    await api(`/sessions/${encodeURIComponent(fuer)}/antwort`, {
       method: "POST",
       body: JSON.stringify({ nummer }),
     });
@@ -1989,7 +1997,12 @@ function oeffneSitzung(sitzung) {
     stoppeListe();
   }
   entwurfMerken();     // was in der vorigen Karte noch im Feld stand
-  if (aktuelleSitzung && aktuelleSitzung.name !== sitzung.name) feldFuerKarteLeeren();
+  if (aktuelleSitzung && aktuelleSitzung.name !== sitzung.name) {
+    feldFuerKarteLeeren();
+    $("frage").hidden = true;    // Knöpfe der alten Karte gehören nicht in die neue
+    offeneFrage = "";
+    verlaufEtag = "";
+  }
   gesehenMelden(sitzung.name);   // die Ungelesen-Markierung erlischt
   aktuelleSitzung = sitzung;
   offeneSitzungMerken(sitzung.name);
@@ -3540,6 +3553,8 @@ $("knopf-zurueck").addEventListener("click", () => {
   verlaufTakt = null;
   entwurfMerken();
   feldFuerKarteLeeren();
+  $("frage").hidden = true;
+  offeneFrage = "";
   // Auch beim Hinausgehen: Was während des Offenseins hereinkam, hast du
   // gesehen. Ohne das leuchtete die Karte in der Liste sofort wieder auf.
   if (!ungelesenBleibt) gesehenMelden(aktuelleSitzung?.name);

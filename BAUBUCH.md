@@ -1107,3 +1107,10 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Geprüft:** Playwright gegen Testserver 8799 mit zwei Scheinkarten (nur die Liste vorgetäuscht, nichts gesendet), 412x800 und 1500x900: Text in A getippt, Zurück oder direkter Wechsel nach B ergibt leeres Feld, zurück in A steht der Text wieder da, keine Konsolenfehler.
 **Nicht geprüft:** Diktat selbst (Mikrofon im Testbrowser nicht vorhanden), Handy. Möglich bleibt, dass ein Diktat, das erst nach dem Stoppen sein Endergebnis liefert, noch einmal schreibt.
 **Lehre für Tests:** Skript nie nach /tmp legen (dort liegt ein bisect.py, das die Standardbibliothek überdeckt), und `python -I` ignoriert PYTHONPATH.
+
+## 11.11.2026: V231, Antwort-Knöpfe und Verlauf gehören nur zu ihrer Karte
+**Auslöser:** Roli 11.11. 17:21 „14. Deine Empfehlung“ (Befund 5 der Durchsicht, Antwort-Knöpfe).
+**Ursache:** `pruefeFrage` und `ladeVerlauf` lasen nach dem `await` nicht nach, ob noch dieselbe Karte offen ist, und `antworte` nahm den Namen erst beim Klick aus der gerade offenen Karte. Wer A öffnete und schnell B antippte, sah Knöpfe und Verlauf von A in B, und ein Tipp auf „Ja“ ging an B.
+**Lösung:** Beide Funktionen merken sich den Kartennamen vor der Anfrage und verwerfen die Antwort, wenn inzwischen eine andere Karte offen ist (bei `ladeVerlauf` vor dem Setzen des ETag). `antworte(nummer, fuer)` schickt an die Karte, aus der die Frage stammt, und tut nichts, wenn sie nicht mehr offen ist. Beim Wechsel und bei Zurück wird der Fragen-Kasten versteckt und der ETag des Verlaufs geleert.
+**Geprüft:** Playwright 412x800, Testserver 8799 mit zwei Scheinkarten: Frage von A um 1,5 s verzögert, sofort B geöffnet: in B keine Knöpfe. Gegenprobe: A offen, Knöpfe erscheinen, Klick auf „Ja“ schickt genau einen POST an `/sessions/ProbeA/antwort`.
+**Offen aus demselben Muster, noch nicht angefasst:** Dateibaum, Datei-Inhalt, Zurückspulen, Glätten, Modell wählen, Umbenennen, Modelle holen (Befund 5 der Durchsicht).
