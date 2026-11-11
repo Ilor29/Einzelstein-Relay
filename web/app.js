@@ -4229,7 +4229,8 @@ let sprungZiel = null;
 function springe(richtung) {
   if (!spricht || aktuellerIndex === null) return;
   if (stromKennung) { stromSpringe(aktuellerIndex + richtung); return; }
-  sprungZiel = aktuellerIndex + richtung;
+  // Zwei rasche Sprünge zählen beide: der zweite baut auf dem Wunsch des ersten auf.
+  sprungZiel = (sprungZiel ?? aktuellerIndex) + richtung;
 }
 
 // Die Vorlese-Leiste (Abspiel-Pille über der Eingabe): Pause/Weiter, die
@@ -4321,12 +4322,13 @@ try {
 // wer nichts hörte, hatte ein Ausgabe-Problem), oder stand sie (dann hat
 // Android die ganze Tonleitung angehalten und der Vortrag wartet)?
 let tonUhrMerker = null;      // { wand: ms, ton: s }
+let tonUhrQuelle = null;      // () => aktuelle Sekunde der Ton-Uhr des laufenden Vortrags
 
 document.addEventListener("visibilitychange", () => {
   if (!(spricht || restText)) return;
-  if (document.visibilityState === "visible" && tonUhrMerker && hörCtx) {
+  if (document.visibilityState === "visible" && tonUhrMerker && tonUhrQuelle) {
     const wandWeg = (Date.now() - tonUhrMerker.wand) / 1000;
-    const tonWeg = hörCtx.currentTime - tonUhrMerker.ton;
+    const tonWeg = tonUhrQuelle() - tonUhrMerker.ton;
     tonEreignis("wach-bericht", {
       wand_s: Math.round(wandWeg), ton_s: Math.round(tonWeg),
       rest: restStuecke ? restStuecke.length : -1,
@@ -4586,6 +4588,7 @@ function stille() {
   }
   aktiveQuellen = [];
   restStuecke = [];           // von Hand gestoppt heißt: nichts steht mehr aus
+  tonUhrMerker = null; tonUhrQuelle = null;
   aktuellerIndex = null;
   sprungZiel = null;
   stromAus();
@@ -4793,6 +4796,7 @@ function vortragBeginnen(knopf) {
   hoertStoppen?.();
 
   restText = "";       // ein neuer Vortrag hebt einen alten Rest auf
+  tonUhrMerker = null; tonUhrQuelle = null;   // die Uhr des alten Vortrags gilt nicht mehr
   spricht = true;
   // Dauerhaft merken, dass ein Vortrag läuft. Wirft Android die App in der
   // Hosentasche weg, verschwindet er spurlos — beim nächsten Start verrät
@@ -4902,8 +4906,10 @@ async function stromAnwerfen(el, ab) {
 
 /** Satzweise vor/zurück (Kopfhörer- oder Lenkradtaste). Liegt die Stelle im
  *  schon geladenen Teil, wird nur gespult; sonst startet der Strom dort neu. */
+let stromSprungLauf = 0;       // zählt die Sprünge; ein überholter Sprung ist kein Fehler
 async function stromSpringe(ziel) {
   const el = $("stimme");
+  const meiner = ++stromSprungLauf;
   const anzahl = Math.max(stromStartzeiten.length, aktuellerIndex + 1);
   ziel = Math.max(0, Math.min(ziel, anzahl - 1));
   const kennung = stromKennung;
@@ -4916,14 +4922,19 @@ async function stromSpringe(ziel) {
       }
     } catch { /* dann eben neu anwerfen */ }
   }
+  // Gleich merken, wohin es geht: Ein zweiter rascher Sprung rechnet von hier
+  // aus weiter, statt vom alten Stand aus dasselbe Ziel noch einmal zu wählen.
+  aktuellerIndex = ziel;
   try {
     if (geladen) {
       el.currentTime = start;
     } else {
       await stromAnwerfen(el, ziel);
     }
-    aktuellerIndex = ziel;
   } catch {
+    // Ein neuerer Sprung hat die Quelle ausgetauscht und dieses play() mit
+    // einem Abbruch beendet. Das ist kein Fehler, der Vortrag läuft weiter.
+    if (meiner !== stromSprungLauf) return;
     if (stromKennung === kennung) stromZuEnde(true);
   }
 }
@@ -4950,7 +4961,7 @@ async function sprichStrom(text, knopf, stimmeName, sitzung) {
     if (abgebrochen()) return;
 
     let tick = 0;
-    let tonUhrMerker = null;
+    tonUhrQuelle = () => el.currentTime;   // der Strom hat seine Uhr im Player
     dauerTakt = setInterval(() => {
       if (!stromKennung) return;
       // Läuft die Player-Uhr im Takt der Wand-Uhr? Wenn nicht, wird gerade
@@ -5018,6 +5029,9 @@ async function sprichHaeppchen(text, knopf, stimmeName = null, nachschub = null)
   // Den Player anwerfen, BEVOR das erste Häppchen eingereiht wird — sonst hinge
   // es noch am alten Ausgang (siehe tonAusgangAn).
   await tonAusgangAn(c);
+  // Wurde in der Startphase gestoppt, nichts mehr anwerfen: sonst käme die
+  // Leiste zurück und der Dauerton liefe weiter.
+  if (abgebrochen()) return;
   // Die Leitung offen halten, bevor die erste Synthese-Lücke entsteht —
   // sonst schläft der Ton bei dunklem Bildschirm ein (siehe dauerTonAn).
   dauerTonAn();
@@ -5062,6 +5076,7 @@ async function sprichHaeppchen(text, knopf, stimmeName = null, nachschub = null)
     // also ist „startZeit − sprechBeginn" die bislang bekannte Gesamtdauer.
     let sprechBeginn = null;
     leisteAn();
+    tonUhrQuelle = () => c.currentTime;
     dauerTakt = setInterval(() => {
       if (sprechBeginn === null) return;
       // Läuft die Ton-Uhr im Takt der Wand-Uhr? Wenn nicht, wird gerade
@@ -5143,6 +5158,12 @@ async function sprichHaeppchen(text, knopf, stimmeName = null, nachschub = null)
       if (sprechBeginn === null) sprechBeginn = start;   // ab hier läuft die Uhr
       startZeit = start + puffer.duration;   // das nächste schließt nahtlos an
       aktiveQuellen.push(quelle);
+      // Ist ein Stück durch, gehört seine Quelle nicht mehr in die Liste und
+      // wird vom Ausgang getrennt, sonst wächst sie bei einem langen Vortrag.
+      quelle.onended = () => {
+        aktiveQuellen = aktiveQuellen.filter((x) => x !== quelle);
+        try { quelle.disconnect(); } catch { /* war schon getrennt */ }
+      };
 
       // So weit wie möglich VORAB einreihen, statt bis kurz vors Stückende zu
       // warten: Die Ton-Uhr spielt Eingereihtes auf einem eigenen System-Faden

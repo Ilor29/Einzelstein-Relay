@@ -1201,3 +1201,15 @@ Nachgesehen am laufenden Dienst: Piper ist nach dem Neustart mit der neuen Umgeb
 **Geprüft:** Playwright 412x700, Testserver 8799, Scheinkarte mit langem Verlauf und einem Code-Block: Sprung zum Code-Treffer klappt auf, Auffrischen mit zwei neuen Blöcken lässt `folgeUnten` an und behält die Markierung. Alter Code: zwei Prüfungen fallen durch, die dritte besteht nur zufällig (er springt immer zum letzten Treffer). Keine Seitenfehler.
 **Fehler unterwegs:** Mein Test erwartete drei Treffer, es waren fünf (das Wort stand dreimal im ersten Block); der Scheinserver lieferte für „ältere Nachrichten“ ein falsches Format und erzeugte Seitenfehler.
 **Nicht geprüft:** Handy, Verhalten beim Mitlaufen mit Dauer-Streaming.
+
+## 11.11.2026: V242, Vorlesen: rasche Sprünge, Stopp in der Startphase, Tonquellen, Wach-Bericht
+**Auslöser:** Roli 11.11. 22:35 „36. Ja“ (Befund 12 der Durchsicht).
+**Ursachen und Lösungen:**
+Zwei rasche Sprünge (Strom-Weg, Android): `stromSpringe` setzte `aktuellerIndex` erst nach dem `await`. Der zweite Sprung rechnete deshalb vom alten Stand, und sein neuer `src` brach das `play()` des ersten mit einem Abbruch ab; der Fang darunter wertete das als Fehler und beendete den Vortrag („Der Ton-Strom ist abgerissen“). Jetzt wird das Ziel sofort gemerkt, ein Zähler `stromSprungLauf` erkennt überholte Sprünge, und deren Abbruch wird übergangen. Auf dem Häppchen-Weg (iOS) baut `springe` auf `sprungZiel` auf, sonst ging der zweite Wunsch verloren.
+Stopp in der Startphase (Häppchen-Weg): Wer stoppte, während `resume` und `tonAusgangAn` noch warteten, bekam danach Leiste, Dauerton und Takt zurück, ohne dass etwas sprach. Jetzt prüft `sprichHaeppchen` nach diesen Warteschritten `abgebrochen()` und kehrt zurück.
+Tonquellen: `aktiveQuellen` wuchs bei jedem Stück. Jede Quelle trägt jetzt `onended`, das sie aus der Liste nimmt und vom Ausgang trennt.
+Tagebuch „wach-bericht“: `sprichStrom` hatte eine eigene Variable `tonUhrMerker`, die die globale verdeckte, und der Bericht las nur `hörCtx`. Jetzt gibt es `tonUhrQuelle` (liefert die Uhr des laufenden Weges: Player oder Web Audio), beide Wege schreiben in die globale Variable, Beginn und Stopp setzen beides zurück.
+**Geprüft:** Playwright 412x700, Testserver 8799, Scheinstrom (WAV, 30 s) und Schein-Stimme, Autoplay erlaubt: 7 von 7 (Strom läuft, zwei Sprünge brechen nicht ab und der zweite zählt, Wach-Bericht kommt beim Strom, Stopp in der Startphase lässt Leiste, Dauerton und Takt aus, beendete Quellen verlassen die Liste: 3 von 6 nach 2,3 s). Mit altem Code bestehen nur 1 von 7, der Strom reißt beim zweiten Sprung ab.
+**Fehler unterwegs:** Der erste Test sprach nur ein Stück, weil `haeppchen` erst ab 90 Zeichen trennt. Danach mit langen Sätzen.
+**Nicht geprüft:** Handy und Kopfhörertasten, echte Stimme (kein zweiter Piper-Prozess), iOS-Weg mit echtem Ton, Wach-Bericht nach echter Bildschirmsperre.
+**Offen aus Befund 12:** nichts mehr.
