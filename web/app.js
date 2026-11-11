@@ -7505,12 +7505,15 @@ async function zurHandBefehle(erzwingen) {
 let aendFuer = "", aendZuletzt = 0, aendAbdruck = "", aendOffen = new Set();
 // Vorschau neben dem Chat (Monitor-Baustein 7, Roli 01.11.2026 „11. Ja“): eine Seite aus dem
 // eigenen Webspace im Rahmen, nur ansehen und neu laden. Die Wahl merkt sich das Gerät.
-let vorschauGeladen = false;
+let vorschauGeladen = false, vorschauFehlerAm = 0;
 async function zurHandVorschau() {
   if ($("zur-hand").hidden || vorschauGeladen) return;
+  // Nach einem Fehler höchstens alle 30 Sekunden neu fragen, nicht bei jedem Auffrischen.
+  if (Date.now() - vorschauFehlerAm < 30000) return;
   vorschauGeladen = true;
   let d;
-  try { d = await (await api("/vorschau")).json(); } catch { vorschauGeladen = false; return; }
+  try { d = await (await api("/vorschau")).json(); }
+  catch { vorschauGeladen = false; vorschauFehlerAm = Date.now(); return; }
   if (!d.aktiv) return;   // ohne Webspace-Adresse bleibt der Block weg
   const wahl = $("zh-vorschau-wahl");
   const leer = document.createElement("option");

@@ -1185,3 +1185,11 @@ Nachgesehen am laufenden Dienst: Piper ist nach dem Neustart mit der neuen Umgeb
 **Geprüft:** Playwright 412x800, Testserver 8799, Scheinantworten: 8 von 8 (kein Treffer löscht die Auswahl, Starten ohne Ordner wird abgewiesen, neuer Treffer wird gewählt, Doppeltipp schickt eine Anfrage, Knopf gesperrt und danach frei, auch nach 500er, abgelehnte Erlaubnis meldet sich). Mit dem alten `app.js` fallen die ersten Prüfungen durch. Keine Seitenfehler. Skript in `/var/tmp/v239/probe.py`.
 **Nicht geprüft:** Handy, echte Erlaubnis-Abfrage von Android.
 
+
+## 11.11.2026: V240, Vorschau fragt nach einem Fehler nicht mehr bei jedem Auffrischen
+**Auslöser:** Roli 11.11. 22:30 „34. Ja“ (Befund 10 der Durchsicht).
+**Ursache:** `zurHandVorschau` setzte nach einem Fehler von `/vorschau` die Sperre `vorschauGeladen` zurück. Jedes Auffrischen der rechten Spalte (beim Streamen mehrmals pro Sekunde) schickte deshalb sofort die nächste Anfrage.
+**Lösung:** Nach einem Fehler wird die Zeit gemerkt (`vorschauFehlerAm`), die nächste Anfrage kommt frühestens nach 30 Sekunden. Erholt sich der Server, lädt die Liste beim nächsten Auffrischen danach von selbst.
+**Geprüft:** Playwright 1500x900, Testserver 8799, `/vorschau` abgebrochen, sechs Auffrischungen im Abstand von 200 ms: neuer Code eine Anfrage, alter Code sechs. Nach Erholung lädt die Liste. Keine Seitenfehler.
+**Fehler unterwegs:** Der erste Test rief zwanzig Mal gleichzeitig auf; das fängt die Sperre schon im alten Code ab, der Test bestand zum Schein. Erst Aufrufe nacheinander mit Pausen zeigen den Fehler.
+**Nicht geprüft:** Handy (die Spalte ist dort versteckt).
