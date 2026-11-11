@@ -255,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 224
+VERSION = 225
 
 
 @app.get("/api/version")
@@ -715,7 +715,7 @@ def patch_session(name: str, body: Patch) -> dict:
     # Datenpunkt für dieselbe Karte anhängen.
     vorher = state.get(name)
     if body.archiviert and not vorher.archiviert and vorher.cwd:
-        verbrauch.protokolliere(name, vorher.cwd)
+        verbrauch.protokolliere(name, vorher.cwd, vorher.mitschrift)
 
     meta = state.update(name, **changes)
     return {
@@ -958,7 +958,7 @@ def session_archivieren(name: str) -> dict:
 
     vorher = state.get(name)
     if not vorher.archiviert and vorher.cwd:
-        verbrauch.protokolliere(name, vorher.cwd)
+        verbrauch.protokolliere(name, vorher.cwd, vorher.mitschrift)
     state.update(name, archiviert=True)
     return {"ok": True}
 
@@ -1884,7 +1884,8 @@ async def modell_wechseln(name: str, body: Modell) -> dict:
     # Versionsnummer zu raten, die beim nächsten Modell-Release schon wieder
     # veraltet wäre.
     aufgeloest = await asyncio.to_thread(state.modell_bestaetigung, name)
-    state.update(name, modell=body.name, modell_aufgeloest=aufgeloest)
+    state.update(name, modell=body.name, modell_aufgeloest=aufgeloest,
+                 modell_gewechselt=int(time.time()))
     return {"ok": True, "modell": body.name, "modellAufgeloest": aufgeloest}
 
 
@@ -2115,6 +2116,12 @@ async def ton_tagebuch(request: Request) -> dict:
     return {"ok": True}
 
 
+def _karten_mitschrift(name: str) -> str:
+    """Die gebundene Mitschrift einer eigenen Karte, sonst leer (fremde
+    Terminals mit ":" im Namen haben keine Bindung)."""
+    return "" if ":" in name else state.get(name).mitschrift
+
+
 @app.get("/api/sessions/{name}/verbrauch", dependencies=[Depends(require_auth)])
 def session_verbrauch(name: str) -> dict:
     """Wie voll das Kontextfenster ist und wo die Plan-Limits stehen.
@@ -2129,10 +2136,12 @@ def session_verbrauch(name: str) -> dict:
     ordner = next(
         (s.cwd for s in tmux.list_sessions() if s.name == name), ""
     )
+    # Die Mitschrift DIESER Karte, nicht die jüngste des Ordners (V225).
+    eigene = _karten_mitschrift(name)
     return {
-        "kontext": verbrauch.kontext(ordner) if ordner else None,
+        "kontext": verbrauch.kontext(ordner, eigene) if ordner else None,
         "limits": verbrauch.limits(),
-        "gegenwert": verbrauch.gegenwert(ordner) if ordner else None,
+        "gegenwert": verbrauch.gegenwert(ordner, eigene) if ordner else None,
     }
 
 
@@ -2209,7 +2218,7 @@ def session_kontext(name: str) -> dict:
     if not tmux.exists(name):
         raise HTTPException(404, "Diese Sitzung gibt es nicht.")
     ordner = next((s.cwd for s in tmux.list_sessions() if s.name == name), "")
-    return {"kontext": verbrauch.kontext(ordner) if ordner else None}
+    return {"kontext": verbrauch.kontext(ordner, _karten_mitschrift(name)) if ordner else None}
 
 
 @app.post("/api/sessions/{name}/antwort", dependencies=[Depends(require_auth)])

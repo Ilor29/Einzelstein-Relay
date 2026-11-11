@@ -135,7 +135,7 @@ def main(argv: list[str]) -> None:
             continue
         if s.get("attached") or (s.get("idleSeconds") or 0) < RUHE_S:
             continue
-        k = verbrauch.kontext(s["cwd"]) or {}
+        k = verbrauch.kontext(s["cwd"], state.get(name).mitschrift) or {}
         if k.get("benutzt", 0) < GRENZE_TOKEN:
             continue
         if tmux.dialog_zustand(name) != "frei":

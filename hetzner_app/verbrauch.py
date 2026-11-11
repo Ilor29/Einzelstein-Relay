@@ -54,29 +54,61 @@ def _projekt_ordner(cwd: str) -> Path:
 _kontext_cache: dict[str, tuple[tuple, dict | None]] = {}
 
 
-def kontext(cwd: str) -> dict | None:
-    """Der Kontext-Füllstand der jüngsten Unterhaltung in diesem Ordner.
+def _mitschrift_datei(cwd: str, mitschrift: str = "") -> Path | None:
+    """Die Mitschrift-Datei, aus der gelesen wird.
 
-    Liefert {"benutzt": Token, "limit": Token, "prozent": 0–100, "modell": …}
-    oder None, wenn es (noch) nichts zu wissen gibt.
+    Kennt die Karte ihre eigene Mitschrift (state.Meta.mitschrift), gilt die.
+    Sonst, oder wenn die Datei fehlt, die zuletzt beschriebene des Ordners:
+    das war bis V224 immer so und stimmt, solange im Ordner nur eine Karte
+    arbeitet. Bei zwei wachen Karten im selben Ordner zeigte sonst jede den
+    Stand derjenigen, die zuletzt schrieb (Durchsicht 11.11.2026).
+    """
+    ordner = _projekt_ordner(cwd)
+    if mitschrift and re.fullmatch(r"[A-Za-z0-9-]+", mitschrift):
+        datei = ordner / f"{mitschrift}.jsonl"
+        if datei.is_file():
+            return datei
+    dateien = list(ordner.glob("*.jsonl"))
+    if not dateien:
+        return None
+    return max(dateien, key=lambda p: p.stat().st_mtime)
+
+
+def kontext(cwd: str, mitschrift: str = "") -> dict | None:
+    """Der Kontext-Füllstand der Unterhaltung dieser Karte.
+
+    Liefert {"benutzt": Token, "limit": Token, "prozent": 0–100, "modell": …,
+    "modell_zeit": Epoche} oder None, wenn es (noch) nichts zu wissen gibt.
     """
     try:
-        ordner = _projekt_ordner(cwd)
-        dateien = [p for p in ordner.glob("*.jsonl")]
-        if not dateien:
+        datei = _mitschrift_datei(cwd, mitschrift)
+        if datei is None:
             return None
-        # Die zuletzt beschriebene Mitschrift gehört zur laufenden Sitzung.
-        datei = max(dateien, key=lambda p: p.stat().st_mtime)
         st = datei.stat()
-        schluessel = (str(datei), st.st_size, st.st_mtime_ns)
-        alt = _kontext_cache.get(cwd)
+        schluessel = (st.st_size, st.st_mtime_ns)
+        alt = _kontext_cache.get(str(datei))
         if alt and alt[0] == schluessel:
             return _mit_cache_rest(alt[1])
         wert = _kontext_lesen(datei)
-        _kontext_cache[cwd] = (schluessel, wert)
+        if len(_kontext_cache) > 400:
+            _kontext_cache.clear()
+        _kontext_cache[str(datei)] = (schluessel, wert)
         return _mit_cache_rest(wert)
     except OSError:
         return None
+
+
+_MODELL_KENNUNG = re.compile(r"^claude-([a-z]+)-(\d{1,2})(?:-(\d{1,2}))?(?:-\d{8})?$")
+
+
+def modell_anzeige(kennung: str) -> str:
+    """Aus der Modell-Kennung der Mitschrift den lesbaren Namen machen:
+    "claude-fable-5-2" wird "Fable 5.2". Unbekannte Formen bleiben, wie sie sind."""
+    t = _MODELL_KENNUNG.match(kennung or "")
+    if not t:
+        return kennung or ""
+    name, gross, klein = t.groups()
+    return f"{name.capitalize()} {gross}" + (f".{klein}" if klein else "")
 
 
 # --- API-Gegenwert (Roli 04.11.2026, „46. Ja“) ----------------------------------
@@ -161,21 +193,22 @@ def _gegenwert_lesen(datei: Path) -> dict | None:
     return {"usd": usd, "zuege": zuege, "unbekannt": unbekannt}
 
 
-def gegenwert(cwd: str) -> dict | None:
-    """API-Gegenwert der jüngsten Sitzung in diesem Ordner: {"usd", "eur" (oder None), "kurs", "zuege", "unbekannt"}."""
+def gegenwert(cwd: str, mitschrift: str = "") -> dict | None:
+    """API-Gegenwert der Unterhaltung dieser Karte: {"usd", "eur" (oder None), "kurs", "zuege", "unbekannt"}."""
     try:
-        dateien = list(_projekt_ordner(cwd).glob("*.jsonl"))
-        if not dateien:
+        datei = _mitschrift_datei(cwd, mitschrift)
+        if datei is None:
             return None
-        datei = max(dateien, key=lambda p: p.stat().st_mtime)
         st = datei.stat()
-        schluessel = (str(datei), st.st_size, st.st_mtime_ns)
-        alt = _gegenwert_cache.get(cwd)
+        schluessel = (st.st_size, st.st_mtime_ns)
+        alt = _gegenwert_cache.get(str(datei))
         if alt and alt[0] == schluessel:
             wert = alt[1]
         else:
             wert = _gegenwert_lesen(datei)
-            _gegenwert_cache[cwd] = (schluessel, wert)
+            if len(_gegenwert_cache) > 400:
+                _gegenwert_cache.clear()
+            _gegenwert_cache[str(datei)] = (schluessel, wert)
         if not wert:
             return None
         kurs = _kurs()
@@ -269,6 +302,9 @@ def _kontext_lesen(datei: Path, happen: int = 262_144) -> dict | None:
                     "limit": limit,
                     "prozent": min(100, round(benutzt * 100 / limit)),
                     "modell": modell,
+                    # Wann diese Antwort kam: Daran entscheidet die Liste, ob
+                    # ein Modellwechsel jünger ist als die letzte Antwort.
+                    "modell_zeit": _zeitpunkt(eintrag.get("timestamp")) or 0,
                 }
         if ttl is None:
             anlage = usage.get("cache_creation") or {}
@@ -302,13 +338,13 @@ def _kontext_lesen(datei: Path, happen: int = 262_144) -> dict | None:
 _VERLAUF_DATEI = Path.home() / ".hetzner-app" / "verbrauch-verlauf.jsonl"
 
 
-def protokolliere(karte: str, cwd: str) -> None:
+def protokolliere(karte: str, cwd: str, mitschrift: str = "") -> None:
     """Einen Datenpunkt für den Modell-Vergleich anhängen.
 
     Aufgerufen beim Archivieren einer Karte — dem Augenblick, in dem ihr
     Kontext-Verbrauch feststeht. Ohne bekannten Verbrauch passiert nichts.
     """
-    wert = kontext(cwd)
+    wert = kontext(cwd, mitschrift)
     if wert is None:
         return
     zeile = json.dumps({

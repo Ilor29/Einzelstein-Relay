@@ -125,7 +125,7 @@ def karten() -> dict:
     for s in state.overview():
         if s.get("archiviert") or not s.get("eigen"):
             continue
-        k = verbrauch.kontext(s["cwd"]) or {}
+        k = verbrauch.kontext(s["cwd"], state.get(s["name"]).mitschrift) or {}
         out.append({
             "name": s["name"], "zustand": s["state"], "ordner": Path(s["cwd"]).name,
             "kontext_token": k.get("benutzt"),

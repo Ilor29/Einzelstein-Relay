@@ -15,7 +15,7 @@ import time
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
-from . import tmux, tts
+from . import tmux, tts, verbrauch
 
 STATE_FILE = Path.home() / ".hetzner-app" / "sitzungen.json"
 
@@ -50,6 +50,10 @@ class Meta:
     # modell_bestaetigung(). Leer, solange nie wirklich wechselte: dann wäre
     # jeder Name geraten.
     modell_aufgeloest: str = ""
+    # Wann wir zuletzt /model getippt haben (Unix-Zeit). Antworten, die danach
+    # in der Mitschrift stehen, sagen genauer als die Bestätigung, welches
+    # Modell wirklich arbeitet, siehe modell_anzeige().
+    modell_gewechselt: int = 0
     # Wie die Sitzung im Handy heißen soll. Leer heißt: ihr technischer Name.
     # Der bleibt unangetastet — an ihm hängen tmux, der Ordner und die
     # Mitschrift. Wir benennen nur das Schild an der Tür um, nicht das Haus.
@@ -461,6 +465,31 @@ def modell_bestaetigung(name: str, sekunden: float = 6, schritt: float = 0.3) ->
     return ""
 
 
+def modell_anzeige(meta: Meta, cwd: str = "") -> str:
+    """Der Modellname, den die Karte zeigt.
+
+    Die Wahrheit steht in der Mitschrift der Karte: Jede Antwort nennt das
+    Modell, das sie geschrieben hat ("claude-fable-5-2"). Die Bestätigungs-
+    zeile vom Schirm (modell_bestaetigung) wurde manchmal verpasst oder nannte
+    nur den Alias, dann stand in der Liste "Fable" statt "Fable 5.2" oder ein
+    Modell, das gar nicht arbeitete (Roli 11.11.2026, "5. Ja").
+
+    Nur direkt nach einem Wechsel, solange noch keine neue Antwort da ist,
+    gilt die Bestätigung; fehlt auch die, bleibt der Name leer und die App
+    zeigt das Etikett des gewählten Alias. Ohne gebundene Mitschrift bleibt
+    es beim Alten, sonst läse man das Modell der Nachbarkarte im Ordner.
+    """
+    ordner = cwd or meta.cwd
+    if not meta.mitschrift or not ordner:
+        return meta.modell_aufgeloest
+    wert = verbrauch.kontext(ordner, meta.mitschrift)
+    if not wert or not wert.get("modell"):
+        return meta.modell_aufgeloest
+    if meta.modell_gewechselt and wert.get("modell_zeit", 0) < meta.modell_gewechselt:
+        return meta.modell_aufgeloest
+    return verbrauch.modell_anzeige(wert["modell"])
+
+
 def preview(name: str, max_len: int = 90) -> str:
     """Die eine Zeile, die in der Übersicht unter dem Sitzungsnamen steht.
 
@@ -584,7 +613,7 @@ def overview() -> list[dict]:
             # darf man ansehen und bedienen, aber nicht beenden.
             "eigen": fuehrend.eigen,
             "modell": meta.modell,
-            "modellAufgeloest": meta.modell_aufgeloest,
+            "modellAufgeloest": modell_anzeige(meta, cwd),
             # Der Kontext-Rest, wenn Claude Code ihn nennt — sonst None, dann
             # zeigt das Handy dazu schlicht nichts.
             "kontext": kontext(fuehrend.name),
@@ -631,7 +660,7 @@ def overview() -> list[dict]:
             "attached": False,
             "eigen": True,
             "modell": meta.modell,
-            "modellAufgeloest": meta.modell_aufgeloest,
+            "modellAufgeloest": modell_anzeige(meta),
             "kontext": None,
             "modus": None,
             "anzeige": meta.anzeige or name,
@@ -667,7 +696,7 @@ def overview() -> list[dict]:
             "attached": False,
             "eigen": True,
             "modell": meta.modell,
-            "modellAufgeloest": meta.modell_aufgeloest,
+            "modellAufgeloest": modell_anzeige(meta),
             "kontext": None,
             "modus": None,
             "anzeige": meta.anzeige or name,
