@@ -49,8 +49,18 @@ TAKT = 10
 
 # --- Der Ausweis des Servers gegenüber dem Push-Dienst ------------------------
 
+_vapid_sperre = threading.Lock()
+
+
 def _vapid() -> dict:
     """Erzeugt einmalig ein Schlüsselpaar, mit dem sich der Server ausweist."""
+    # Unter Sperre: Zwei gleichzeitige erste Aufrufe erzeugten sonst zwei Paare,
+    # und die Geräte, die sich mit dem ersten angemeldet haben, wären wertlos.
+    with _vapid_sperre:
+        return _vapid_ohne_sperre()
+
+
+def _vapid_ohne_sperre() -> dict:
     if VAPID.exists():
         return json.loads(VAPID.read_text())
 
@@ -178,6 +188,11 @@ def schicken(titel: str, text: str, sitzung: str = "") -> int:
             # Schlimmste: Man drückt die Glocke, alles sieht gut aus, und es
             # klingelt nie.
             print(f"Benachrichtigung fehlgeschlagen ({code}): {fehler}", flush=True)
+        except Exception as fehler:
+            # Verbindungsfehler, Zeitüberschreitung, kaputter Eintrag: Früher brach
+            # das die ganze Schleife ab, und alle Geräte dahinter blieben stumm
+            # (Durchsicht 11.11., Befund 15). Jetzt trifft es nur dieses eine.
+            print(f"Benachrichtigung fehlgeschlagen ({type(fehler).__name__}): {fehler}", flush=True)
 
     for endpoint in tot:
         austragen(endpoint)

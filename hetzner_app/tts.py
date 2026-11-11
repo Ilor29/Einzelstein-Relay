@@ -440,6 +440,19 @@ _URL = f"http://127.0.0.1:{_PORT}"
 _LOG = Path.home() / ".hetzner-app" / "piper.log"
 
 _prozess: subprocess.Popen | None = None
+
+
+# Was Piper NICHT erben soll: alles mit HETZNER_ (Zugangswort der App) und alles,
+# was nach einem Zugang aussieht. Früher fielen nur die HETZNER_-Variablen heraus,
+# die Schlüssel für ElevenLabs und Google wanderten mit (Durchsicht 11.11., Befund 15).
+_GEHEIM_MARKEN = ("KEY", "TOKEN", "SECRET", "PASSWOR", "PASSWD", "CREDENTIAL")
+
+
+def _kind_umgebung(quelle) -> dict:
+    return {
+        k: v for k, v in quelle.items()
+        if not k.startswith("HETZNER_") and not any(m in k.upper() for m in _GEHEIM_MARKEN)
+    }
 _sperre = threading.Lock()
 
 # Schutzautomatik gegen aufgeblähten Piper. Piper lädt für jede angehörte
@@ -546,9 +559,9 @@ def _starten(warte: float = 20.0) -> None:
             raise TTSError(f"Die Stimme fehlt: {datei.name}")
 
         _LOG.parent.mkdir(parents=True, exist_ok=True)
-        # Der Kindprozess braucht unsere Geheimnisse nicht (Zugangswort in
-        # HETZNER_*-Variablen) — also bekommt er sie gar nicht erst.
-        umgebung = {k: v for k, v in os.environ.items() if not k.startswith("HETZNER_")}
+        # Der Kindprozess braucht unsere Geheimnisse nicht — also bekommt er
+        # sie gar nicht erst.
+        umgebung = _kind_umgebung(os.environ)
         # Die glibc-Speicherverwaltung zähmen: Ohne Deckel legt sie je Faden
         # eigene Speicher-Arenen an, und Piper hielt so 1,2 GB fest — mit
         # Deckel sind es ~160 MB nach dem Start und ~250 MB beim Sprechen,
