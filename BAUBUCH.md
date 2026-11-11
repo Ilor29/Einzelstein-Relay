@@ -1121,3 +1121,11 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Lösung:** Nur die Zeile mit der Nummer der Frage wird ersetzt, entfernt oder neu eingefügt. Eine neue Zeile kommt vor die erste Antwort mit größerer Nummer, sonst hinter die letzte, sonst ans Ende. Freitext und Leerzeilen bleiben stehen.
 **Geprüft:** Playwright, `waehle` direkt aufgerufen: „Mein Text, Leerzeile, zweiter Absatz“ plus Antworten 3, 1, 2 ergibt Text unverändert, darunter 1, 2, 3 in Reihenfolge; leeres Feld mit 5 und 2 ergibt 2, 5; zweimal dieselbe Taste nimmt zurück; vorhandene „1. Ja“ mit Anmerkung darunter wird zu „1. Nein“, Anmerkung bleibt.
 **Nicht geprüft:** Eigene-Antwort-Feld in Kombination mit Freitext, Handy.
+
+## 11.11.2026: V233, Vorlese-Strom meldet unerwartete Fehler statt still abzureißen
+**Auslöser:** Roli 11.11. 17:21 „14. Deine Empfehlung“ (Befund 6 der Durchsicht).
+**Ursache:** `strom.strom()` fing nur `TTSError`. Jede andere Ausnahme (ffmpeg-Zeitüberschreitung, ffmpeg fehlt, Netzfehler, Google-Antwort ohne gültiges JSON) riss den Strom ab, und der `finally`-Zweig setzte `fertig` auf wahr, ohne Fehlertext. Die App hielt das für ein normales Ende.
+**Lösung:** Zusätzlicher `except Exception`: setzt `v.fehler` („Beim Sprechen ist etwas schiefgegangen.“) und schreibt den ganzen Fehler ins Protokoll. Die App liest `fehler` aus dem Strom-Stand und zeigt ihn.
+**Geprüft:** Test mit nachgebauter Stimme (das echte `tts` nicht aus einem zweiten Prozess benutzt): Stück 2 wirft `TimeoutExpired`: ein Stück geliefert, `fertig` wahr, `fehler` gesetzt. Gutfall mit zwei Stücken: beide geliefert, `fehler` leer. Dienst neu gestartet.
+**Nicht geprüft:** Anzeige der Meldung am Handy, die Google-Stimme mit kaputter Antwort am echten Dienst.
+**Offen aus Befund 6:** In `tts.py` fängt der Google-Weg ungültiges JSON ebenfalls nicht als `TTSError` ab; der Strom meldet es jetzt wenigstens, die Meldung bleibt allgemein.

@@ -287,6 +287,13 @@ async def strom(v: Vortrag, ab: int, erstes: tuple[bytes, float],
     except tts.TTSError as fehler:
         v.fehler = str(fehler)
         log.warning("Vortrag abgebrochen: %s", fehler)
+    except Exception as fehler:
+        # Alles andere (ffmpeg zu langsam oder nicht da, Netzfehler, Antwort
+        # ohne gültiges JSON) darf den Strom nicht still abreißen und dann als
+        # „fertig“ gelten: Die App soll erfahren, dass etwas schiefging
+        # (Durchsicht 11.11.).
+        v.fehler = "Beim Sprechen ist etwas schiefgegangen."
+        log.exception("Vortrag abgebrochen, unerwarteter Fehler: %s", fehler)
     except asyncio.CancelledError:
         # Der Hörer hat aufgelegt (Stopp, Sprung, Seite weg). Nichts weiter
         # sprechen — das nächste Stück wäre für niemanden.
