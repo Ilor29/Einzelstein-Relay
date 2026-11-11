@@ -1160,3 +1160,4 @@ Manifest: `background_color` und `theme_color` auf `#1F1E1D`, wie die App selbst
 
 ## 11.11.2026: Handyprobe, Rückmeldung Roli 21:26
 Bestanden laut Roli: 18 Modellnamen in der Kartenliste, 19 Kontext-Balken, 20 Aufwecken einer echten Karte, 21 Modus-Knopf bei offener Frage, 22 Foto mit Begleittext. Offen: 23 Entwurf beim Kartenwechsel (Roli brauchte die Schritte erklärt), 24 Antwort-Knöpfe nach schnellem Wechsel (Roli testet), 25 Antwort-Tipp mit Freitext, 26 Ordner dl ohne Anmeldung, 27 und 28 Tablet.
+**Nachtrag Roli 21:32:** 23 und 24 passen. Zu 25 und 26 „Deine Empfehlung“: 25 (Antwort-Tipp mit Freitext) gilt mit der Browser-Prüfung aus V232 als erledigt, fällt im Alltag von selbst auf; 26 (Ordner dl ohne Anmeldung) wird nicht eigens geprüft, die Sperre ist per Abruf belegt (401), Roli meldet sich, wenn Lea oder Lorenz ein Link fehlt. Offen bleiben nur 27 und 28 am Tablet.
