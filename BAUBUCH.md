@@ -1091,3 +1091,11 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Lösung:** Eigene Route `/dl/{pfad}` mit `require_auth` vor dem Static-Mount, Pfad wird aufgelöst und darf den Ordner `web/dl` nicht verlassen. Der übrige Ordner `web/` bleibt offen, sonst käme man nicht zur Anmeldeseite.
 **Geprüft:** Öffentlich über die Adresse: 401. Testserver 8799 mit ausgehängter Anmeldung: APK 200 mit 17 MB, Tourpaket 200, fehlende Datei und `..%2f`-Pfad 404. Nichts in der App verlinkt `dl/`.
 **Nicht geprüft:** ob jemand die Links ohne Anmeldung (Lea, Lorenz, Handy ohne Cookie) benutzt; sie bekommen jetzt 401. Roli sagt Bescheid, wenn etwas fehlt.
+
+## 11.11.2026: V229, Foto mit Begleittext und Werkzeugzeilen gehen im Verlauf nicht mehr verloren
+**Auslöser:** Roli 11.11. 17:21 „14. Deine Empfehlung“ (erster der schweren Funde der Durchsicht).
+**Ursache:** Alle Blöcke eines Mitschrift-Eintrags trugen dieselbe `uuid`. Die Entdoppelung in `mitschrift.lesen` (gedacht für Kopien in Folgedateien) warf deshalb jeden Block nach dem ersten weg: Bei einem Foto fiel der Text weg, bei einer Antwort mit Text und Werkzeugaufruf fiel die Werkzeugzeile weg (relevant für den Schalter „Mit Arbeitsschritten“ aus V218).
+**Lösung:** `block()` hängt die Stelle im Eintrag an die Kennung (`<uuid>#<n>`). Kopien in Folgedateien haben dieselben Stellen und werden weiter als doppelt erkannt. Die Kennung wird sonst nirgends benutzt.
+**Geprüft:** Probe-Mitschrift mit Foto plus Text und Antwort mit Werkzeug, zweimal als Datei a und b (Fortsetzung kopiert alles): Projekt-Zeitleiste und Einzelgespräch zeigen je Bild, Text, Antwort, Werkzeugzeile genau einmal. Dienst neu gestartet.
+**Nicht geprüft:** echte Karte am Handy, sehr lange Gespräche mit Zusammenfassung.
+**Lehre:** Ein Probeverlauf ohne Zeilenumbruch am Ende wird nicht gelesen (unvollständige letzte Zeile, gewollt).

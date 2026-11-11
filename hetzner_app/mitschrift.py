@@ -83,14 +83,23 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
     rolle = nachricht.get("role")
     inhalt = nachricht.get("content")
 
+    zaehler = [0]
+
     def block(typ: str, text: str, datei: str = "") -> dict:
+        # Alle Blöcke eines Eintrags tragen dieselbe Kennung der Zeile. Die
+        # Entdoppelung in lesen() würde sonst alles nach dem ersten Block
+        # verwerfen (Foto mit Begleittext verlor seinen Text, 11.11.). Darum
+        # kommt die Stelle im Eintrag dazu; Kopien in Folgedateien tragen
+        # dieselbe Stelle und werden weiter erkannt.
+        stelle = zaehler[0]
+        zaehler[0] += 1
         return {
             "typ": typ,
             "text": text,
             "datei": datei,
             "zeilen": 0,
             "zeit": zeit,
-            "uuid": uuid,
+            "uuid": f"{uuid}#{stelle}" if uuid else "",
         }
 
     # --- Was du gesagt hast ---
