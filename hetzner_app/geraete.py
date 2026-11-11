@@ -128,6 +128,14 @@ def erlauben(name: str, schluessel: str) -> Geraet:
 
     with _sperre:
         geraete = [g for g in _laden() if g.schluessel != schluessel]
+        # Der Name ist der Griff zum Entfernen und Aussperren: Zwei Geräte mit
+        # demselben Namen würden gemeinsam fliegen. Also macht ein doppelter
+        # Name ein „(2)“, „(3)“ … hinter sich.
+        vergeben = {g.name for g in geraete}
+        frei, n = name, 2
+        while frei in vergeben:
+            frei, n = f"{name} ({n})", n + 1
+        name = frei
         neu = Geraet(name=name, schluessel=schluessel, hinzugefuegt=int(time.time()))
         geraete.append(neu)
         _speichern(geraete)

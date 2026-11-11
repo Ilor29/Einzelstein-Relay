@@ -463,6 +463,8 @@ _sperre = threading.Lock()
 # Community-Servern (2–4 GB) wichtig. Grenze bei Bedarf per Umgebung anhebbar.
 _PIPER_MAX_MB = int(os.environ.get("HETZNER_PIPER_MAX_MB", "600"))
 _letzte_nutzung = 0.0     # wann zuletzt gesprochen — nie mitten im Satz neu starten
+_im_gange = 0             # wie viele Sätze Piper gerade spricht (auch lange über 15 Sekunden)
+_zaehler_sperre = threading.Lock()
 
 
 def _laeuft() -> bool:
@@ -475,6 +477,16 @@ def _gesund(frist: float = 1.0) -> bool:
             return True
     except OSError:
         return False
+
+
+def _ist_unser_piper(kommando: str) -> bool:
+    """Ist das Kommando (aus /proc/<pid>/cmdline, Nullzeichen-getrennt) ein
+    piper.http_server auf genau unserem Port? 5005 darf nicht 50051 treffen."""
+    argumente = kommando.split("\x00")
+    if "piper.http_server" not in kommando or "--port" not in argumente:
+        return False
+    stelle = argumente.index("--port") + 1
+    return stelle < len(argumente) and argumente[stelle] == str(_PORT)
 
 
 def _streuner_abraeumen() -> None:
@@ -506,9 +518,7 @@ def _streuner_abraeumen() -> None:
             kommando = (eintrag / "cmdline").read_bytes().decode(errors="replace")
         except OSError:
             continue                       # Prozess schon weg oder nicht lesbar
-        # In /proc/*/cmdline trennt ein Nullzeichen die Argumente.
-        kommando = kommando.replace("\x00", " ")
-        if "piper.http_server" not in kommando or f"--port {_PORT}" not in kommando:
+        if not _ist_unser_piper(kommando):
             continue
         try:
             os.kill(pid, signal.SIGTERM)
@@ -632,6 +642,8 @@ def speicher_pruefen() -> None:
         p = _prozess
         if p is None or p.poll() is not None:
             return                                  # läuft gerade keiner
+        if _im_gange > 0:
+            return                                  # spricht gerade, egal wie lange schon
         if time.time() - _letzte_nutzung < 15:
             return                                  # eben benutzt — in Ruhe lassen
         if _rss_mb(p.pid) < _PIPER_MAX_MB:
@@ -705,9 +717,22 @@ def _sprechen(text: str, name: str) -> bytes:
     if name.startswith(_GC_PRAEFIX):
         return _google_sprechen(text, name[len(_GC_PRAEFIX):])
 
-    global _letzte_nutzung
-    _letzte_nutzung = time.time()      # markiert Aktivität — der Wächter fasst
-                                       # Piper dann nicht an (siehe speicher_pruefen)
+    global _letzte_nutzung, _im_gange
+    # Aktivität markieren, solange gesprochen wird: Ein langer Absatz braucht
+    # mehr als die 15 Sekunden Schonfrist, der Wächter darf Piper dann nicht
+    # mitten im Satz beenden (siehe speicher_pruefen).
+    with _zaehler_sperre:
+        _im_gange += 1
+    _letzte_nutzung = time.time()
+    try:
+        return _piper_sprechen(text, name)
+    finally:
+        with _zaehler_sperre:
+            _im_gange -= 1
+        _letzte_nutzung = time.time()      # die Schonfrist zählt ab dem Ende
+
+
+def _piper_sprechen(text: str, name: str) -> bytes:
     stem, sprecher = _zerlegen_stimme(name)
     if stem in AUSSPRACHE_STIMMEN:
         text = aussprache_anwenden(text)
