@@ -415,7 +415,7 @@
   <!-- Die Speicher-Ampel des Wächters (systemd-Timer). Steht nur da, wenn es
        eine Messung gibt — sonst würde eine leere Zeile Platz fressen. -->
   <div id="speicher-zeile" class="speicher-zeile" hidden>
-    <span id="speicher-punkt" class="speicher-punkt"></span>
+    <span id="speicher-punkt" class="speicher-punkt" aria-hidden="true"></span>
     <span id="speicher-text"></span>
   </div>
   <div id="liste" class="liste"></div>
@@ -488,7 +488,7 @@
        nächsten — der Zusammenhang drumherum bleibt sichtbar. -->
   <div id="verlauf-suche" class="bib-suche verlauf-suche" hidden>
     <svg class="bib-suche-lupe" viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
-    <input type="search" id="verlauf-suchfeld" class="bib-suchfeld"
+    <input type="search" id="verlauf-suchfeld" aria-label="Im Verlauf suchen" class="bib-suchfeld"
            placeholder="Im Verlauf suchen …" autocomplete="off" enterkeyhint="search">
     <span id="verlauf-suche-stand" class="verlauf-suche-stand"></span>
     <button type="button" id="verlauf-suche-zurueck" class="knopf-blank" aria-label="Voriger Treffer">▲</button>
@@ -532,7 +532,7 @@
       <button type="button" id="anmelde-kopieren" class="frage-knopf" hidden>Link kopieren</button>
     </div>
     <div class="anmelde-code-zeile" id="anmelde-code-zeile" hidden>
-      <input type="text" id="anmelde-code" autocomplete="off" autocapitalize="off"
+      <input type="text" id="anmelde-code" aria-label="Anmelde-Code aus dem Browser" autocomplete="off" autocapitalize="off"
              spellcheck="false" placeholder="Code aus dem Browser einfügen">
       <button type="button" id="anmelde-code-senden" class="frage-knopf ja">Code senden</button>
     </div>
@@ -609,7 +609,7 @@
          jüngste Antwort nummerierte Fragen mit Empfehlung hat. Ein Tipp trägt ihn ein. -->
     <button type="button" id="antwort-vorschlag" class="antwort-vorschlag" hidden></button>
     <div class="feld-rahmen">
-      <textarea id="eingabe" class="eingabe" placeholder="Nachricht an Claude …"
+      <textarea id="eingabe" aria-label="Nachricht an Claude" class="eingabe" placeholder="Nachricht an Claude …"
                 rows="1" autocomplete="off" autocapitalize="sentences"
                 enterkeyhint="send"></textarea>
       <button type="button" id="knopf-leeren" class="knopf-leeren" aria-label="Alles löschen" hidden>
@@ -828,7 +828,7 @@
            ewig (Roli 31.10.2026). Filtert rein im Browser, Tippen genügt. -->
       <div class="bib-suche neu-suche">
         <svg class="bib-suche-lupe" viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
-        <input type="search" id="neu-suche" class="bib-suchfeld"
+        <input type="search" id="neu-suche" aria-label="Ordner suchen" class="bib-suchfeld"
                placeholder="Ordner suchen …" autocomplete="off" enterkeyhint="search">
       </div>
       <div id="neu-ordner" class="ordnerwahl"></div>
@@ -836,7 +836,7 @@
       <!-- Steht hier etwas, gewinnt es über die Auswahl oben: Die App legt
            dann unter ~/projekte einen frischen Ordner an — mit Start-CLAUDE.md
            und Git-Repo aus der Vorlage. -->
-      <input type="text" id="neu-projekt" class="eingabe mono"
+      <input type="text" id="neu-projekt" aria-label="Name des neuen Projekts" class="eingabe mono"
              pattern="[A-Za-z0-9][A-Za-z0-9._\-]*"
              placeholder="… oder NEUES Projekt anlegen: Ordnername">
     </div>
@@ -1200,7 +1200,7 @@
          stroke-width="1.8" stroke-linecap="round">
       <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
     </svg>
-    <input type="search" id="bib-suchfeld" class="bib-suchfeld"
+    <input type="search" id="bib-suchfeld" aria-label="Skill suchen" class="bib-suchfeld"
            placeholder="Skill suchen …" autocomplete="off" enterkeyhint="search">
   </div>
   <div id="bib-reiter" class="bib-reiter"></div>

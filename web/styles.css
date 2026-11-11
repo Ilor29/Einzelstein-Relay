@@ -11,8 +11,11 @@
   --erhoben-2: #30302E;
   --linie: #3E3E3B;
   --schrift: #F5F4EF;
-  --schrift-leise: #A6A29A;
-  --schrift-schwach: #7A766E;
+  --schrift-leise: #B5B1A9;
+  /* Mindestens 4,5 zu 1 auch auf den erhobenen Flächen (Durchsicht 11.11. Befund 16). */
+  --schrift-schwach: #9C988F;
+  /* Schrift auf Akzentflächen: Weiß kam im Dunkeln nur auf 3,1 zu 1. */
+  --auf-akzent: #1F1E1D;
   --akzent: #D97757;
   --akzent-weich: #3A2820;
   --laeuft: #6BB899;
@@ -49,7 +52,8 @@
   --linie: #E4E7EF;
   --schrift: #14182B;
   --schrift-leise: #5B6275;
-  --schrift-schwach: #8A91A3;
+  --schrift-schwach: #626A7D;
+  --auf-akzent: #FFFFFF;
   --akzent: #B5541D;
   --akzent-weich: #F3E2D6;
   --laeuft: #1E7A55;
@@ -136,7 +140,10 @@ html, body {
 .speicher-zeile.gruen .speicher-punkt { background: var(--laeuft); }
 .speicher-zeile.gelb  .speicher-punkt { background: var(--wartet); }
 .speicher-zeile.rot   .speicher-punkt { background: #D9534F; }
-.speicher-zeile.rot { color: #D9534F; }
+.speicher-zeile.rot { color: #E8746F; font-weight: 600; }
+/* Form zusätzlich zur Farbe: Kreis heißt in Ordnung, Raute knapp, Quadrat kritisch. */
+.speicher-zeile.gelb .speicher-punkt { border-radius: 1px; transform: rotate(45deg); }
+.speicher-zeile.rot  .speicher-punkt { border-radius: 1px; width: 10px; height: 10px; }
 
 .sitzung-info {
   display: flex;
@@ -705,7 +712,7 @@ body.eng .sitzung-info { display: none; }
 .frage-knopf.ja {
   background: var(--akzent);
   border-color: var(--akzent);
-  color: #fff;
+  color: var(--auf-akzent);
   font-weight: 600;
 }
 .frage-knopf:active { filter: brightness(.9); }
@@ -916,7 +923,7 @@ body.eng .sitzung-info { display: none; }
   gap: .5rem;
   width: 100%;
   background: var(--akzent);
-  color: #fff;
+  color: var(--auf-akzent);
   border: 0;
   border-radius: 11px;
   padding: .85rem;
@@ -1677,7 +1684,7 @@ body.eng .sitzung-info { display: none; }
   width: 34px; height: 34px;
   flex: none;
   background: var(--akzent);
-  color: #fff;
+  color: var(--auf-akzent);
   border: 0;
   border-radius: 50%;
   cursor: pointer;
@@ -1732,7 +1739,7 @@ body.eng .sitzung-info { display: none; }
 /* Während es zuhört, pulsiert es — sonst weiß man nicht, ob es lauscht. */
 .knopf-diktat.hoert {
   background: var(--akzent);
-  color: #fff;
+  color: var(--auf-akzent);
   animation: pochen 1.4s ease-in-out infinite;
 }
 @keyframes pochen {
@@ -1833,7 +1840,13 @@ body.eng .sitzung-info { display: none; }
   color: var(--schrift-leise);
   cursor: pointer;
 }
-.schalterzeile input { display: none; }
+.schalterzeile { position: relative; min-height: 40px; }
+.schalterzeile input {
+  position: absolute; right: 0; top: 50%;
+  width: 38px; height: 21px; margin: -10px 0 0;
+  opacity: 0; cursor: pointer;
+}
+.schalterzeile input:focus-visible + .schalter { outline: 2px solid var(--akzent); outline-offset: 2px; }
 .schalter {
   margin-left: auto;
   width: 38px; height: 21px;
@@ -2081,7 +2094,7 @@ mark.treffer {
   border-radius: 3px;
   padding: 0 1px;
 }
-mark.treffer.aktuell { background: var(--akzent); color: #fff; }
+mark.treffer.aktuell { background: var(--akzent); color: var(--auf-akzent); }
 
 .bib-reiter {
   flex: none;
@@ -2449,7 +2462,7 @@ mark.treffer.aktuell { background: var(--akzent); color: #fff; }
   border: 1px solid var(--linie); background: var(--erhoben-2); color: inherit;
   font: inherit; font-size: .9rem; cursor: pointer;
 }
-.wahl-taste.an { background: var(--akzent, #D97757); color: #fff; border-color: transparent; font-weight: 600; }
+.wahl-taste.an { background: var(--akzent, #D97757); color: var(--auf-akzent); border-color: transparent; font-weight: 600; }
 .wahl-alle { flex: 1; }
 .wahl-eigen {
   flex: 1 1 100%; width: 100%; box-sizing: border-box; min-height: 3.2rem; padding: .6rem .8rem;
@@ -2607,3 +2620,24 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .zh-komm-liste textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: .85rem; min-height: 3rem; padding: .35rem; background: var(--erhoben); color: var(--schrift); border: 1px solid var(--linie); border-radius: 8px; }
 .zh-komm-knoepfe { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
 #zh-komm-schalter[aria-pressed="true"] { background: var(--akzent, #e8825a); color: #1a1a1a; }
+
+
+/* --- Tippflächen (Durchsicht 11.11. Befund 16) ---------------------------------
+   Kleine Knöpfe bekommen eine unsichtbare, größere Trefferfläche. Das Aussehen
+   bleibt gleich. Wo Nachbarn dicht stehen (Kopfzeile der Karte, Symbole auf der
+   Karte), wächst die Fläche nur dorthin, wo Platz ist. */
+.karte .nadel, .karte .mond, .karte .ungelesen-knopf,
+.kopf .knopf-blank, #knopf-kartenmenue, .modus-pille, .modell-knopf,
+.knopf-diktat, .knopf-senden { position: relative; }
+.karte .nadel::after, .karte .mond::after, .karte .ungelesen-knopf::after,
+.kopf .knopf-blank::after, .modus-pille::after, .modell-knopf::after,
+.knopf-leeren::after, .knopf-diktat::after, .knopf-senden::after {
+  content: ""; position: absolute;
+}
+.karte .nadel::after, .karte .mond::after, .karte .ungelesen-knopf::after { inset: -10px -3px; }
+.kopf .knopf-blank::after { inset: -5px -3px; }
+.kopf-sitzung .knopf-blank::after { inset: -5px 0; }
+#knopf-kartenmenue::after { inset: -7px -8px -7px 0; }
+.modus-pille::after, .modell-knopf::after { inset: -8px 0; }
+.knopf-leeren::after { inset: -6px; }
+.knopf-diktat::after, .knopf-senden::after { inset: -3px; }

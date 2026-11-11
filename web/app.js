@@ -696,7 +696,10 @@ async function ladeSpeicher() {
 
   zeile.classList.remove("gruen", "gelb", "rot");
   zeile.classList.add(stand.ampel);
-  let text = `Speicher: ${stand.verfuegbarMb} MB verfügbar · `
+  // Die Ampel sagt ihren Stand auch als Wort und als Form, nicht nur über die
+  // Farbe des Punktes (Rot-Grün-Schwäche, Durchsicht 11.11. Befund 16).
+  const wort = { gruen: "in Ordnung", gelb: "knapp", rot: "kritisch" }[stand.ampel] || stand.ampel;
+  let text = `Speicher ${wort}: ${stand.verfuegbarMb} MB verfügbar · `
     + `Swap ${stand.swapBenutztMb}/${stand.swapGesamtMb} MB`;
   // Größtes Programm zuerst: Die dickste Karte allein führte in die Irre
   // (28.09.2026), weil Docker-Dienste oder Modelle weit mehr brauchen.
@@ -752,6 +755,17 @@ function stoppeListe() {
 // --- Eine Sitzung ------------------------------------------------------------
 
 let term = null;
+// Jedes Blatt ist für Vorleseprogramme ein Dialog mit dem Namen seiner Überschrift.
+document.querySelectorAll(".blatt").forEach((blatt, i) => {
+  blatt.setAttribute("role", "dialog");
+  blatt.setAttribute("aria-modal", "true");
+  const titel = blatt.querySelector("h2");
+  if (titel) {
+    if (!titel.id) titel.id = `blatt-titel-${i}`;
+    blatt.setAttribute("aria-labelledby", titel.id);
+  }
+});
+
 let fit = null;
 let steckdose = null;      // die WebSocket-Verbindung
 let aktuelleSitzung = null;
