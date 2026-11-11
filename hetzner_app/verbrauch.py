@@ -89,10 +89,11 @@ def kontext(cwd: str) -> dict | None:
 # (5 Minuten) oder 2-fach (1 Stunde) der Eingabe. Unbekannte Modelle zählen
 # nicht mit und werden als Anzahl gemeldet. Bei neuen Modellen hier nachtragen.
 _PREISE = {
+    "claude-fable-5-2": (8.0, 40.0, 0.20),
     "claude-fable-5-1": (10.0, 50.0, 0.25), "claude-fable-5": (10.0, 50.0, 1.0),
     "claude-opus-5-5": (4.0, 20.0, 0.20), "claude-opus-5": (5.0, 25.0, 0.5),
     "claude-opus-4-8": (5.0, 25.0, 0.5),
-    "claude-sonnet-5-5": (2.0, 10.0, 0.20), "claude-sonnet-5": (2.0, 10.0, 0.20),
+    "claude-sonnet-5-5": (2.0, 10.0, 0.10), "claude-sonnet-5": (2.0, 10.0, 0.20),
     "claude-haiku-5-5": (0.10, 0.50, 0.01), "claude-haiku-4-5-20251001": (1.0, 5.0, 0.10),
 }
 # Der Dollarkurs liegt als Datei bereit, wenn der LEIT//PULS ihn holt. Fehlt sie
