@@ -1177,3 +1177,11 @@ Bestanden laut Roli: 18 Modellnamen in der Kartenliste, 19 Kontext-Balken, 20 Au
 Nachgesehen am laufenden Dienst: Piper ist nach dem Neustart mit der neuen Umgebung gestartet (12 Variablen, keine mit HETZNER_, KEY, TOKEN, SECRET oder PASSWOR im Namen, nur die Namen angesehen) und beantwortet `/voices` mit 200.
 **Nicht geprüft:** ein gesprochener Satz am Handy nach der Änderung, echte Benachrichtigung mit ausgefallenem Push-Dienst.
 **Offen aus Befund 15:** `_letzte_nutzung` nur am Satzanfang (der Speicherwächter kann Piper mitten im Satz beenden), `--port 5005` trifft als Teilstring auch 50051 bis 50059, der Rest der Zeile im Baubuch-Befund.
+
+## 11.11.2026: V239, Neue Karte: verborgener Ordner, Doppeltipp, abgelehnte Benachrichtigung
+**Auslöser:** Roli 11.11. 22:28 „33. Ja“ (Befund 9 der Durchsicht).
+**Ursache:** Passte beim Tippen in die Ordnersuche kein Ordner, blieb der zuletzt gewählte Ordner gewählt, obwohl er verborgen war, und „Sitzung starten“ nahm ihn. Das Formular hatte keinen Schutz gegen Doppeltipp, zwei rasche Tipps legten zwei Karten an. Lehnte man die Benachrichtigungs-Erlaubnis ab, stand das nur in der Konsole.
+**Lösung:** Ohne Treffer wird die Auswahl gelöscht (`gewaehlterOrdner = null`), „Sitzung starten“ weist dann ohne Ordner ab; beim nächsten Treffer rückt der erste nach. `neueKarteLaeuft` sperrt das Formular und den Knopf während der Anfrage, ein `finally` gibt beides auch nach einem Serverfehler wieder frei. Wurde die Erlaubnis verweigert, zeigt die Karte nach dem Start „Karte läuft, aber ohne Meldung: …“.
+**Geprüft:** Playwright 412x800, Testserver 8799, Scheinantworten: 8 von 8 (kein Treffer löscht die Auswahl, Starten ohne Ordner wird abgewiesen, neuer Treffer wird gewählt, Doppeltipp schickt eine Anfrage, Knopf gesperrt und danach frei, auch nach 500er, abgelehnte Erlaubnis meldet sich). Mit dem alten `app.js` fallen die ersten Prüfungen durch. Keine Seitenfehler. Skript in `/var/tmp/v239/probe.py`.
+**Nicht geprüft:** Handy, echte Erlaubnis-Abfrage von Android.
+

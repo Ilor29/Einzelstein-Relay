@@ -5857,7 +5857,15 @@ $("neu-suche").addEventListener("input", () => {
   });
   $("neu-ordner-leer").hidden = sichtbar.length > 0;
   const gewaehlt = alle.find((el) => el.classList.contains("gewaehlt"));
-  if ((!gewaehlt || gewaehlt.hidden) && sichtbar.length) sichtbar[0].click();
+  if ((!gewaehlt || gewaehlt.hidden) && sichtbar.length) {
+    sichtbar[0].click();
+  } else if (!sichtbar.length) {
+    // Nichts passt: Auswahl ganz löschen, sonst nähme „Sitzung starten“
+    // den verborgenen Ordner.
+    alle.forEach((el) => el.classList.remove("gewaehlt"));
+    gewaehlterOrdner = null;
+    zeigeNamensvorschlag();
+  }
 });
 
 // „Übergabe lesen“ als erster Auftrag, mit einem Tipp (V191).
@@ -5866,8 +5874,11 @@ $("neu-vorschlag-uebergabe").addEventListener("click", () => {
   $("neu-auftrag").focus();
 });
 
+let neueKarteLaeuft = false;   // Schutz gegen Doppeltipp auf „Sitzung starten“
+
 $("neu-formular").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (neueKarteLaeuft) return;
   const fehler = $("neu-fehler");
   fehler.hidden = true;
 
@@ -5883,6 +5894,10 @@ $("neu-formular").addEventListener("submit", async (e) => {
   }
 
   const melden = $("neu-melden").checked;
+  let erlaubnisFehlt = "";
+  neueKarteLaeuft = true;
+  const startKnopf = $("neu-formular").querySelector('button[type="submit"]');
+  startKnopf.disabled = true;
 
   try {
     // Erst die Erlaubnis holen — danach wäre das Fenster weg, weil wir
@@ -5893,6 +5908,7 @@ $("neu-formular").addEventListener("submit", async (e) => {
       } catch (err) {
         // Kein Grund, die Sitzung deswegen platzen zu lassen.
         console.warn("Benachrichtigungen aus:", err.message);
+        erlaubnisFehlt = err.message;
       }
     }
 
@@ -5909,9 +5925,13 @@ $("neu-formular").addEventListener("submit", async (e) => {
     });
     $("neu-formular").reset();
     starteListe();
+    if (erlaubnisFehlt) melde(`Karte läuft, aber ohne Meldung: ${erlaubnisFehlt}`);
   } catch (err) {
     fehler.textContent = err.message;
     fehler.hidden = false;
+  } finally {
+    neueKarteLaeuft = false;
+    startKnopf.disabled = false;
   }
 });
 
