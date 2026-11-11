@@ -260,6 +260,15 @@
       <rect x="7" y="6" width="3.4" height="12" rx="1.1"/>
       <rect x="13.6" y="6" width="3.4" height="12" rx="1.1"/>
     </g>
+    <!-- Einen Satz zurück / vor: Balken und Dreieck, wie bei Medien-Playern. -->
+    <g id="i-satz-zurueck" fill="currentColor" stroke="none">
+      <rect x="6" y="6" width="2.6" height="12" rx="1"/>
+      <path d="M18 6.6v10.8a.9.9 0 0 1-1.4.75l-7-5.4a.9.9 0 0 1 0-1.5l7-5.4A.9.9 0 0 1 18 6.6z"/>
+    </g>
+    <g id="i-satz-vor" fill="currentColor" stroke="none">
+      <rect x="15.4" y="6" width="2.6" height="12" rx="1"/>
+      <path d="M6 6.6v10.8a.9.9 0 0 0 1.4.75l7-5.4a.9.9 0 0 0 0-1.5l-7-5.4A.9.9 0 0 0 6 6.6z"/>
+    </g>
     <g id="i-abspielen" fill="currentColor" stroke="none">
       <path d="M8 6.2v11.6a1 1 0 0 0 1.5.87l9.2-5.8a1 1 0 0 0 0-1.74L9.5 5.33A1 1 0 0 0 8 6.2z"/>
     </g>
@@ -800,8 +809,14 @@
      zwischendurch in die Liste oder einen anderen Chat schaut — die Leiste
      bleibt sichtbar und behält Pause und Beenden in Reichweite. -->
 <div id="vorlese-leiste" class="vorlese-leiste" hidden>
+  <button type="button" id="vl-zurueck" class="vl-knopf" aria-label="Einen Satz zurück">
+    <svg viewBox="0 0 24 24"><use href="#i-satz-zurueck"/></svg>
+  </button>
   <button type="button" id="vl-pause" class="vl-knopf" aria-label="Pause">
     <svg viewBox="0 0 24 24"><use href="#i-pause"/></svg>
+  </button>
+  <button type="button" id="vl-vor" class="vl-knopf" aria-label="Einen Satz vor">
+    <svg viewBox="0 0 24 24"><use href="#i-satz-vor"/></svg>
   </button>
   <span id="vl-zeit" class="vl-zeit" aria-hidden="true">0:00</span>
   <button type="button" id="vl-schliessen" class="vl-knopf" aria-label="Vorlesen beenden">

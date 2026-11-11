@@ -1213,3 +1213,10 @@ Tagebuch „wach-bericht“: `sprichStrom` hatte eine eigene Variable `tonUhrMer
 **Fehler unterwegs:** Der erste Test sprach nur ein Stück, weil `haeppchen` erst ab 90 Zeichen trennt. Danach mit langen Sätzen.
 **Nicht geprüft:** Handy und Kopfhörertasten, echte Stimme (kein zweiter Piper-Prozess), iOS-Weg mit echtem Ton, Wach-Bericht nach echter Bildschirmsperre.
 **Offen aus Befund 12:** nichts mehr.
+
+## 11.11.2026: V243, Vorlese-Leiste mit „Einen Satz zurück“ und „Einen Satz vor“
+**Auslöser:** Roli 11.11. 22:52 „37. Wo soll das gehen? Vor zurück knopf“ (die Prüfbitte zu V242 setzte Knöpfe voraus, die es nicht gab; Vor und Zurück gab es nur über Medientasten) und 22:57 „39. Ja“.
+**Lösung:** Die Leiste hat jetzt links „Einen Satz zurück“ und rechts neben Pause „Einen Satz vor“ (neue Symbole `i-satz-zurueck`, `i-satz-vor`). Beide rufen `springe(-1)` und `springe(1)` auf, also dieselbe Logik wie die Medientasten. Am Anfang bleibt „zurück“ beim ersten Satz, am Ende wird geklemmt.
+**Geprüft:** Playwright 412x700, Scheinstrom: Leiste mit vier Knöpfen (zurück, Pause, vor, Kreuz), Vor springt von Satz 1 auf 2, zweimal Zurück landet bei Satz 0 und der Vortrag läuft, Zurück am Anfang bleibt bei 0. Knopf 37 mal 37 Pixel. Bildschirmfoto angesehen. Keine Seitenfehler.
+**Nicht geprüft:** Handy, iOS-Weg, Bedienung per Daumen bei laufendem Ton.
+**Lehre:** Vor einer Prüfbitte an Roli erst nachsehen, ob der Bedienweg in der App überhaupt existiert.

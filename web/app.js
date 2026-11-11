@@ -5307,6 +5307,8 @@ async function pauseUmschalten() {
 }
 
 $("vl-pause").addEventListener("click", pauseUmschalten);
+$("vl-zurueck").addEventListener("click", () => springe(-1));
+$("vl-vor").addEventListener("click", () => springe(1));
 $("vl-schliessen").addEventListener("click", stille);
 
 // --- Freisprech-Modus --------------------------------------------------------
