@@ -1227,6 +1227,7 @@ function randZeigen() {
   }
 }
 
+let verlaufFehlschlaege = 0;   // Fehlschläge in Folge; beim zweiten gibt es einmal eine Meldung
 async function ladeVerlauf() {
   if (!aktuelleSitzung || imTerminal) return;
   const fuer = aktuelleSitzung.name;     // die Antwort gilt nur für diese Karte
@@ -1239,11 +1240,17 @@ async function ladeVerlauf() {
       `/sessions/${encodeURIComponent(fuer)}/verlauf`, optionen
     );
     if (aktuelleSitzung?.name !== fuer) return;   // inzwischen andere Karte offen
-    if (antwort.status === 304) return;         // nichts Neues
+    if (antwort.status === 304) { verlaufFehlschlaege = 0; return; }   // nichts Neues
     verlaufEtag = antwort.headers.get("ETag") || "";
     bloecke = await antwort.json();
     if (aktuelleSitzung?.name !== fuer) return;
-  } catch {
+    verlaufFehlschlaege = 0;
+  } catch (err) {
+    // Früher still: Der Verlauf blieb stehen, und nichts sagte, dass er alt ist.
+    // (Abgemeldet ist etwas anderes, dann zeigt die App schon die Anmeldung.)
+    if (err?.message !== "Nicht angemeldet." && aktuelleSitzung?.name === fuer && ++verlaufFehlschlaege === 2) {
+      melde("Keine Verbindung zum Server. Der Verlauf ist gerade nicht aktuell.");
+    }
     return;
   }
 
@@ -1316,6 +1323,8 @@ async function aeltereNachladen() {
     for (const b of seite.bloecke) verlaufBloecke.set(b.nr, b);
     verlaufVor = Math.min(verlaufVor, seite.von);
     if (seite.anfang) verlaufAnfang = true;
+  } else {
+    melde("Das Ältere ließ sich gerade nicht laden. Beim nächsten Hochscrollen versuche ich es wieder.");
   }
   randZeigen();
   verlaufZeichnen();
@@ -5495,17 +5504,32 @@ $("knopf-einstellungen").addEventListener("click", async () => {
   const liste = $("stimmen-liste");
   liste.replaceChildren();
 
+  // Sprache, Tempo, Verlauf, Diktat und Geräte hängen nicht an der Stimmen-Liste.
+  // Sie laden zuerst, damit die Einstellungen ganz erscheinen, auch wenn die
+  // Stimmen gerade nicht kommen (Durchsicht 11.11., Befund 8).
+  ladeSpracheWahl();
+  ladeTempo();
+  ladeVerlaufWahl();
+  ladeDiktatWahl();
+  ladeGeraete();
+
   let stimmen;
   try {
     stimmen = await (await api("/stimmen")).json();
   } catch {
+    liste.replaceChildren();
     const hinweis = document.createElement("p");
     hinweis.className = "hinweis";
     hinweis.textContent = "Stimmen konnten nicht geladen werden — keine Verbindung?";
-    liste.append(hinweis);
-    ladeGeraete();
+    const nochmal = document.createElement("button");
+    nochmal.type = "button";
+    nochmal.className = "frage-knopf";
+    nochmal.textContent = "Noch einmal versuchen";
+    nochmal.addEventListener("click", () => $("knopf-einstellungen").click());
+    liste.append(hinweis, nochmal);
     return;
   }
+  liste.replaceChildren();    // zwei rasche Tipps sollen die Liste nicht doppelt füllen
 
   let probeNr = 0;
   for (const s of stimmen) {
@@ -5554,12 +5578,6 @@ $("knopf-einstellungen").addEventListener("click", async () => {
 
     liste.append(el);
   }
-
-  ladeSpracheWahl();
-  ladeTempo();
-  ladeVerlaufWahl();
-  ladeDiktatWahl();
-  ladeGeraete();
 });
 
 // Die Wahl der Oberflächensprache (Deutsch oder Englisch), gemerkt auf dem Gerät.
@@ -6479,7 +6497,13 @@ $("neuskill-schliessen").addEventListener("click", neuskillBlattZu);
 
 async function nachAnlegen(id) {
   neuskillBlattZu();
-  skills = await (await api("/skills")).json();
+  try {
+    skills = await (await api("/skills")).json();
+  } catch {
+    // Der Skill liegt schon auf dem Server; nur die Liste kam nicht neu.
+    melde("Skill angelegt. Die Liste ließ sich gerade nicht neu laden, bitte die Bibliothek noch einmal öffnen.");
+    return;
+  }
   baueReiter();
   zeigeSkills();
   fuelleKategorien();
@@ -7950,6 +7974,7 @@ $("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden 
     if (!adresse) return;
     const w = window.open(adresse, "kaira-fenster", "popup=yes,width=400,height=680");
     if (w) w.focus();
+    else melde("Der Browser hat das Kaira-Fenster gesperrt. Bitte Pop-ups für diese Seite erlauben.");
   }));
   (async () => {
     let d;
