@@ -1085,3 +1085,9 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Geschmack:** doppelte CSS-Regeln, `--warn` nirgends definiert, ein emojiartiges Zeichen in `styles.css`, tote ID `zh-befehle-block`, `zurHandKorb` ohne Aufruf, `manifest.webmanifest` nennt „Claude-Code-Sitzungen“.
 **Nicht geprüft:** alles am Handy, Caddy-Regeln (Datei nicht lesbar), ob Befunde 4 und 5 im Browser wirklich auftreten.
 **Erweiterungen (höchstens fünf, jede mit dem günstigsten widerlegenden Test), noch nicht vorgeschlagen:** erst nach Rolis Auswahl der Befunde.
+
+## 11.11.2026: V228, Ordner dl nur noch nach Anmeldung
+**Auslöser:** Roli 11.11. 17:21 „15. Deine Empfehlung“ (Befund 2 der Durchsicht: APK-Dateien ohne Anmeldung abrufbar).
+**Lösung:** Eigene Route `/dl/{pfad}` mit `require_auth` vor dem Static-Mount, Pfad wird aufgelöst und darf den Ordner `web/dl` nicht verlassen. Der übrige Ordner `web/` bleibt offen, sonst käme man nicht zur Anmeldeseite.
+**Geprüft:** Öffentlich über die Adresse: 401. Testserver 8799 mit ausgehängter Anmeldung: APK 200 mit 17 MB, Tourpaket 200, fehlende Datei und `..%2f`-Pfad 404. Nichts in der App verlinkt `dl/`.
+**Nicht geprüft:** ob jemand die Links ohne Anmeldung (Lea, Lorenz, Handy ohne Cookie) benutzt; sie bekommen jetzt 401. Roli sagt Bescheid, wenn etwas fehlt.

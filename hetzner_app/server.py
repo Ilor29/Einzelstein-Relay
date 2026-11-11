@@ -255,7 +255,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 227
+VERSION = 228
 
 
 @app.get("/api/version")
@@ -2762,6 +2762,18 @@ def teilen_ziel_post() -> Response:
     schickt ein Neuladen das Formular ein zweites Mal.
     """
     return Response(status_code=303, headers={"Location": "/teilen"})
+
+
+@app.get("/dl/{pfad:path}", dependencies=[Depends(require_auth)])
+def downloads(pfad: str) -> FileResponse:
+    """Die Dateien im Ordner web/dl (Installationspakete, Tourpaket) gibt es nur
+    nach der Anmeldung. Alles andere in web/ bleibt offen, sonst käme man nicht
+    einmal bis zur Anmeldeseite. Der Pfad darf den Ordner nicht verlassen."""
+    wurzel = (WEB_DIR / "dl").resolve()
+    ziel = (wurzel / pfad).resolve()
+    if wurzel not in ziel.parents or not ziel.is_file():
+        raise HTTPException(404, "Diese Datei gibt es nicht.")
+    return FileResponse(ziel)
 
 
 app.mount("/", StaticFiles(directory=WEB_DIR), name="web")
