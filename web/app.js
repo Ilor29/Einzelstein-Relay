@@ -7151,16 +7151,28 @@ function eigeneAntwortenAbgleichen() {
 
 function waehle(nr, satz, box, nurSetzen = false) {
   const feld = $("eingabe");
-  const zeilen = feld.value.split("\n").filter((z) => z.trim() !== "");
-  const re = new RegExp(`^${nr}\\.\\s`);
-  const i = zeilen.findIndex((z) => re.test(z));
+  // Nur die nummerierten Antwortzeilen werden angefasst. Eigener Text und
+  // Leerzeilen bleiben, wo sie stehen (vorher räumte jeder Tipp sie weg und
+  // schob freie Zeilen ans Ende, Durchsicht 11.11.).
+  const zeilen = feld.value.split("\n");
+  const num = (z) => { const m = z.match(/^(\d+)\.\s/); return m ? Number(m[1]) : null; };
+  const i = zeilen.findIndex((z) => num(z) === nr);
   const neu = `${nr}. ${satz}`;
   if (i >= 0 && zeilen[i] === neu && !nurSetzen) zeilen.splice(i, 1);    // nochmal getippt: zurücknehmen
   else if (i >= 0) zeilen[i] = neu;
-  else zeilen.push(neu);
-  // Nach Nummer sortieren, damit die Antwort in der Reihenfolge der Fragen steht.
-  const num = (z) => { const m = z.match(/^(\d+)\.\s/); return m ? Number(m[1]) : 1e9; };
-  zeilen.sort((a, b) => num(a) - num(b));
+  else {
+    // Neue Zeile in der Reihenfolge der Fragen: vor die erste Antwort mit
+    // größerer Nummer, sonst hinter die letzte, sonst ans Ende.
+    const spaeter = zeilen.findIndex((z) => num(z) !== null && num(z) > nr);
+    if (spaeter >= 0) zeilen.splice(spaeter, 0, neu);
+    else {
+      let letzte = -1;
+      zeilen.forEach((z, k) => { if (num(z) !== null) letzte = k; });
+      if (letzte >= 0) zeilen.splice(letzte + 1, 0, neu);
+      else if (zeilen.length === 1 && zeilen[0] === "") zeilen[0] = neu;
+      else zeilen.push(neu);
+    }
+  }
   feld.value = zeilen.join("\n");
   feld.dispatchEvent(new Event("input", { bubbles: true }));
   // Welche Taste gilt, sieht man an der Füllung (und am Haken, nicht nur an der Farbe).

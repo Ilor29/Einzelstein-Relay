@@ -1114,3 +1114,10 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Lösung:** Beide Funktionen merken sich den Kartennamen vor der Anfrage und verwerfen die Antwort, wenn inzwischen eine andere Karte offen ist (bei `ladeVerlauf` vor dem Setzen des ETag). `antworte(nummer, fuer)` schickt an die Karte, aus der die Frage stammt, und tut nichts, wenn sie nicht mehr offen ist. Beim Wechsel und bei Zurück wird der Fragen-Kasten versteckt und der ETag des Verlaufs geleert.
 **Geprüft:** Playwright 412x800, Testserver 8799 mit zwei Scheinkarten: Frage von A um 1,5 s verzögert, sofort B geöffnet: in B keine Knöpfe. Gegenprobe: A offen, Knöpfe erscheinen, Klick auf „Ja“ schickt genau einen POST an `/sessions/ProbeA/antwort`.
 **Offen aus demselben Muster, noch nicht angefasst:** Dateibaum, Datei-Inhalt, Zurückspulen, Glätten, Modell wählen, Umbenennen, Modelle holen (Befund 5 der Durchsicht).
+
+## 11.11.2026: V232, Antwort-Tipp lässt den übrigen Text im Eingabefeld in Ruhe
+**Auslöser:** Roli 11.11. 17:21 „14. Deine Empfehlung“ (Befund 7 der Durchsicht).
+**Ursache:** `waehle()` filterte beim Tippen auf Ja, Nein oder Deine Empfehlung alle Leerzeilen aus dem Eingabefeld und sortierte alle Zeilen nach Nummer, wobei freie Textzeilen ans Ende wanderten.
+**Lösung:** Nur die Zeile mit der Nummer der Frage wird ersetzt, entfernt oder neu eingefügt. Eine neue Zeile kommt vor die erste Antwort mit größerer Nummer, sonst hinter die letzte, sonst ans Ende. Freitext und Leerzeilen bleiben stehen.
+**Geprüft:** Playwright, `waehle` direkt aufgerufen: „Mein Text, Leerzeile, zweiter Absatz“ plus Antworten 3, 1, 2 ergibt Text unverändert, darunter 1, 2, 3 in Reihenfolge; leeres Feld mit 5 und 2 ergibt 2, 5; zweimal dieselbe Taste nimmt zurück; vorhandene „1. Ja“ mit Anmerkung darunter wird zu „1. Nein“, Anmerkung bleibt.
+**Nicht geprüft:** Eigene-Antwort-Feld in Kombination mit Freitext, Handy.
