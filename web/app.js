@@ -755,6 +755,10 @@ let term = null;
 let fit = null;
 let steckdose = null;      // die WebSocket-Verbindung
 let aktuelleSitzung = null;
+// Ist diese Karte noch offen? Jede Anfrage merkt sich vorher den Kartennamen und
+// fragt danach hier nach: Wer inzwischen gewechselt hat, bekommt die Antwort der
+// alten Karte nicht in die neue gemalt (Durchsicht 11.11., Befund 5).
+function nochOffen(name) { return !!name && aktuelleSitzung?.name === name; }
 
 // Die Tasten, die einer Handytastatur fehlen — ohne die man Claude Code
 // schlicht nicht bedienen kann.
@@ -1753,11 +1757,13 @@ function zeigeAnmeldung(frage) {
 $("anmelde-start").addEventListener("click", async () => {
   const knopf = $("anmelde-start");
   knopf.disabled = true;
+  const fuer = aktuelleSitzung?.name;
   try {
     const antwort = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/anmelden`,
+      `/sessions/${encodeURIComponent(fuer)}/anmelden`,
       { method: "POST" }
     )).json();
+    if (!nochOffen(fuer)) return;
     // Nicht auf den nächsten Takt warten — Link und Code-Feld sofort zeigen.
     zeigeAnmeldung({ anmeldung: "offen", anmeldeLink: antwort.link });
   } catch (err) {
@@ -1774,11 +1780,13 @@ $("anmelde-code-senden").addEventListener("click", async () => {
   const knopf = $("anmelde-code-senden");
   knopf.disabled = true;
   melde("Code eingereicht — einen Moment …");
+  const fuer = aktuelleSitzung?.name;
   try {
     const antwort = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/anmelde-code`,
+      `/sessions/${encodeURIComponent(fuer)}/anmelde-code`,
       { method: "POST", body: JSON.stringify({ code }) }
     )).json();
+    if (!nochOffen(fuer)) return;
     if (antwort.erfolg) {
       feld.value = "";
       zeigeAnmeldung(null);
@@ -1999,6 +2007,7 @@ function oeffneSitzung(sitzung) {
   entwurfMerken();     // was in der vorigen Karte noch im Feld stand
   if (aktuelleSitzung && aktuelleSitzung.name !== sitzung.name) {
     feldFuerKarteLeeren();
+    blaetterDerKarteZu();
     $("frage").hidden = true;    // Knöpfe der alten Karte gehören nicht in die neue
     offeneFrage = "";
     verlaufEtag = "";
@@ -2212,11 +2221,15 @@ async function sendeInSitzung(text) {
   // kamen sie als normaler Text an (Roli 27.09.2026: „wäre da nicht auch sinnig,
   // dass ich sowas in der Relay-App eintragen kann").
   const istBefehl = /^\s*(\/[a-z]|!\s*\S)/i.test(text);
-  await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/senden`, {
+  const fuer = aktuelleSitzung.name;
+  await api(`/sessions/${encodeURIComponent(fuer)}/senden`, {
     method: "POST",
     // Die Uhrzeit still vorangestellt, damit Claude immer weiß, wann jetzt ist.
     body: JSON.stringify({ text: istCode ? text : istBefehl ? text.trim() : `[${jetztStempel()}] ${text}` }),
   });
+  // Inzwischen eine andere Karte offen: Die Nachricht ist raus, aber „beschäftigt“
+  // und die Denk-Anzeige gehören nicht in die neue Karte.
+  if (!nochOffen(fuer)) { melde("Gesendet."); return; }
   // Du hast gerade abgeschickt — jetzt willst du die Antwort sehen. Also wieder
   // ans Ende mitlaufen, egal wo du vorher standest.
   folgeUnten = true;
@@ -2264,6 +2277,7 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   // wieder her.
   const gesamt = nachrichtMitAnhaengen(anhaenge, text);
   const gemerkt = anhaenge;
+  const fuer = aktuelleSitzung.name;
   feld.value = "";
   feldAnpassen();           // sonst bleibt das Feld auf voller Höhe stehen
   entwurfMerken();          // der Entwurf ist abgeschickt, nichts mehr zu merken
@@ -2272,6 +2286,13 @@ $("eingabe-formular").addEventListener("submit", async (e) => {
   try {
     await sendeInSitzung(gesamt);
   } catch (err) {
+    if (!nochOffen(fuer)) {
+      // Inzwischen andere Karte offen: Der Text gehört nicht in ihr Feld. Er
+      // kommt als Entwurf zurück in seine eigene Karte.
+      try { if (text) localStorage.setItem(`relay_entwurf_${fuer}`, text); } catch { /* nicht merkbar */ }
+      melde("Nicht gesendet. Der Text liegt als Entwurf in seiner Karte.");
+      return;
+    }
     feld.value = text;      // nichts verloren
     feldAnpassen();
     anhaenge = gemerkt;     // auch die Anhänge zurück
@@ -2301,11 +2322,13 @@ async function schnellbefehl(text) {
   // Bilder bleiben unbemerkt liegen. Pfade zuerst, der Befehlssatz dahinter.
   const gesamt = nachrichtMitAnhaengen(anhaenge, text);
   const gemerkt = anhaenge;
+  const fuer = aktuelleSitzung.name;
   anhaengeLeeren();
 
   try {
     await sendeInSitzung(gesamt);
   } catch (err) {
+    if (!nochOffen(fuer)) { melde(err.message); return; }   // andere Karte offen, dort nichts verstellen
     anhaenge = gemerkt;          // ging nicht raus — Anhänge zurück
     anhangStreifenZeichnen();
     beschaeftigt = false;
@@ -2963,6 +2986,7 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
   if (!dateien.length || !aktuelleSitzung) return;
 
   const istBild = endpunkt === "bild";
+  const fuer = aktuelleSitzung.name;   // die Anhänge gehören zu dieser Karte
   knopf.classList.add("laedt");
   try {
     for (const datei of dateien) {
@@ -2971,7 +2995,7 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
       // eintragen, sonst kommt das Paket zerrissen an.
       paket.append(feldname, datei);
       const antwort = await fetch(
-        `/api/sessions/${encodeURIComponent(aktuelleSitzung.name)}/${endpunkt}`,
+        `/api/sessions/${encodeURIComponent(fuer)}/${endpunkt}`,
         { method: "POST", body: paket }
       );
       if (!antwort.ok) {
@@ -2979,6 +3003,8 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
         throw new Error(koerper.detail || "Der Anhang kam nicht an.");
       }
       const { pfad } = await antwort.json();
+      // Karte gewechselt, während es lud: nicht an die neue Karte hängen.
+      if (!nochOffen(fuer)) { melde("Der Anhang gehörte zur vorigen Karte und wurde nicht angehängt."); return; }
       const dateiname = pfad.split("/").pop();
       anhaenge.push({
         pfad,
@@ -2988,7 +3014,7 @@ async function anhaengeHochladen(dateien, endpunkt, feldname, knopf) {
         // Nur Fotos haben eine Vorschau — über denselben Weg, über den auch der
         // Verlauf ein geschicktes Foto wieder anzeigt.
         url: istBild
-          ? `/api/bilder/${encodeURIComponent(aktuelleSitzung.name)}/${encodeURIComponent(dateiname)}`
+          ? `/api/bilder/${encodeURIComponent(fuer)}/${encodeURIComponent(dateiname)}`
           : "",
       });
     }
@@ -3126,6 +3152,16 @@ function entwurfMerken() {
 // entstanden sind. Nach dem Sichern des Entwurfs muss beides weg, sonst
 // schickte Senden den Text der alten Karte an die neue, und das Diktat
 // schriebe in ein fremdes Feld (Durchsicht 11.11.).
+// Blätter, die zu einer Karte gehören (Modellwahl, Verbrauch, Datei, Zurückspulen),
+// gehen beim Wechsel zu. Sonst träfe ein Tipp darin die neue Karte.
+function blaetterDerKarteZu() {
+  blattZu();
+  verbrauchBlattZu();
+  $("datei-blatt").hidden = true;
+  dateiLauf++;
+  rewindZu();
+}
+
 function feldFuerKarteLeeren() {
   hoertStoppen?.();
   eingabeFeld.value = "";
@@ -3499,11 +3535,17 @@ $("knopf-glaetten").addEventListener("click", async () => {
 
   knopf.disabled = true;
   knopf.classList.add("laedt");
+  const fuer = aktuelleSitzung?.name;
   try {
     const { text: sauber } = await (await api("/glaetten", {
       method: "POST",
       body: JSON.stringify({ text }),
     })).json();
+    if (!nochOffen(fuer)) {
+      // Karte gewechselt: Der geglättete Text ersetzt den Entwurf der alten Karte.
+      try { if (fuer) localStorage.setItem(`relay_entwurf_${fuer}`, sauber); } catch { /* nicht merkbar */ }
+      return;
+    }
     feld.value = sauber;
     feldAnpassen();
     feld.focus();
@@ -3532,11 +3574,14 @@ $("sitzung-name").addEventListener("click", async () => {
   );
   if (neu === null) return;   // abgebrochen
 
+  const karte = aktuelleSitzung;   // der Name gilt dieser Karte, auch wenn gleich eine andere offen ist
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}`, {
+    await api(`/sessions/${encodeURIComponent(karte.name)}`, {
       method: "PATCH",
       body: JSON.stringify({ anzeige: neu }),
     });
+    karte.anzeige = neu.trim();
+    if (!nochOffen(karte.name)) return;
     aktuelleSitzung.anzeige = neu.trim();
     $("sitzung-name").textContent = benannt(aktuelleSitzung);
     melde(neu.trim() ? `Heißt jetzt „${neu.trim()}“` : "Wieder der technische Name");
@@ -3553,6 +3598,7 @@ $("knopf-zurueck").addEventListener("click", () => {
   verlaufTakt = null;
   entwurfMerken();
   feldFuerKarteLeeren();
+  blaetterDerKarteZu();
   $("frage").hidden = true;
   offeneFrage = "";
   // Auch beim Hinausgehen: Was während des Offenseins hereinkam, hast du
@@ -3570,24 +3616,29 @@ $("knopf-zurueck").addEventListener("click", () => {
 $("knopf-archivieren").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
   if (!confirm(`Die Karte „${benannt(aktuelleSitzung)}" ins Archiv stellen?`)) return;
+  const fuer = aktuelleSitzung.name;
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/archivieren`, { method: "POST" });
+    await api(`/sessions/${encodeURIComponent(fuer)}/archivieren`, { method: "POST" });
   } catch (err) {
     melde(err.message || "Das Archivieren ging gerade nicht.");
     return;
   }
-  $("knopf-zurueck").click();
+  // Nur die archivierte Karte schließen, nicht eine inzwischen geöffnete andere.
+  if (nochOffen(fuer)) $("knopf-zurueck").click();
   melde("Ins Archiv gestellt — ganz unten zu finden.");
 });
 
 $("knopf-anheften").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
   const neu = !aktuelleSitzung.pinned;
+  const karte = aktuelleSitzung;
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}`, {
+    await api(`/sessions/${encodeURIComponent(karte.name)}`, {
       method: "PATCH",
       body: JSON.stringify({ pinned: neu }),
     });
+    karte.pinned = neu;
+    if (!nochOffen(karte.name)) return;
     aktuelleSitzung.pinned = neu;
     $("knopf-anheften").classList.toggle("an", neu);
   } catch (err) {
@@ -3670,12 +3721,13 @@ function zeigeModus(m) {
 // Ein Tipp schaltet den Berechtigungs-Modus weiter — genau wie Shift+Tab.
 $("knopf-modus").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
+  const fuer = aktuelleSitzung.name;
   try {
     const { modus } = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modus`,
+      `/sessions/${encodeURIComponent(fuer)}/modus`,
       { method: "POST" }
     )).json();
-    zeigeModus(modus);
+    if (nochOffen(fuer)) zeigeModus(modus);
   } catch (err) {
     melde(err.message);
   }
@@ -3745,15 +3797,20 @@ function verbrauchBlattZu() { $("verbrauch-blatt").hidden = true; }
 $("verbrauch-schatten").addEventListener("click", verbrauchBlattZu);
 $("verbrauch-schliessen").addEventListener("click", verbrauchBlattZu);
 
+let verbrauchLauf = 0;    // zählt hoch, damit eine alte Antwort aufgibt
 async function oeffneVerbrauchsBlatt() {
   if (!aktuelleSitzung) return;
   $("verbrauch-blatt").hidden = false;
   const liste = $("verbrauch-liste");
   liste.textContent = "Einen Moment …";
+  const fuer = aktuelleSitzung.name;
+  const lauf = ++verbrauchLauf;
   try {
     const daten = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/verbrauch`
+      `/sessions/${encodeURIComponent(fuer)}/verbrauch`
     )).json();
+    // Blatt inzwischen neu geöffnet oder andere Karte offen: Antwort verwerfen.
+    if (lauf !== verbrauchLauf || !nochOffen(fuer)) return;
     liste.textContent = "";
     if (daten.kontext) {
       liste.appendChild(verbrauchZeile(
@@ -3761,7 +3818,7 @@ async function oeffneVerbrauchsBlatt() {
         daten.kontext.prozent,
         `${tokenKurz(daten.kontext.benutzt)} / ${tokenKurz(daten.kontext.limit)}`
       ));
-      kontextGroesse = { name: aktuelleSitzung.name, benutzt: daten.kontext.benutzt || 0 };
+      kontextGroesse = { name: fuer, benutzt: daten.kontext.benutzt || 0 };
       const cz = cacheZeile(daten.kontext.cache);
       if (cz) liste.appendChild(cz);
       // Ab 100.000 Token (oder kalt) ist eine Übergabe der günstige Weg: ein Zug
@@ -3960,7 +4017,15 @@ $("modell-schliessen").addEventListener("click", blattZu);
 $("knopf-modell").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
 
-  const liste = await modelleHolen();
+  const fuer = aktuelleSitzung.name;
+  let liste;
+  try {
+    liste = await modelleHolen();
+  } catch (err) {
+    melde(err.message || "Die Modelle ließen sich gerade nicht laden.");
+    return;
+  }
+  if (!nochOffen(fuer)) return;    // inzwischen andere Karte offen
   const kinder = [];
   let letzteGruppe = null;
   for (const m of liste) {
@@ -3991,7 +4056,7 @@ $("knopf-modell").addEventListener("click", async () => {
       ${gewaehlt ? '<span class="modell-haken">✓</span>' : ""}`;
     zeile.querySelector(".modell-titel").textContent = m.anzeige;
     zeile.querySelector(".modell-art").textContent = m.art;
-    zeile.addEventListener("click", () => waehleModell(m));
+    zeile.addEventListener("click", () => waehleModell(m, fuer));
     kinder.push(zeile);
   }
   $("modell-liste").replaceChildren(...kinder);
@@ -4008,16 +4073,22 @@ $("knopf-modell").addEventListener("click", async () => {
   $("modell-blatt").hidden = false;
 });
 
-async function waehleModell(m) {
+async function waehleModell(m, fuer) {
   blattZu();
+  // Das Blatt wurde für eine bestimmte Karte geöffnet; nur an sie geht der Wechsel.
+  if (!nochOffen(fuer)) return;
+  const karte = aktuelleSitzung;
   try {
     // Die Antwort trägt schon Claude Codes eigene Bestätigung — das braucht
     // ein paar Sekunden (die App wartet serverseitig darauf), zeigt dafür
     // aber gleich den echten Namen statt nur des Alias.
-    const antwort = await (await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/modell`, {
+    const antwort = await (await api(`/sessions/${encodeURIComponent(fuer)}/modell`, {
       method: "POST",
       body: JSON.stringify({ name: m.name }),
     })).json();
+    karte.modell = m.name;
+    karte.modellAufgeloest = antwort.modellAufgeloest;
+    if (!nochOffen(fuer)) return;    // Anzeige der neuen Karte nicht überschreiben
     aktuelleSitzung.modell = m.name;
     aktuelleSitzung.modellAufgeloest = antwort.modellAufgeloest;
     zeigeModell(m.name, antwort.modellAufgeloest);
@@ -4076,6 +4147,7 @@ function melde(text) {
 $("knopf-melden").addEventListener("click", async () => {
   if (!aktuelleSitzung) return;
   const neu = !aktuelleSitzung.notifyWhenDone;
+  const karte = aktuelleSitzung;
 
   if (neu) {
     try {
@@ -4087,10 +4159,12 @@ $("knopf-melden").addEventListener("click", async () => {
   }
 
   try {
-    await api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}`, {
+    await api(`/sessions/${encodeURIComponent(karte.name)}`, {
       method: "PATCH",
       body: JSON.stringify({ notify_when_done: neu }),
     });
+    karte.notifyWhenDone = neu;
+    if (!nochOffen(karte.name)) return;
     aktuelleSitzung.notifyWhenDone = neu;
     glockeZeigen(neu);
   } catch (err) {
@@ -5083,10 +5157,11 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     return;
   }
   if (!aktuelleSitzung) return;
+  const vortragsSitzung = aktuelleSitzung.name;
 
   try {
     const { text } = await (await api(
-      `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+      `/sessions/${encodeURIComponent(vortragsSitzung)}/text`
     )).json();
     if (!text) throw new Error("Da ist nichts zum Vorlesen.");
     zuletztVorgelesen = text;   // damit Freisprech es nicht gleich nochmal liest
@@ -5097,7 +5172,7 @@ $("knopf-vorlesen").addEventListener("click", async () => {
     // Die Sitzung wird JETZT festgehalten, nicht bei jedem Nachschub neu
     // gelesen: Wer während des Vortrags in einen anderen Chat wechselt, soll
     // weiter den alten hören — nicht plötzlich Sätze aus dem neuen.
-    const vortragsSitzung = aktuelleSitzung.name;
+    // (Festgehalten schon vor der ersten Anfrage, siehe oben.)
     let gelesen = text;
     const nachschub = async (abgebrochen) => {
       const beginn = Date.now();
@@ -5269,6 +5344,7 @@ async function freisprechVorlesen() {
   // Hörst du schon etwas oder diktierst gerade, misch dich nicht ein.
   if (spricht || hoert) return;
   if (!aktuelleSitzung) return;
+  const fuer = aktuelleSitzung.name;
 
   try {
     // Auf die FRISCHE Antwort warten. Direkt nach "fertig" liefert die
@@ -5278,8 +5354,9 @@ async function freisprechVorlesen() {
     let text = "";
     for (let versuch = 0; versuch < 6; versuch++) {
       const antwort = await (await api(
-        `/sessions/${encodeURIComponent(aktuelleSitzung.name)}/text`
+        `/sessions/${encodeURIComponent(fuer)}/text`
       )).json();
+      if (!nochOffen(fuer)) return;   // Karte gewechselt: nicht vorlesen, kein Mikrofon
       text = antwort.text || "";
       if (text && text !== zuletztVorgelesen) break;
       await new Promise((r) => setTimeout(r, 700));
@@ -5289,6 +5366,7 @@ async function freisprechVorlesen() {
     zuletztVorgelesen = text;
 
     await sprich(text, $("knopf-vorlesen"));
+    if (!nochOffen(fuer)) return;     // das Mikrofon schriebe sonst ins Feld der anderen Karte
     await mikrofonAufmachen();
   } catch {
     // Kein Text, kein Netz — dann eben nicht.
@@ -7672,10 +7750,13 @@ document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListene
 // Zeigt die Nachrichten der Karte zur Wahl, danach die Möglichkeiten, die Claude Code
 // selbst anbietet. Getippt wird erst nach der letzten Wahl; Schließen lässt alles, wie es war.
 let rewindOffen = false;
+let rewindFuer = "";     // zu welcher Karte das Blatt gehört
+let rewindLauf = 0;      // zählt hoch, damit eine alte Antwort aufgibt
 function rewindZu() {
   $("rewind-blatt").hidden = true;
-  if (rewindOffen && aktuelleSitzung) {
-    api(`/sessions/${encodeURIComponent(aktuelleSitzung.name)}/rewind/abbrechen`, { method: "POST" }).catch(() => {});
+  rewindLauf++;
+  if (rewindOffen && rewindFuer) {
+    api(`/sessions/${encodeURIComponent(rewindFuer)}/rewind/abbrechen`, { method: "POST" }).catch(() => {});
   }
   rewindOffen = false;
 }
@@ -7692,7 +7773,10 @@ function rewindKnopf(text, klein, auf, gefahr) {
 }
 async function rewindOeffnen() {
   if (!aktuelleSitzung) return;
-  const name = encodeURIComponent(aktuelleSitzung.name);
+  const fuer = aktuelleSitzung.name;
+  const name = encodeURIComponent(fuer);
+  const lauf = ++rewindLauf;
+  rewindFuer = fuer;
   $("rewind-titel").textContent = "Zurückspulen";
   $("rewind-text").textContent = "Ich öffne die Auswahl in der Karte …";
   $("rewind-liste").replaceChildren();
@@ -7701,7 +7785,12 @@ async function rewindOeffnen() {
   try {
     antwort = await (await api(`/sessions/${name}/rewind/start`, { method: "POST" })).json();
   } catch (err) {
-    $("rewind-text").textContent = err.message || "Das ging gerade nicht.";
+    if (lauf === rewindLauf) $("rewind-text").textContent = err.message || "Das ging gerade nicht.";
+    return;
+  }
+  if (lauf !== rewindLauf) {
+    // Blatt schon zu oder Karte gewechselt: die Auswahl in der alten Karte wieder schließen.
+    api(`/sessions/${name}/rewind/abbrechen`, { method: "POST" }).catch(() => {});
     return;
   }
   rewindOffen = true;
@@ -7715,24 +7804,30 @@ async function rewindOeffnen() {
   });
 }
 async function rewindWaehlen(zurueck) {
-  const name = encodeURIComponent(aktuelleSitzung.name);
+  if (!nochOffen(rewindFuer)) { rewindZu(); return; }
+  const name = encodeURIComponent(rewindFuer);
+  const lauf = rewindLauf;
   $("rewind-text").textContent = "Einen Moment …";
   $("rewind-liste").replaceChildren();
   let a;
   try {
     a = await (await api(`/sessions/${name}/rewind/waehlen`, { method: "POST", body: JSON.stringify({ zurueck }) })).json();
   } catch (err) {
+    if (lauf !== rewindLauf) return;
     rewindOffen = false;
     $("rewind-text").textContent = err.message || "Das ging gerade nicht.";
     return;
   }
+  if (lauf !== rewindLauf) return;   // Blatt zu oder Karte gewechselt, abgebrochen ist schon
   $("rewind-titel").textContent = "Was soll passieren?";
   $("rewind-text").textContent = `Zurück vor die Nachricht „${a.nachricht.slice(0, 120)}“. Alles danach wird entfernt.`;
   a.optionen.forEach((o) => {
     const nein = /^never mind/i.test(o.original);
     $("rewind-liste").appendChild(rewindKnopf(o.text, "", async () => {
       try {
+        if (lauf !== rewindLauf) return;
         const r = await (await api(`/sessions/${name}/rewind/ausfuehren`, { method: "POST", body: JSON.stringify({ nr: o.nr }) })).json();
+        if (lauf !== rewindLauf) return;
         rewindOffen = false;
         $("rewind-blatt").hidden = true;
         melde(r.getan ? "Zurückgespult. Die Nachricht steht wieder im Eingabefeld." : "Nichts geändert.");
@@ -7761,7 +7856,8 @@ document.addEventListener("keydown", (e) => {
 // Rechte Spalte: Ordner des Kartenordners klappen beim Antippen auf, eine Datei öffnet ein Blatt
 // (Markdown gesetzt, sonst als Text). Nur lesen. Der Server liefert nie Inhalt von Zugangsdaten.
 let baumFuer = "";
-function baumZeile(e, pfad, tiefe) {
+let dateiLauf = 0;       // zählt hoch, damit eine alte Datei-Antwort aufgibt
+function baumZeile(e, pfad, tiefe, name) {
   const z = document.createElement("div");
   z.className = "zh-baumzeile";
   z.style.paddingLeft = (tiefe * 0.9) + "rem";
@@ -7780,35 +7876,38 @@ function baumZeile(e, pfad, tiefe) {
       if (!kinder.hidden) { kinder.hidden = true; k.textContent = "▸ " + e.name; return; }
       k.textContent = "▾ " + e.name;
       kinder.hidden = false;
-      if (!kinder.dataset.geladen) { kinder.dataset.geladen = "1"; await baumFuellen(kinder, rel, tiefe + 1); }
+      if (!kinder.dataset.geladen) { kinder.dataset.geladen = "1"; await baumFuellen(kinder, rel, tiefe + 1, name); }
     } else {
-      dateiOeffnen(rel, e);
+      dateiOeffnen(rel, e, name);
     }
   });
   return box;
 }
-async function baumFuellen(ziel, rel, tiefe) {
-  const name = aktuelleSitzung?.name;
-  if (!name) return;
+// Der Baum gehört der Karte, für die er geholt wurde: Der Name wandert in jede
+// Zeile mit, statt beim Antippen die gerade offene Karte zu nehmen.
+async function baumFuellen(ziel, rel, tiefe, name) {
+  if (!nochOffen(name)) return;
   let d;
   try { d = await (await api(`/sessions/${encodeURIComponent(name)}/dateien?pfad=${encodeURIComponent(rel)}`)).json(); }
-  catch { ziel.textContent = "Nicht lesbar."; return; }
+  catch { if (nochOffen(name)) ziel.textContent = "Nicht lesbar."; return; }
+  if (!nochOffen(name)) return;      // inzwischen andere Karte offen
   ziel.replaceChildren();
   if (!d.ok || !d.eintraege.length) {
     const l = document.createElement("p"); l.className = "zh-leer"; l.textContent = "Leer."; ziel.append(l); return;
   }
-  for (const e of d.eintraege) ziel.append(baumZeile(e, rel, tiefe));
+  for (const e of d.eintraege) ziel.append(baumZeile(e, rel, tiefe, name));
   if (d.gekuerzt) { const l = document.createElement("p"); l.className = "zh-leer"; l.textContent = "Liste gekürzt."; ziel.append(l); }
 }
 function zurHandDateien() {
   if ($("zur-hand").hidden || !aktuelleSitzung) return;
   if (baumFuer === aktuelleSitzung.name) return;
   baumFuer = aktuelleSitzung.name;
-  baumFuellen($("zh-dateien-baum"), "", 0);
+  $("zh-dateien-baum").replaceChildren();    // der Baum der vorigen Karte verschwindet sofort
+  baumFuellen($("zh-dateien-baum"), "", 0, baumFuer);
 }
-async function dateiOeffnen(rel, e) {
-  const name = aktuelleSitzung?.name;
-  if (!name) return;
+async function dateiOeffnen(rel, e, name) {
+  if (!nochOffen(name)) return;
+  const lauf = ++dateiLauf;
   $("datei-titel").textContent = rel;
   const ziel = $("datei-inhalt");
   ziel.replaceChildren();
@@ -7816,7 +7915,8 @@ async function dateiOeffnen(rel, e) {
   if (e.geheim) { ziel.textContent = "Diese Datei kann Zugangsdaten enthalten, ihr Inhalt wird nie angezeigt."; return; }
   let d;
   try { d = await (await api(`/sessions/${encodeURIComponent(name)}/dateien/inhalt?pfad=${encodeURIComponent(rel)}`)).json(); }
-  catch { ziel.textContent = "Konnte die Datei nicht laden."; return; }
+  catch { if (lauf === dateiLauf) ziel.textContent = "Konnte die Datei nicht laden."; return; }
+  if (lauf !== dateiLauf) return;    // inzwischen andere Datei oder andere Karte
   if (!d.ok) { ziel.textContent = "Datei nicht gefunden."; return; }
   if (d.geheim) { ziel.textContent = "Diese Datei kann Zugangsdaten enthalten, ihr Inhalt wird nie angezeigt."; return; }
   if (d.binaer) { ziel.textContent = `Keine Textdatei (${d.groesse} Bytes), wird nicht angezeigt.`; return; }
@@ -7824,8 +7924,8 @@ async function dateiOeffnen(rel, e) {
   else { const pre = document.createElement("pre"); pre.className = "datei-text"; pre.textContent = d.text; ziel.append(pre); }
   if (d.gekuerzt) { const h = document.createElement("p"); h.className = "zh-leer"; h.textContent = "Nur der Anfang der Datei ist zu sehen."; ziel.append(h); }
 }
-$("datei-schatten").addEventListener("click", () => { $("datei-blatt").hidden = true; });
-$("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden = true; });
+$("datei-schatten").addEventListener("click", () => { $("datei-blatt").hidden = true; dateiLauf++; });
+$("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden = true; dateiLauf++; });
 
 // Kaira-Knopf: öffnet die Kaira-Seite in einem eigenen Fenster (am Handy ein neuer Tab). Als Rahmen in der
 // App ging es nicht: das Anmelde-Cookie des Werkstatt-Tors kommt im Rahmen nicht an (Roli 02.11. 16:11, 16:14 „1. Ja“).
