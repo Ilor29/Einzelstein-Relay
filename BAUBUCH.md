@@ -1057,3 +1057,31 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Geprüft:** Probekarte: `frage()` liefert jetzt die Frage mit vier Antworten, auch über die Schnittstelle `/frage` am Testserver 8799. Gegenproben mit nachgemachtem Schirm: alte Liste mit arbeitendem Claude darunter ergibt keine Knöpfe, reine Aufzählung ohne Auswahlpfeil ergibt keine Knöpfe. Modus: ohne Dialog schaltet der Knopf im Kreis (Änderungen ok, Plan, Auto, Fragt), im Dialog kommt 409 und die Frage steht unverändert da.
 **Nicht geprüft:** Knöpfe und Meldung im Browser an der Probekarte, Handy, andere Dialogarten (Planfreigabe, Auswahlfragen von Claude).
 **Fehler unterwegs:** Der Browsertest suchte die Probekarte über den Text „probe-aufweck“ und traf stattdessen die Karte Hetzner-App 15, in deren Vorschau das Wort stand. Der Klick auf den Modus-Knopf schaltete diese echte Karte von „fragt nie“ auf „Auto“. Zurückschalten durfte die Karte sich nicht selbst (im Auto-Modus gesperrt), Roli wurde gebeten. Lehre: Im Browsertest eine Karte nie über Text suchen, der auch im Gespräch stehen kann, sondern die Adresse der Probekarte direkt öffnen, und vor jedem Klick auf einen schreibenden Knopf den Kartennamen im Kopf prüfen.
+
+## 11.11.2026: Durchsicht der Oberfläche und der übrigen Module, nur Befunde, nichts geändert
+**Auslöser:** Roli 11.11. 16:17 „12. Ja“ und 16:27 „13. Ja“ (Oberfläche in neuer Karte durchsehen, Auswahl aus dem Prüf-Prompt).
+**Gelesen** (von fünf Lesern, Funde danach von mir stichprobenartig nachgeprüft): `web/app.js` ganz, `index.html`, `styles.css`, `sw.js`, `texte.js`, `manifest.webmanifest`, `mitschrift.py`, `melden.py`, `strom.py`, `tts.py`, `geraete.py`. Einstufung: **belegt** = von mir am Code oder im Lauf bestätigt, **Code** = nur aus dem Code gelesen, noch nicht nachgestellt, **Geschmack**.
+
+**Belegt**
+1. Foto mit Begleittext verliert den Text (`mitschrift.py` Block-Bau und Entdoppelung am Ende von `lesen`): Bild- und Textblock eines Eintrags teilen dieselbe `uuid`, die Entdoppelung wirft den zweiten weg. Nachgestellt mit einem Eintrag aus Bild und „Was ist das hier?“: Ausgabe nur `bild ''`.
+2. Der Ordner `web/dl` (mehrere APK-Dateien, Vox, Reisebuch) ist ohne Anmeldung aus dem Netz abrufbar: HEAD auf `https://65-21-246-222.sslip.io/dl/vox-0.11.2-c17053fe1acf.apk` liefert 200. Ob das so gewollt ist (Installation aufs Handy), ist offen.
+3. Der Verdacht auf Pfadausbruch in `mitschrift.lesen(datei=…)` und `aelter()` trifft nicht zu: Die Kennung kommt aus dem Zustand der Karte auf dem Server, nicht aus einer Eingabe. Bleibt eine Härtung (Kennung auf Buchstaben, Ziffern, Bindestrich beschränken), kein Fehler. Gleiches für `stimme_waehlen("el:../…")`: nur mit Anmeldung, geringes Gewicht.
+
+**Code, nach Gewicht**
+4. Kartenwechsel ohne Aufräumen: Eingabefeld wird nicht geleert, der Text der alten Karte geht mit Senden an die neue (`oeffneSitzung`, Zurück); Google-Diktat läuft nach Zurück weiter und schreibt in die nächste Karte (`hoertStoppen` fehlt).
+5. Rennen beim Kartenwechsel nach dem `await`: Verlauf (`ladeVerlauf`), Antwort-Knöpfe (`pruefeFrage`, `antworte` kann dann an die falsche Karte gehen), Modell in der Kopfzeile, Dateibaum (`baumFuellen`), Datei-Inhalt unter fremdem Titel, Zurückspulen (Abbruch geht an die aktuell offene Karte), Glätten überschreibt inzwischen Getipptes, Modell wählen und Umbenennen ohne Namensprüfung.
+6. Vorlese-Strom (`strom.py`): Ausnahmen außer `TTSError` werden nicht gefangen, der Strom bricht still ab, `fertig` wird trotzdem gesetzt; gleiches bei Google-Antworten ohne gültiges JSON (`tts.py`).
+7. Antwort-Tipp räumt im Eingabefeld alle Leerzeilen weg und sortiert freie Zeilen ans Ende (`app.js` um 7125 bis 7137).
+8. Einstellungen laden nur halb, wenn `/stimmen` fehlschlägt (Sprache, Tempo, Verlauf, Diktat fehlen).
+9. Neue Karte: Suchfilter ohne Treffer lässt den verborgenen Ordner gewählt; kein Schutz gegen Doppeltipp (zwei Karten oder Skills möglich); verweigerte Benachrichtigungs-Erlaubnis nur in der Konsole.
+10. Vorschau: bei Fehler geht während des Streamens bei jedem Frame eine neue Anfrage raus.
+11. Lupe: jedes Verlaufs-Update springt zum Treffer und stoppt das Mitlaufen; zählt Treffer in zugeklappten Code-Blöcken mit.
+12. Vorlesen: zwei rasche Sprünge brechen den Vortrag ab; Leiste bleibt bei Stopp in der Startphase sichtbar; beendete Tonquellen werden nie freigegeben; Tagebucheintrag „wach-bericht“ fehlt auf Android (verdeckte Variable `tonUhrMerker`).
+13. Nach Netzfehler still: Verlauf laden, ältere holen, Modelle holen, Kaira-Knopf bei Popup-Sperre, Skill-Liste nach Anlegen.
+14. Terminal: Eingabe vor Verbindungsaufbau geht verloren (`send` im Zustand CONNECTING wirft), späte `close`-Ereignisse können neu verbinden.
+15. Server: Piper erbt `ELEVENLABS_API_KEY` und `GOOGLE_TTS_API_KEY` aus der Umgebung (nur `HETZNER_`-Variablen fallen heraus); Web-Push fängt nur `WebPushException`, Verbindungsfehler brechen die Geräteschleife ab; `_vapid()` ohne Sperre; `_letzte_nutzung` nur am Satzanfang, Speicherwächter kann Piper mitten im Satz beenden; `--port 5005` trifft als Teilstring auch 50051 bis 50059; `geraete.entfernen` löscht alle Geräte gleichen Namens.
+16. Barrierefreiheit (Rot-Grün-Schwäche zählt): Speicher-Ampel nur über Punktfarbe; drei Schalter im Formular „Neue Sitzung“ per `display:none` für Tastatur und Vorleser unerreichbar; Hinweisschrift 2,9 bis 3,7 zu 1 Kontrast, weiße Schrift auf Akzent im Dunkelmodus 3,1 zu 1; fünf Eingabefelder ohne Beschriftung; Blätter ohne `role="dialog"`; Tippziele von 20 bis 30 Pixel; Manifest-Farbe `#16130F` statt `#1F1E1D`.
+**Unbestätigt:** XSS über `.md`-Inhalt (`schreibe` baut Text per `textContent`, Gegenprobe im Browser fehlt); SVG-Icons im Manifest auf iPhone und Chrome.
+**Geschmack:** doppelte CSS-Regeln, `--warn` nirgends definiert, ein emojiartiges Zeichen in `styles.css`, tote ID `zh-befehle-block`, `zurHandKorb` ohne Aufruf, `manifest.webmanifest` nennt „Claude-Code-Sitzungen“.
+**Nicht geprüft:** alles am Handy, Caddy-Regeln (Datei nicht lesbar), ob Befunde 4 und 5 im Browser wirklich auftreten.
+**Erweiterungen (höchstens fünf, jede mit dem günstigsten widerlegenden Test), noch nicht vorgeschlagen:** erst nach Rolis Auswahl der Befunde.
