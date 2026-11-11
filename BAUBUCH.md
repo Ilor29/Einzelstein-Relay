@@ -1099,3 +1099,11 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Geprüft:** Probe-Mitschrift mit Foto plus Text und Antwort mit Werkzeug, zweimal als Datei a und b (Fortsetzung kopiert alles): Projekt-Zeitleiste und Einzelgespräch zeigen je Bild, Text, Antwort, Werkzeugzeile genau einmal. Dienst neu gestartet.
 **Nicht geprüft:** echte Karte am Handy, sehr lange Gespräche mit Zusammenfassung.
 **Lehre:** Ein Probeverlauf ohne Zeilenumbruch am Ende wird nicht gelesen (unvollständige letzte Zeile, gewollt).
+
+## 11.11.2026: V230, Eingabefeld und Diktat bleiben nicht mehr an der alten Karte hängen
+**Auslöser:** Roli 11.11. 17:21 „14. Deine Empfehlung“ (Befund 4 der Durchsicht).
+**Ursache:** `entwurfMerken()` sicherte den Text unter dem Schlüssel der alten Karte, leerte das Feld aber nicht. Beim Öffnen einer anderen Karte brach `entwurfHolen()` wegen des vollen Feldes ab, und Senden schickte den Text der alten Karte an die neue. Das Google-Diktat lief nach Zurück oder Wechsel weiter und schrieb in das Feld der nächsten Karte.
+**Lösung:** Neue Funktion `feldFuerKarteLeeren()` (stoppt das Zuhören, leert das Feld). Aufruf im Zurück-Knopf und in `oeffneSitzung` nur beim Wechsel auf eine andere Karte, jeweils nach dem Sichern des Entwurfs. Beim erneuten Öffnen derselben Karte holt `entwurfHolen()` den Text zurück.
+**Geprüft:** Playwright gegen Testserver 8799 mit zwei Scheinkarten (nur die Liste vorgetäuscht, nichts gesendet), 412x800 und 1500x900: Text in A getippt, Zurück oder direkter Wechsel nach B ergibt leeres Feld, zurück in A steht der Text wieder da, keine Konsolenfehler.
+**Nicht geprüft:** Diktat selbst (Mikrofon im Testbrowser nicht vorhanden), Handy. Möglich bleibt, dass ein Diktat, das erst nach dem Stoppen sein Endergebnis liefert, noch einmal schreibt.
+**Lehre für Tests:** Skript nie nach /tmp legen (dort liegt ein bisect.py, das die Standardbibliothek überdeckt), und `python -I` ignoriert PYTHONPATH.

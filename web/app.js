@@ -1989,6 +1989,7 @@ function oeffneSitzung(sitzung) {
     stoppeListe();
   }
   entwurfMerken();     // was in der vorigen Karte noch im Feld stand
+  if (aktuelleSitzung && aktuelleSitzung.name !== sitzung.name) feldFuerKarteLeeren();
   gesehenMelden(sitzung.name);   // die Ungelesen-Markierung erlischt
   aktuelleSitzung = sitzung;
   offeneSitzungMerken(sitzung.name);
@@ -3108,6 +3109,16 @@ function entwurfMerken() {
   } catch { /* nicht merkbar */ }
 }
 
+// Der Text im Feld und ein laufendes Diktat gehören zur Karte, in der sie
+// entstanden sind. Nach dem Sichern des Entwurfs muss beides weg, sonst
+// schickte Senden den Text der alten Karte an die neue, und das Diktat
+// schriebe in ein fremdes Feld (Durchsicht 11.11.).
+function feldFuerKarteLeeren() {
+  hoertStoppen?.();
+  eingabeFeld.value = "";
+  feldAnpassen();
+}
+
 function entwurfHolen() {
   const k = entwurfSchluessel();
   if (!k || eingabeFeld.value) return;
@@ -3528,6 +3539,7 @@ $("knopf-zurueck").addEventListener("click", () => {
   clearInterval(verlaufTakt);
   verlaufTakt = null;
   entwurfMerken();
+  feldFuerKarteLeeren();
   // Auch beim Hinausgehen: Was während des Offenseins hereinkam, hast du
   // gesehen. Ohne das leuchtete die Karte in der Liste sofort wieder auf.
   if (!ungelesenBleibt) gesehenMelden(aktuelleSitzung?.name);
