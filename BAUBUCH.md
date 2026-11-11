@@ -1129,3 +1129,9 @@ Fehler unterwegs: Erst /api/tts statt /api/speak aufgerufen (405). Die PID-Datei
 **Geprüft:** Test mit nachgebauter Stimme (das echte `tts` nicht aus einem zweiten Prozess benutzt): Stück 2 wirft `TimeoutExpired`: ein Stück geliefert, `fertig` wahr, `fehler` gesetzt. Gutfall mit zwei Stücken: beide geliefert, `fehler` leer. Dienst neu gestartet.
 **Nicht geprüft:** Anzeige der Meldung am Handy, die Google-Stimme mit kaputter Antwort am echten Dienst.
 **Offen aus Befund 6:** In `tts.py` fängt der Google-Weg ungültiges JSON ebenfalls nicht als `TTSError` ab; der Strom meldet es jetzt wenigstens, die Meldung bleibt allgemein.
+
+## 11.11.2026: V234, installierte App lässt sich drehen
+**Auslöser:** Roli 11.11. 18:47 (Foto vom Tablet): „In Chrome richtig, bei Tablet-App lässt es sich nicht drehen, und wieso nicht dreispaltig?“
+**Ursache:** `manifest.webmanifest` setzte `"orientation": "portrait"`. Die installierte App (PWA) blieb damit im Hochformat, das Tablet im Querformat zeigte sie gedreht und schmal. Die dreispaltige Ansicht (`BREIT` in `app.js`, ab 1280 CSS-Pixel Breite) kam so nie zustande, weil die Breite im Hochformat zu klein ist. Im Chrome-Tab gab es die Sperre nicht, deshalb ging es dort.
+**Lösung:** `"orientation": "any"`. Das Telefon folgt wieder seiner eigenen Dreh-Einstellung.
+**Geprüft:** Manifest über die Adresse ausgeliefert, zeigt `any`. **Nicht geprüft:** am Tablet. Eine schon installierte App übernimmt das Manifest erst nach Aktualisierung durch Android (kann dauern); schnell geht es mit Deinstallieren und neu installieren. Ob die Breite im Querformat 1280 CSS-Pixel erreicht, hängt vom Tablet ab; sonst bleibt es bei der zweispaltigen Ansicht ab 900 Pixel.
