@@ -1,41 +1,81 @@
-# Übergabe Hetzner-App (Relay), Karte Hetzner-App 15, 11.11.2026 gegen 16:20
+# Project Handoff: Hetzner-App (Relay)
 
-**Thema:** Durchsicht der App mit Fable 5.2. Der Server-Teil ist durchgesehen und repariert, jetzt folgt die Oberfläche. Wahrheit liegt in BAUBUCH.md (Ende, Einträge vom 11.11.) und ~/projekte/Brain/REGISTER.md.
+Version: v02 (ersetzt die Übergabe von 16:20, die in Git steht, Commit 390cd14)
+Date: 2026-11-11, gegen 18:50
+Owner/User: Roli
+Prepared by: Claude (Karte Hetzner-App 16)
 
-## Fertig in dieser Karte
-- Relay V227 läuft, gesichert (github main), Arbeitsordner sauber.
-- V225: Modell-Anzeige liest aus der letzten Antwort der Karten-Mitschrift (`state.modell_anzeige`, `verbrauch.modell_anzeige`, neues Feld `Meta.modell_gewechselt`). Kontext-Balken, Wert ohne Abo und Datenpunkt beim Archivieren hängen an der gebundenen Mitschrift (`verbrauch._mitschrift_datei`).
-- V226: Aufwecken fällt nur bei Scheitern in den ersten 20 Sekunden zurück, immer auf ein frisches Gespräch (`tmux._mit_rueckfall`).
-- V227: `state.frage()` sucht den Arbeits-Hinweis nur ab der ersten Antwortzeile; `modus_wechseln` lehnt bei offenem Dialog mit 409 ab.
-- Alles mit Probekarten und Testserver geprüft, nichts davon am Handy.
+Wahrheit liegt in `BAUBUCH.md` (Ende, Einträge vom 11.11.) und `~/projekte/Brain/REGISTER.md`. Diese Datei fasst nur zusammen.
 
-## Nächster Schritt: Frage 8, Oberfläche durchsehen (Roli „8. Ja“, „9. Ja“, „12. Ja“)
-`web/` ganz lesen (rund 7.800 Zeilen, vor allem app.js), dazu die noch nicht gelesenen Module mitschrift.py, melden.py, strom.py, tts.py, geraete.py. Erst Befunde als Liste ins Baubuch, dann Roli fragen, dann einzeln ändern. Aus Rolis Prüf-Prompt gilt nur diese Auswahl:
-- Von den Dateien ausgehen, nicht von Zusammenfassungen.
-- Code starten und die Bedienwege durchspielen (Testserver 8799, Playwright, Probekarte).
-- Jeden Fund einstufen als falsch, unklar oder Geschmack. Ohne Skript-Ausgabe oder Nachstellen steht er als „unbestätigt“ da.
-- Höchstens fünf Erweiterungen, jede mit dem günstigsten Test, der sie widerlegen würde.
-- Am Ende die Liste dessen, was Roli am Handy prüfen muss.
-Nicht übernommen: Excel-Nachrechnung, Fragen an Anwalt und Steuerberater, versionierte Dateinamen.
-Als Vergleich dienen Rolis zwei Bilder der Einstellungen der Original-App (Gruppen im Baubuch unter V224 notiert, die Bilder verfallen um den 25.11.).
+## 1. Project Goal
 
-## Offen bei Roli
-- 11. Diese Karte (Hetzner-App 15) steht seit dem Testfehler auf „Auto“ statt „fragt nie“; Roli wurde gebeten, die Modus-Pille zurückzuschalten, Antwort steht aus. Betrifft die neue Karte nicht.
-- Handyprobe V225 bis V227: Modellnamen in der Liste, Kontext-Balken, Aufwecken einer echten Karte, Modus-Knopf bei offener Frage.
+Relay: Web-App (PWA) plus FastAPI-Dienst, mit der Roli Claude-Code-Sitzungen vom Handy und Tablet aus bedient (tmux auf dem Server, Vorlesen mit Piper, Diktat). Aktuell läuft eine Durchsicht der ganzen App mit Fable 5.2, danach einzelne Reparaturen.
 
-## Weiter offen
-- Skillkontor-Marketing 39: gemerkt ist „fable“, geantwortet hat zuletzt Sonnet 5.5; ob der Wechsel scheiterte, ist ungeklärt.
-- Kleine Befunde aus der Durchsicht, nicht bearbeitet: `overview()` ruft je wacher Karte vier Mal tmux auf; `gesehen`/`ungelesen` legen für unbekannte Namen Einträge an; Senden bei offener Erlaubnisfrage drückt Escape und lehnt damit still ab.
-- Verhalten im Auto (Diktat, Freisprechen, Ton-Tagebuch): frühestens um den 22.11.
-- Baustein 16 zwei Karten nebeneinander; Baustein 11 Teil 3; Auslieferer für Lea und Lorenz; Englisch zum Schluss; Baustein 18 zurückgestellt; Remote Control liegt.
+## 2. Current Status
 
-## Beschlüsse dieser Sitzung
-- Roli 11.11. 10:12: „5. Ja, 6. Ja, 7. Ja, 8. Ja“, dazu der Prüf-Prompt mit dem Satz „Ich denke nicht alles ist brauchbar aus dem Prompt“.
-- Roli 11.11. 13:36: „9. Ja“ (Durchsicht der Oberfläche mit der Auswahl oben), „10. Ja“ (Punkt 7, zuerst Aufweck-Kette).
-- Roli 11.11. 16:17: „12. Ja“ (Oberfläche in neuer Karte, Übergabe schreiben).
+Relay V234 läuft und ist auf GitHub (`github main`) gesichert, Arbeitsordner sauber. Server-Teil und Oberfläche sind durchgesehen. Sechs belegte oder schwere Funde sind behoben und einzeln committet. Alles wurde im Browser (Playwright, Testserver 8799, Scheinkarten) oder mit Probe-Skript geprüft, nichts am Handy.
 
-## Hinweise für die neue Karte
-Fragen-Nummern laufen weiter, zuletzt 12. Testserver: Skript mit `server.app.dependency_overrides[server.require_auth] = lambda: None` und `server.app.router.on_startup.clear()`, Port 8799, mit `PYTHONPATH=.` und dem Python aus `.venv`, Beenden mit `fuser -k 8799/tcp`. Probekarten nur auf eigenem tmux-Socket (zuletzt `tmux -L probe225`, Ordner /tmp/probe-aufweck, dort ist die Vertrauensfrage schon beantwortet); sie erscheinen in der App als fremde Karte „probe225:<name>“ mit dem Ordnernamen als Schild. Wichtig: Der Testserver zeigt alle echten Karten, schreibende Klicks wirken auf sie. Im Browsertest eine Karte nie über Fließtext suchen, vor jedem Klick auf Senden, Modus, Modell oder Anhalten den Kartennamen im Kopf prüfen (Fehler vom 11.11., siehe Baubuch V227). Die Relay startet neue Karten mit Sonnet; für die Durchsicht hat Roli bisher von Hand auf Fable gestellt.
+## 3. What Changed in This Session
 
-## Rolis letzter Wortlaut
-„12. Ja“ (11.11. 16:17).
+- Durchsicht von `web/app.js`, `index.html`, `styles.css`, `sw.js`, `manifest.webmanifest`, `mitschrift.py`, `melden.py`, `strom.py`, `tts.py`, `geraete.py` durch fünf Leser; die Funde mit Einstufung (belegt, Code, Geschmack) stehen im Baubuch unter „Durchsicht der Oberfläche …“.
+- V228: Ordner `web/dl` nur noch nach Anmeldung (eigene Route vor dem Static-Mount).
+- V229: Foto mit Begleittext und Werkzeugzeilen gehen im Verlauf nicht mehr verloren (Kennung je Block mit Stelle im Eintrag).
+- V230: Eingabefeld und Diktat werden beim Kartenwechsel und bei Zurück geleert und gestoppt (`feldFuerKarteLeeren`).
+- V231: Antwort-Knöpfe und Verlauf gehören nur zu ihrer Karte (Kartenname vor dem `await` merken, danach prüfen; `antworte(nummer, fuer)`).
+- V232: Antwort-Tipp (`waehle`) lässt Freitext und Leerzeilen im Feld stehen.
+- V233: Vorlese-Strom meldet unerwartete Fehler (`except Exception` in `strom.strom`).
+- V234: Manifest `orientation` von `portrait` auf `any`, damit sich die installierte App am Tablet drehen lässt.
+- Roli koppelte sein Tablet; die App fragt dort nach einem Kopplungscode (nicht nach dem Geräteschlüssel). Gedächtnis-Eintrag `relay-zweites-geraet-ueber-einstellungen` angelegt.
+
+## 4. Decisions Made
+
+- Roli 11.11. 17:21 „14. Deine Empfehlung“: die schweren Funde einzeln beheben, je mit eigener Version und Test. Grund: sie verfälschen Nachrichten oder schicken sie an die falsche Karte. Umgesetzt (V229 bis V233).
+- Roli 11.11. 17:21 „15. Deine Empfehlung“: Ordner `dl` hinter die Anmeldung. Umgesetzt (V228). Folge: Links ohne Anmeldung (Lea, Lorenz, Handys ohne Cookie) bekommen 401.
+- Roli 11.11. 16:27 „13. Ja“: Durchsicht der Oberfläche beginnen. Die Modus-Pille der Karte Hetzner-App 15 ließ sich laut Roli wieder umschalten, damit erledigt.
+- Aus Rolis Prüf-Prompt gilt nur die vereinbarte Auswahl (von den Dateien ausgehen, Bedienwege durchspielen, Funde einstufen, höchstens fünf Erweiterungen mit widerlegendem Test, Liste der Handyprüfungen). Nicht übernommen: Excel-Nachrechnung, Anwalts- und Steuerfragen, versionierte Dateinamen.
+- Manifest-Orientierung auf `any` gestellt, ohne dass im Baubuch ein Beschluss für Hochformat stand (Auslöser: Rolis Foto 11.11. 18:47).
+
+## 5. Important Files and Locations
+
+- `hetzner_app/server.py` (VERSION 234, Route `/dl/{pfad}`), `hetzner_app/mitschrift.py` (Block-Kennung), `hetzner_app/strom.py` (Fehlerfang), `web/app.js` (`feldFuerKarteLeeren`, `pruefeFrage`, `ladeVerlauf`, `antworte`, `waehle`), `web/manifest.webmanifest` (orientation), alle bearbeitet und committet.
+- `BAUBUCH.md`, `~/projekte/Brain/REGISTER.md` (Eintrag 11.11. 17:50, **V234 dort noch nicht nachgetragen**).
+- Gedächtnis: `~/.claude/memory-gemeinsam/relay-zweites-geraet-ueber-einstellungen.md`.
+
+## 6. Open Tasks
+
+Offen bei Roli (Nummern laufen weiter, zuletzt 28):
+- 16. Soll ich die übrigen Rennen beim Kartenwechsel (Dateibaum, Datei-Inhalt, Zurückspulen, Glätten, Modellwahl, Umbenennen) nach demselben Muster in einer Version beheben? Empfehlung: Ja.
+- 17. Soll danach die Barrierefreiheit folgen (Ampel mit Text, erreichbare Schalter, Kontrast, größere Tippflächen)? Empfehlung: Ja.
+- 27. Relay-App am Tablet neu installieren (Manifest-Änderung); 28. Querformat testen, ob zwei oder drei Spalten erscheinen.
+- Handyprobe V225 bis V234, Liste 18 bis 26: Modellnamen in der Kartenliste, Kontext-Balken, Aufwecken einer echten Karte, Modus-Knopf bei offener Frage, Foto mit Text, Kartenwechsel mit Entwurf, Antwort-Knöpfe nach schnellem Wechsel, Antwort-Tipp mit Freitext, `dl` ohne Anmeldung.
+
+Noch nicht behoben aus der Durchsicht: Einstellungen laden nur halb, wenn `/stimmen` ausfällt; Neue Karte (verborgener Ordner bei leerem Suchfilter, Doppeltipp, Benachrichtigungs-Erlaubnis); Vorschau fragt bei Fehler pro Frame; Lupe zieht das Mitlaufen weg; Vorlesen (rasche Sprünge, Leiste bleibt, Tonquellen); Netzfehler still; Terminal-Eingabe im Zustand CONNECTING; Piper erbt `ELEVENLABS_API_KEY` und `GOOGLE_TTS_API_KEY`; Web-Push fängt nur `WebPushException`; Barrierefreiheit (Punkt 16 im Baubuch). Höchstens fünf Erweiterungen mit Test sind noch nicht vorgeschlagen.
+
+Weiter offen: Skillkontor-Marketing 39 (gemerkt „fable“, geantwortet hat Sonnet 5.5; ungeklärt). Verhalten im Auto (Diktat, Freisprechen, Ton-Tagebuch) frühestens um den 22.11. Baustein 16 zwei Karten nebeneinander, Baustein 11 Teil 3, Auslieferer für Lea und Lorenz, Englisch zum Schluss, Baustein 18 zurückgestellt, Remote Control liegt.
+
+## 7. Known Issues / Risks
+
+- Nichts davon ist am Handy oder Tablet geprüft. Diktat und die Strom-Meldung ließen sich im Testbrowser nicht prüfen (kein Mikrofon, kein echter Fehler).
+- Ob das Tablet im Querformat 1280 CSS-Pixel erreicht (dreispaltige Ansicht), ist offen; sonst zwei Spalten ab 900 Pixel.
+- Eine schon installierte PWA übernimmt das neue Manifest erst nach Aktualisierung durch Android.
+- Der Server zeigt im Testserver alle echten Karten, schreibende Klicks wirken auf sie. Keine Karte über Fließtext suchen, vor jedem Klick auf Senden, Modus, Modell oder Anhalten den Kartennamen prüfen. Die Scheinkarten-Methode (Liste per `page.route` vortäuschen) ist sicher.
+- Der Kopplungscode für das Tablet (einmalig, 15 Minuten) steht bewusst nicht in dieser Datei.
+
+## 8. Next Recommended Step
+
+Rolis Antworten auf 16 und 17 abwarten; bei Ja die Rennen in einer Version beheben, dann die Barrierefreiheit, jeweils mit Probe und Baubuch-Eintrag. Zuerst V234 im Register nachtragen.
+
+## 9. Context for Future Claude Sessions
+
+- Pro Änderung an App oder API `VERSION` in `hetzner_app/server.py` hochzählen, dann `sudo systemctl restart hetzner-app.service` und `curl -s localhost:8787/api/version`. Einzeln committen mit deutscher Nachricht und `git push github main`.
+- Testserver: Skript **nicht nach /tmp** legen (dort liegt ein `bisect.py`, das die Standardbibliothek überdeckt), sondern in ein frisches Verzeichnis unter /var/tmp; `python -I` ignoriert `PYTHONPATH`, also `sys.path.insert` im Skript. `dependency_overrides[require_auth]` und `on_startup.clear()`, Port 8799, Beenden mit `fuser -k 8799/tcp`. Playwright aus `~/werkzeuge/browser/.venv`. Tour-Schalter `relay_tour_liste_v1` und `relay_tour_sitzung_v1` auf "1".
+- Aufräumen mit `rm -rf /var/tmp/ts.*` geht, mit `$(...)` im Pfad sperrt die Schutzprüfung den Befehl.
+- Nie `tts` aus einem zweiten Python-Prozess nutzen, sondern die Stimme nachbauen (Test in V233).
+- Probeeintrag in Mitschrift-Tests braucht einen Zeilenumbruch am Ende, sonst wird die letzte Zeile nicht gelesen.
+- Nach 250.000 Token Kontext neue Karte. Antworten kurz, nummerierte Fragen mit Empfehlung, am Ende „Fertig.“
+
+## 10. Suggested Next Prompt
+
+```text
+Übergabe lesen
+```
