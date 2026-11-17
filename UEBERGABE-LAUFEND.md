@@ -5,3 +5,4 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 17.11.2026 13:43. Schreibt de
 
 - [17.11. 13:43] „(Nachricht mit Zugangs-Stichwort, Wortlaut nicht mitgeschrieben; steht im Verlauf)“
 - [17.11. 13:49] „185. Deine Empfehlung 186. Deine Empfehlung“
+- [17.11. 15:03] „187. Ja 188. Ja, Und meine nächste Bitte wäre, da muss man auch tatsächlich was einrichten –, und zwar die Benachrichtigungsglocke. Die ist standardmäßig gefühlt bei jeder Karte an, die möchte ich gerne aus haben. Und erst wenn ich dann draufdrücke, dass das dann angeht, weil das ist wahnsinnig nervig.“
