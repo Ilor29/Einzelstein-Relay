@@ -258,7 +258,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 246
+VERSION = 247
 
 
 @app.get("/api/version")
@@ -400,7 +400,7 @@ class NewSession(BaseModel):
     cwd: str
     first_prompt: str = ""
     pinned: bool = False
-    notify_when_done: bool = True   # siehe state.Meta: klingelt nur bei "wartet auf dich"
+    notify_when_done: bool = False  # siehe state.Meta (seit V247 standardmäßig aus): klingelt nur bei "wartet auf dich"
     # "Fragt nie": Claude führt auch Befehle ohne Rückfrage aus. Nur beim Start
     # setzbar, nicht später umschaltbar.
     ohne_rueckfragen: bool = False

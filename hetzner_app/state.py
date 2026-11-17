@@ -40,8 +40,9 @@ FESTE_ORDNER = ["Medienwerk"]
 class Meta:
     pinned: bool = False
     # Seit 07.09. klingelt es nur noch, wenn die Karte dich BRAUCHT (wartet
-    # auf dich), nicht bei jedem "fertig" — darum für neue Karten an.
-    notify_when_done: bool = True
+    # auf dich). Seit 17.11.2026 ist die Glocke für neue Karten AUS (Roli 15:03:
+    # „bei jeder Karte an, wahnsinnig nervig“); er schaltet sie selbst ein.
+    notify_when_done: bool = False
     created_prompt: str = ""
     # Welches Modell wir zuletzt gewählt haben (der Alias, z. B. "opus").
     modell: str = ""
