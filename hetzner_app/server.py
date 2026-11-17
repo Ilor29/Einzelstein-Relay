@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from . import aenderungen, befehle, bibliothek, dateibaum, diktat, geraete, hintergrund, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, verbrauch, verlauf, vorschau, zurueckspulen
+from . import aenderungen, befehle, bibliothek, dateibaum, diktat, geraete, hintergrund, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, uebergabe_cache, verbrauch, verlauf, vorschau, zurueckspulen
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -224,6 +224,9 @@ async def waechter_starten() -> None:
 
     asyncio.create_task(melden.waechter())
 
+    # Übergabe kurz vor Cache-Ablauf (Roli 17.11.2026 13:26).
+    asyncio.create_task(uebergabe_cache.waechter())
+
     # Die Stimme schon mal in den Speicher holen. Sonst wartet man beim ersten
     # Vorlesen drei Sekunden auf ein Modell, das man auch vorher hätte laden
     # können.
@@ -255,7 +258,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 245
+VERSION = 246
 
 
 @app.get("/api/version")
