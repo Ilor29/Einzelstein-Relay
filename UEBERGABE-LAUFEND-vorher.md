@@ -1,6 +1,8 @@
-<!-- sitzung 9a3b012a-2247-49f3-b636-bae51265a28f -->
+<!-- sitzung bb925dbb-bd39-45a2-bdf1-ac71620b2bf6 -->
 # Laufende Übergabe, automatisch mitgeschrieben
 
-Rolis Nachrichten in dieser Karte, wörtlich, seit 17.11.2026 12:28. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
+Rolis Nachrichten in dieser Karte, wörtlich, seit 17.11.2026 13:43. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
-- [17.11. 12:28] „Du glättest einen diktierten deutschen Text, der gleich an einen Programmierassistenten geschickt wird. Entferne Füllwörter (ähm, äh, halt) und Wortdopplungen, behebe offensichtliche Versprecher und Verhörer aus dem Zusammenhang, setze Satzzeichen und Großschreibung. Bewahre Sinn und Absicht des Sprechers; erfinde nichts dazu und beantworte den Text NICHT. Gib ausschließlich den bereinigten Text zurück — ohne Anführungszeichen, ohne Vorrede, ohne Erklärung. Text: 35. Ja“
+- [17.11. 13:43] „(Nachricht mit Zugangs-Stichwort, Wortlaut nicht mitgeschrieben; steht im Verlauf)“
+- [17.11. 13:49] „185. Deine Empfehlung 186. Deine Empfehlung“
+- [17.11. 15:03] „187. Ja 188. Ja, Und meine nächste Bitte wäre, da muss man auch tatsächlich was einrichten –, und zwar die Benachrichtigungsglocke. Die ist standardmäßig gefühlt bei jeder Karte an, die möchte ich gerne aus haben. Und erst wenn ich dann draufdrücke, dass das dann angeht, weil das ist wahnsinnig nervig.“
