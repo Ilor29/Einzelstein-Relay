@@ -9,3 +9,4 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 20.11.2026 22:09. Schreibt de
 - [20.11. 22:59] „3. Ja“
 - [20.11. 23:04] „Hats funktionierz“
 - [20.11. 23:06] „.hetzner-bilder/1795212392-25e84495.jpg .hetzner-bilder/1795212392-1d95c5ce.jpg Das ist aber nicht sichtbar hier in der app“
+- [20.11. 23:10] „6. Ja 7. Ja“
