@@ -1527,7 +1527,10 @@ function linksSammeln(bloecke) {
     for (const fund of linksAusText(block.text)) {
       if (bekannt.has(fund.url) || weg.has(fund.url)) continue;
       bekannt.add(fund.url);
-      liste.push({ url: fund.url, wort: fund.wort, wann: Date.now() });
+      // Die Uhrzeit der Antwort, nicht die des Einsammelns: Beim ersten
+      // Öffnen einer Karte kommen sonst alle Links mit derselben Zeit herein.
+      const zeit = Date.parse(block.zeit || "");
+      liste.push({ url: fund.url, wort: fund.wort, wann: isNaN(zeit) ? Date.now() : zeit });
       neu = true;
     }
   }
@@ -1561,7 +1564,14 @@ function linkBlattZeigen() {
     ziel.append(leer);
   }
 
-  for (const eintrag of [...liste].reverse()) {
+  // Neueste oben, nach der Uhrzeit der Antwort sortiert. Drei fast gleiche
+  // Anmelde-Links hintereinander ließen Roli am 20.11. den alten erwischen
+  // (23:37: „wenn du gleich Links hast, sehe ich nicht, welches das neueste
+  // ist“). Darum steht jetzt bei jedem die Uhrzeit, der oberste trägt
+  // „neueste“, und die Adresse zeigt Anfang UND Ende, wo sich solche Links
+  // unterscheiden.
+  const sortiert = [...liste].reverse().sort((a, b) => (b.wann || 0) - (a.wann || 0));
+  sortiert.forEach((eintrag, nr) => {
     const zeile = document.createElement("div");
     zeile.className = "link-zeile";
 
@@ -1576,8 +1586,17 @@ function linkBlattZeigen() {
     const adresse = document.createElement("span");
     adresse.className = "link-adresse";
     adresse.textContent = eintrag.url.length > 70
-      ? eintrag.url.slice(0, 67) + "…" : eintrag.url;
-    a.append(titel, adresse);
+      ? eintrag.url.slice(0, 42) + " … " + eintrag.url.slice(-24) : eintrag.url;
+    const wann = document.createElement("span");
+    wann.className = "link-zeit";
+    wann.textContent = linkZeit(eintrag.wann);
+    if (nr === 0 && sortiert.length > 1) {
+      const neu = document.createElement("span");
+      neu.className = "link-neu";
+      neu.textContent = "neueste";
+      wann.append(" ", neu);
+    }
+    a.append(titel, adresse, wann);
 
     const wegKnopf = document.createElement("button");
     wegKnopf.type = "button";
@@ -1592,9 +1611,21 @@ function linkBlattZeigen() {
 
     zeile.append(a, wegKnopf);
     ziel.append(zeile);
-  }
+  });
 
   $("links-blatt").hidden = false;
+}
+
+// „23:36“ für heute, „gestern 23:36“, sonst „18.11. 23:36“.
+function linkZeit(wann) {
+  const t = new Date(wann || 0);
+  if (!wann || isNaN(t)) return "";
+  const uhr = t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const heute = new Date();
+  const tage = Math.round((new Date(heute.toDateString()) - new Date(t.toDateString())) / 86400000);
+  if (tage === 0) return uhr;
+  if (tage === 1) return `gestern ${uhr}`;
+  return `${t.getDate()}.${t.getMonth() + 1}. ${uhr}`;
 }
 
 function linkBlattZu() { $("links-blatt").hidden = true; }

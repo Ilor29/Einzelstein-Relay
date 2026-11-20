@@ -1441,6 +1441,18 @@ body.eng .sitzung-info { display: none; }
   font-size: .72rem;
   overflow-wrap: anywhere;
 }
+.link-zeit {
+  color: var(--schrift-leise);
+  font-size: .75rem;
+}
+/* „neueste“ als Wort im Rahmen, nicht nur über die Farbe (Rot-Grün-Schwäche). */
+.link-neu {
+  border: 1px solid var(--akzent);
+  border-radius: 999px;
+  padding: 0 .45em;
+  color: var(--schrift);
+  font-weight: 600;
+}
 
 .bildunterschrift {
   font-size: .82rem;

@@ -1277,3 +1277,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** Der WebSocket-Endpunkt ruft nach `tmux.attach` ausdrücklich `tmux.resize(name, cols, rows)` auf. Nach dem Trennen setzt `fenster_zuruecksetzen` wie bisher auf 120x40 zurück.
 **Geprüft:** Probe-Sitzung `hz-probeterm` auf `manual` 120x40 gestellt, Testserver 8799 mit ausgehängter Anmeldung (auch für den WebSocket), Verbindung mit 52x23: Fenster 52x23 während der Verbindung, 120x40 danach. Gegenprobe alter Weg (nur `stty` und Anhängen): bleibt 120x40. Playwright 412x915: xterm füllt den Kasten (34 Zeilen), nichts liegt unter den Sondertasten.
 **Nicht geprüft:** am echten Handy, zwei Zuschauer gleichzeitig (es gewinnt der zuletzt verbundene).
+
+## 20.11.2026: V250, Linkliste mit Uhrzeit und „neueste“
+**Auslöser:** Roli 23:37 „wenn du gleich Links hast, sehe ich nicht, welches das neueste ist. Auch übrigens eine Verbesserung für die App“ und 23:39 „12. Ja“. Bei der Fish-Anmeldung öffnete er einmal den alten von drei fast gleichen Links.
+**Lösung:** `linksSammeln` merkt sich die Uhrzeit der Antwort (`block.zeit`) statt des Einsammelns. Das Blatt „Gesammelte Links“ sortiert nach dieser Zeit, zeigt bei jedem Link die Uhrzeit („23:40“, „gestern 21:42“, sonst Datum), der oberste trägt ein umrandetes Wort „neueste“ (nicht nur Farbe). Lange Adressen zeigen Anfang und Ende statt nur des Anfangs, denn genau am Ende unterscheiden sich solche Links.
+**Geprüft:** Playwright 412x800 mit vier vorbelegten Links (drei Fish-Links 23:12, 23:34, 23:40 und eine Seite von gestern): Reihenfolge stimmt, „neueste“ am obersten, Enden unterscheidbar, Bildschirmfoto angesehen, keine Seitenfehler.
+**Nicht geprüft:** am Handy; Links, die vor V250 gesammelt wurden, behalten ihre alte Einsammel-Zeit.
