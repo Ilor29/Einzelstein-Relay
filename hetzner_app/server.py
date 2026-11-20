@@ -258,7 +258,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 248
+VERSION = 249
 
 
 @app.get("/api/version")
@@ -2727,6 +2727,15 @@ async def terminal(
 
     await websocket.accept()
     process = await tmux.attach(name, cols, rows)
+    # Ausdrücklich auf die Größe des Zuschauers stellen. `fenster_zuruecksetzen`
+    # stellt das Fenster per resize-window auf 120x40, und das schaltet tmux
+    # still auf window-size manual: Danach passte sich das Fenster beim
+    # Anhängen nicht mehr an, und am Handy fehlten rechts und unten Teile
+    # (Roli 20.11. 23:06, /mcp-Menü abgeschnitten, Handy 52x23, Fenster 120x40).
+    try:
+        await asyncio.to_thread(tmux.resize, name, cols, rows)
+    except tmux.TmuxError:
+        pass
 
     async def server_to_browser() -> None:
         """Was das Terminal ausgibt, geht ans Handy."""
