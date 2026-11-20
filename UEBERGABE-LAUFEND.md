@@ -14,3 +14,5 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 20.11.2026 22:09. Schreibt de
 - [20.11. 23:33] „http://localhost:59787/callback?code=mrY42NIb9DEfryqUjbxgfIAzrjeP3mEx87qOjAvKc3M&iss=https%3A%2F%2Fapi.fish.audio&state=WFQc4O3LyAUtRFrn9rcMdNC5j8iL2PX42hsrZPBCLLc“
 - [20.11. 23:36] „http://localhost:59787/callback?code=FktnLzo-xzjWJ1ZZ1BvuHDdL-k4A14cLqxE3CG4OO4w&iss=https%3A%2F%2Fapi.fish.audio&state=hA8QS99uco1_gr-i3uVVy5PBSyL7YFhqHNYE1nX-WtI“
 - [20.11. 23:37] „Weisst du wenn du gleich links hast sehe ich nicht welches das neuste ist. Auch übrigens eine verbesserung für die app“
+- [20.11. 23:38] „http://localhost:52610/callback?code=B0crj_H2xJjSBGP94jQq7LSLKRDk4oK6fm_Yb26DOaQ&iss=https%3A%2F%2Fapi.fish.audio&state=oPusGaGoObMNjHONRxkMuxSCgDoWDfQsxO5T845j0L0“
+- [20.11. 23:39] „12. Ja, Frag nur was du wirklich nicht entscheiden kannst!“
