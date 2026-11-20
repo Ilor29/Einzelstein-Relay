@@ -407,7 +407,18 @@ def dialog_zustand(name: str) -> str:
     # riss damit die frisch angelegte Sitzung ab.
     if "trust this folder" in fuss or "trust the files" in fuss:
         return "vertrauensfrage"
+    # Die Anmeldeseite eines MCP-Servers (/mcp, Server, „Authenticate“). Sie
+    # wartet auf die Adresse, auf die der Browser nach der Anmeldung
+    # umleitet. Escape hieße hier „zurück“ und bräche den Anlauf ab; am
+    # 20.11. landete Rolis nächste Nachricht im /mcp-Fenster und schloss es.
+    if "paste the url from your browser" in fuss and "enter to submit" in fuss:
+        return "mcp-anmeldung"
     if "esc to cancel" in fuss:
+        return "abbrechbar"
+    # Das /mcp-Menü und seine Unterseiten sagen „Esc to close“ bzw. „Esc to
+    # go back“. Bis V248 galten sie als frei, und die nächste Nachricht wurde
+    # ins Menü getippt (Medienwerk 175, 20.11.: „MCP dialog dismissed“).
+    if "esc to close" in fuss or "esc to go back" in fuss:
         return "abbrechbar"
     if "enter to continue" in fuss or "enter to confirm" in fuss:
         return "blockiert"

@@ -428,6 +428,55 @@ def anmelde_link(name: str) -> str | None:
 _LOGIN_NOETIG = re.compile(r"please run /login", re.I)
 
 
+_MCP_SERVER = re.compile(r"Authenticate with (\S+)")
+
+
+def mcp_anmeldung(name: str) -> dict | None:
+    """Die offene Anmeldung eines MCP-Servers: Server, Adresse, Fehler.
+
+    Claude Code bricht die Adresse hart um, wie beim /login; zusammengesetzt
+    wird ab der Zeile nach „Use the URL below“, solange die Folgezeilen nur
+    aus Adress-Zeichen bestehen.
+    """
+    if tmux.dialog_zustand(name) != "mcp-anmeldung":
+        return None
+    try:
+        screen = tmux.capture(name, lines=None)
+    except tmux.TmuxError:
+        return None
+    zeilen = screen.splitlines()
+    server = ""
+    link = ""
+    fehler = ""
+    # Nur ab der letzten Überschrift lesen: Weiter oben steht Gesprächstext.
+    for i in range(len(zeilen) - 1, -1, -1):
+        m = _MCP_SERVER.search(zeilen[i])
+        if m:
+            server = m.group(1)
+            zeilen = zeilen[i:]
+            break
+    for i, zeile in enumerate(zeilen):
+        if "use the url below" in zeile.lower():
+            teile = []
+            for folge in zeilen[i + 1:]:
+                folge = folge.strip()
+                if not teile and not folge:
+                    continue  # Leerzeile zwischen Hinweis und Adresse
+                if not teile and not folge.startswith("https://"):
+                    break
+                if not folge or not _ANMELDE_STUECK.match(folge):
+                    break
+                teile.append(folge)
+            link = "".join(teile)
+        if "✘" in zeile:
+            fehler = zeile.split("✘", 1)[1].strip()
+            for folge in zeilen[i + 1:]:
+                if not folge.startswith("    ") or not folge.strip():
+                    break
+                fehler += " " + folge.strip()
+    return {"server": server, "link": link, "fehler": fehler}
+
+
 def anmeldung_status(name: str) -> str:
     """Wo steht die Claude-Anmeldung dieser Sitzung gerade?
 

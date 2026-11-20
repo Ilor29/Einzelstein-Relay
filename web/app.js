@@ -1791,9 +1791,38 @@ async function pruefeFrage() {
 //              übers normale Eingabefeld scheiterte am 07.09., weil der
 //              Dialog-Wächter den Login mit Escape wegdrückte.
 let anmeldeLink = "";
+// V248: Dieselbe Box dient auch der Anmeldung eines MCP-Servers (/mcp,
+// „Authenticate“). Dann geht ins Feld die Adresse, auf die der Browser nach
+// der Anmeldung umleitet, nicht ein Code.
+let mcpModus = false;
 
 function zeigeAnmeldung(frage) {
   const kasten = $("anmelde-link");
+  const mcp = frage?.mcpAnmeldung || null;
+  const warMcp = mcpModus;
+  mcpModus = !!mcp;
+  if (mcp) {
+    anmeldeLink = mcp.link || "";
+    $("anmelde-start").hidden = true;
+    $("anmelde-oeffnen").hidden = !anmeldeLink;
+    $("anmelde-kopieren").hidden = !anmeldeLink;
+    $("anmelde-code-zeile").hidden = false;
+    $("anmelde-code").placeholder = "Adresse aus dem Browser einfügen";
+    $("anmelde-code").setAttribute("aria-label", "Adresse aus der Adresszeile des Browsers");
+    $("anmelde-code-senden").textContent = "Adresse senden";
+    $("anmelde-hinweis").textContent =
+      `Anmeldung bei ${mcp.server || "dem MCP-Server"}: Link öffnen und anmelden. ` +
+      "Danach zeigt der Browser einen Verbindungsfehler, das ist richtig so. " +
+      "Kopiere die Adresse aus seiner Adresszeile (sie beginnt mit http://localhost) und füge sie hier ein." +
+      (mcp.fehler ? ` Claude Code meldet: ${mcp.fehler}` : "");
+    kasten.hidden = false;
+    return;
+  }
+  if (warMcp) {
+    $("anmelde-code").placeholder = "Code aus dem Browser einfügen";
+    $("anmelde-code").setAttribute("aria-label", "Anmelde-Code aus dem Browser");
+    $("anmelde-code-senden").textContent = "Code senden";
+  }
   const stand = frage?.anmeldung || "";
   anmeldeLink = frage?.anmeldeLink || "";
   if (!stand && !anmeldeLink) {
@@ -1836,8 +1865,30 @@ $("anmelde-code-senden").addEventListener("click", async () => {
   if (!code) { feld.focus(); return; }
   const knopf = $("anmelde-code-senden");
   knopf.disabled = true;
-  melde("Code eingereicht — einen Moment …");
   const fuer = aktuelleSitzung?.name;
+  if (mcpModus) {
+    melde("Adresse eingereicht, einen Moment …");
+    try {
+      const antwort = await (await api(
+        `/sessions/${encodeURIComponent(fuer)}/mcp-rueckgabe`,
+        { method: "POST", body: JSON.stringify({ adresse: code }) }
+      )).json();
+      if (!nochOffen(fuer)) return;
+      if (antwort.erfolg) {
+        feld.value = "";
+        zeigeAnmeldung(null);
+        melde("Angemeldet. Im Terminal steht, ob der Server jetzt verbunden ist.");
+      } else {
+        melde(antwort.fehler || "Die Anmeldung hat nicht geklappt. Bitte im Terminal nachsehen.");
+      }
+    } catch (err) {
+      melde(err.message);
+    } finally {
+      knopf.disabled = false;
+    }
+    return;
+  }
+  melde("Code eingereicht — einen Moment …");
   try {
     const antwort = await (await api(
       `/sessions/${encodeURIComponent(fuer)}/anmelde-code`,

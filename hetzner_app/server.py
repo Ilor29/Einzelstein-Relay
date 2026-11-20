@@ -258,7 +258,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 247
+VERSION = 248
 
 
 @app.get("/api/version")
@@ -580,9 +580,12 @@ async def _eingabe_bereit(name: str) -> str:
         await asyncio.to_thread(tmux.vertrauensfrage_beantworten, name)
         await asyncio.to_thread(tmux.warte_bis_bereit, name, 15)
         zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
-    if zustand in ("abbrechbar", "nebenfrage"):
-        # Auch ein offenes Nebenfrage-Fenster (/btw) wird geschlossen, bevor
-        # getippt wird; die Antwort hat die App da schon angezeigt.
+    # Auch ein offenes Nebenfrage-Fenster (/btw) wird geschlossen, bevor
+    # getippt wird; die Antwort hat die App da schon angezeigt. Bis zu drei
+    # Mal: Im /mcp-Menü führt Escape von der Unterseite erst zurück zur Liste.
+    for _ in range(3):
+        if zustand not in ("abbrechbar", "nebenfrage"):
+            break
         tmux.send_key(name, "Escape")
         await asyncio.sleep(0.8)
         zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
@@ -1981,6 +1984,11 @@ def session_frage(name: str) -> dict:
     anmeldung = state.anmeldung_status(name)
     if anmeldung:
         antwort["anmeldung"] = anmeldung
+    # Und die Anmeldung eines MCP-Servers (V248): Adresse zum Öffnen plus
+    # Feld für die Rückgabe-Adresse aus dem Browser.
+    mcp = state.mcp_anmeldung(name)
+    if mcp:
+        antwort["mcpAnmeldung"] = mcp
     return antwort
 
 
@@ -2088,6 +2096,54 @@ async def session_anmelde_code(name: str, body: AnmeldeCode) -> dict:
                     "fehler": "Der Code wurde abgelehnt — bitte im Browser "
                               "einen frischen Code holen und noch einmal einfügen."}
     return {"ok": True, "erfolg": False}
+
+
+# --- Anmeldung eines MCP-Servers (V248) ----------------------------------------
+#
+# /mcp, Server wählen, „Authenticate“: Claude Code zeigt eine Adresse und
+# wartet. Nach der Anmeldung im Handy-Browser leitet der Anbieter auf
+# http://localhost:<port>/callback um. Dieses localhost ist der Server, nicht
+# das Handy, darum zeigt der Browser einen Verbindungsfehler. Die Adresse aus
+# seiner Adresszeile gehört in Claude Codes Einfügefeld; das erledigt dieser
+# Endpunkt (Roli 20.11. 22:29 „2. Ja“).
+
+_MCP_RUECKGABE = re.compile(r"http://(?:localhost|127\.0\.0\.1)(?::\d{1,5})?/\S{1,4000}")
+
+
+class McpRueckgabe(BaseModel):
+    adresse: str
+
+
+async def _mcp_rueckgabe_einreichen(name: str, adresse: str) -> dict:
+    tmux.send_text(name, adresse)
+    await asyncio.sleep(0.3)
+    tmux.send_key(name, "Enter")
+    frist = time.monotonic() + 15
+    while time.monotonic() < frist:
+        await asyncio.sleep(1.0)
+        mcp = await asyncio.to_thread(state.mcp_anmeldung, name)
+        if mcp and mcp.get("fehler"):
+            return {"ok": True, "erfolg": False, "fehler": mcp["fehler"]}
+        if not mcp:
+            return {"ok": True, "erfolg": True}
+    return {"ok": True, "erfolg": False,
+            "fehler": "Claude Code hat noch nicht geantwortet. Bitte im Terminal nachsehen."}
+
+
+@app.post("/api/sessions/{name}/mcp-rueckgabe", dependencies=[Depends(require_auth)])
+async def session_mcp_rueckgabe(name: str, body: McpRueckgabe) -> dict:
+    """Reicht die Rückgabe-Adresse aus dem Browser in die MCP-Anmeldung."""
+    if not tmux.exists(name):
+        raise HTTPException(404, "Diese Sitzung gibt es nicht.")
+    adresse = body.adresse.strip()
+    if not _MCP_RUECKGABE.fullmatch(adresse):
+        raise HTTPException(400, "Das ist nicht die Adresse aus dem Browser. Sie "
+                            "beginnt mit http://localhost und steht nach der "
+                            "Anmeldung oben in der Adresszeile.")
+    if await asyncio.to_thread(tmux.dialog_zustand, name) != "mcp-anmeldung":
+        raise HTTPException(409, "In dieser Sitzung ist gerade keine "
+                            "MCP-Anmeldung offen.")
+    return await _mcp_rueckgabe_einreichen(name, adresse)
 
 
 @app.post("/api/ton-tagebuch", dependencies=[Depends(require_auth)])
@@ -2600,6 +2656,17 @@ async def session_senden(name: str, body: Nachricht) -> dict:
     # Escape als Ausweg an, drücken wir ihn weg; wenn nicht, lieber ein
     # ehrlicher Fehler als eine stumm verlorene Nachricht.
     zustand = await asyncio.to_thread(tmux.dialog_zustand, name)
+    if zustand == "mcp-anmeldung":
+        # Die Anmeldeseite eines MCP-Servers. Die Rückgabe-Adresse aus dem
+        # Browser darf auch übers normale Feld kommen, alles andere nicht.
+        if _MCP_RUECKGABE.fullmatch(body.text.strip()):
+            return await _mcp_rueckgabe_einreichen(name, body.text.strip())
+        raise HTTPException(
+            409,
+            "Claude Code wartet in dieser Sitzung auf die Anmeldung eines "
+            "MCP-Servers. Erst über den Anmelde-Kasten anmelden oder im "
+            "Terminal mit Escape abbrechen.",
+        )
     if zustand == "anmeldung":
         # Der /login-Bildschirm liegt über der Eingabe. Sieht der Text wie
         # ein Anmelde-Code aus (langes Zeichenpaket ohne Leerzeichen, so
