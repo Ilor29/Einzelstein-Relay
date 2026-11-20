@@ -1250,3 +1250,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** `Meta.notify_when_done` und das Feld im Anlege-Formular der API stehen auf False; der Haken „Melden, wenn die Karte dich braucht“ im Formular „Neue Karte“ ist nicht mehr vorgewählt. Die Glocke in der Karte schaltet wie bisher um. Einmalig wurden außerdem alle 621 bestehenden Karteneinträge (die meisten archiviert oder schlafend) auf aus gestellt, sonst hätten alte Karten weiter geklingelt. Der Kartenwechsel erbt die Einstellung der alten Karte und bleibt damit aus.
 **Geprüft:** Playwright gegen Testserver 8799: Haken beim Start nicht gesetzt, keine Seitenfehler; `Meta()` liefert False; nach der Umstellung steht keine Karte mehr auf an.
 **Nicht geprüft:** Einschalten der Glocke am Handy (Erlaubnis-Abfrage), echte Meldung nach dem Umschalten.
+
+## 20.11.2026: XSS-Gegenprobe für Verlaufstext (kein Code geändert)
+**Auslöser:** Roli 20.11. 22:09 „1. Ja“ (Frage 189, offener Punkt „Unbestätigt: XSS über .md-Inhalt“ aus der Durchsicht).
+**Geprüft:** Playwright gegen Testserver 8799 (Anmeldung ausgehängt), `schreibe()` im Browser mit acht feindlichen Texten: Bild mit onerror, Script, Link mit `javascript:`, dieselben Muster in fett, kursiv, Code und Codeblock, Anführungszeichen-Ausbruch in einer nackten Adresse. Ergebnis: alles erscheint als Text, es lief kein Skript (`window.__x` blieb leer), keine `on…`-Attribute, kein `javascript:`-Link, keine Seitenfehler. Das einzige Bild-/SVG-Element ist das Kopieren-Symbol im Codekasten.
+**Grund:** `inlineSchreiben` erzeugt alles per `textContent` und Knoten, Links nur für `https:`/`mailto:`.
+**Nicht geprüft:** andere `innerHTML`-Stellen in app.js (28 Treffer), nur der Verlaufs-Schreibweg.
