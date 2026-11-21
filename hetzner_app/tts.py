@@ -270,7 +270,7 @@ def _google_sprechen(text: str, voice_name: str) -> bytes:
         roh = inhalt.get("audioContent")
         if not roh:
             raise TTSError("Google hat keinen Ton geliefert.")
-        return base64.b64decode(roh)
+        return base64.b64decode(roh, validate=True)
     except urllib.error.HTTPError as fehler:
         status, meldung = "", ""
         try:
@@ -289,6 +289,9 @@ def _google_sprechen(text: str, voice_name: str) -> bytes:
         raise TTSError(f"Google lehnt ab (HTTP {fehler.code}).")
     except OSError:
         raise TTSError("Google ist gerade nicht erreichbar.")
+    except (ValueError, AttributeError):
+        # V252 (Befund 6): kaputtes JSON, kein Objekt oder ungültiges base64.
+        raise TTSError("Google hat eine unlesbare Antwort geschickt.")
 
 
 def _zerlegen_stimme(name: str) -> tuple[str, int | None]:
