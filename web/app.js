@@ -1844,7 +1844,8 @@ function zeigeAnmeldung(frage) {
     $("anmelde-hinweis").textContent =
       `Anmeldung bei ${mcp.server || "dem MCP-Server"}: Link öffnen und anmelden. ` +
       "Danach zeigt der Browser einen Verbindungsfehler, das ist richtig so. " +
-      "Kopiere die Adresse aus seiner Adresszeile (sie beginnt mit http://localhost) und füge sie hier ein." +
+      "Kopiere die Adresse aus seiner Adresszeile (sie beginnt mit http://localhost) und füge sie hier ein. " +
+      "Claude Code wartet nur etwa fünf Minuten, also zügig durchgehen; sonst im Terminal-Teil neu „Authenticate“ wählen." +
       (mcp.fehler ? ` Claude Code meldet: ${mcp.fehler}` : "");
     kasten.hidden = false;
     return;

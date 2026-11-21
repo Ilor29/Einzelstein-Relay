@@ -1283,3 +1283,10 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** `linksSammeln` merkt sich die Uhrzeit der Antwort (`block.zeit`) statt des Einsammelns. Das Blatt „Gesammelte Links“ sortiert nach dieser Zeit, zeigt bei jedem Link die Uhrzeit („23:40“, „gestern 21:42“, sonst Datum), der oberste trägt ein umrandetes Wort „neueste“ (nicht nur Farbe). Lange Adressen zeigen Anfang und Ende statt nur des Anfangs, denn genau am Ende unterscheiden sich solche Links.
 **Geprüft:** Playwright 412x800 mit vier vorbelegten Links (drei Fish-Links 23:12, 23:34, 23:40 und eine Seite von gestern): Reihenfolge stimmt, „neueste“ am obersten, Enden unterscheidbar, Bildschirmfoto angesehen, keine Seitenfehler.
 **Nicht geprüft:** am Handy; Links, die vor V250 gesammelt wurden, behalten ihre alte Einsammel-Zeit.
+
+## 21.11.2026: V251, Fünf-Minuten-Hinweis im MCP-Anmeldekasten
+**Auslöser:** Roli 21.11. 08:54 „1. Ja“ (offener Punkt aus der Übergabe: Lehre aus der Fish-Anmeldung, Claude Code wartet nach „Authenticate“ nur etwa fünf Minuten).
+**Lösung:** Der Hinweistext der MCP-Fassung in `zeigeAnmeldung` (app.js) endet jetzt mit „Claude Code wartet nur etwa fünf Minuten, also zügig durchgehen; sonst im Terminal-Teil neu „Authenticate“ wählen.“
+**Fehler unterwegs:** Testserver startete zuerst nicht (Skript aus /tmp ohne `PYTHONPATH` auf den Projektordner).
+**Geprüft:** Playwright 412x800 gegen Testserver 8799, `zeigeAnmeldung` mit nachgestellter MCP-Anmeldung: Text vollständig, Knöpfe und Feld sichtbar, Bildschirmfoto angesehen, keine Seitenfehler.
+**Nicht geprüft:** am Handy, mit echter MCP-Anmeldung.
