@@ -1315,3 +1315,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Nicht geprüft:** am Handy mit echter Tastatur, „Stand sichern“ und Glocke aus dem Menü mit echter Karte (nur dass der Punkt den alten Knopf auslöst), Tour-Schritt im Durchlauf, Safari (`:has` fehlt dort vor 15.4, dann bleiben Terminal-Wechsel und Blitz einfach sichtbar).
 **Nachtrag 21.11. 13:41:** Roli hat V253 am Handy mit echter Tastatur ausprobiert: „19. Ja, testbestanden“.
 **Nachtrag 21.11. 13:42:** Roli am Handy: Glocke einschalten geht, Terminal (V249) geht („Glocke auch erledigt geht terminal auch“). Aus Punkt 13 ist nur noch die Bibliothek (jeder Skill einmal) unbestätigt.
+
+## 21.11.2026: V254, Kette oben, Lupe im Menü
+**Auslöser:** Roli 21.11. 15:29 „23. Ja, Bitte noch einmal die Lupe gegen den Link tauschen … Die Lupe verschwindet in den drei Punkten, aber die Linkklammer brauche ich auf jeden Fall auf der Schnellwahltaste oben.“ (und „22. Nein“: Schnellbefehle ohne Tastatur bleiben sichtbar).
+**Lösung:** Das Ketten-Symbol (`knopf-linkliste`) steht wieder oben, die Lupe trägt `ins-menue`. Neuer Menüpunkt „Im Verlauf suchen“ löst die Lupe aus. Bei offener Tastatur wird die Kette statt der Lupe ausgeblendet. Strg+K prüft nicht mehr die Sichtbarkeit der Lupe. Tour: Link-Schritt zeigt auf die Kette, Such-Schritt ohne Markierung, Text nennt das Menü.
+**Geprüft:** Playwright 412x800 gegen Testserver 8799: Kette sichtbar, Lupe unsichtbar, bei `body.eng` Kette weg, keine Seitenfehler, Bildschirmfoto der Kopfzeile angesehen.
+**Nicht geprüft:** Menüpunkt „Im Verlauf suchen“ mit echter Karte (Handler ruft nur den Lupen-Klick auf), Tour im Durchlauf, Handy.

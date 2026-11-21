@@ -447,13 +447,13 @@
       <svg viewBox="0 0 24 24"><use href="#i-zurueck"/></svg>
     </button>
     <h1 id="sitzung-name"></h1>
-    <button id="knopf-suche" data-tour="suche" class="knopf-blank" aria-label="Im Verlauf suchen">
+    <button id="knopf-suche" class="knopf-blank ins-menue" aria-label="Im Verlauf suchen">
       <svg viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
     </button>
     <!-- V253 (Roli 21.11.2026 „18. Ja“): Kette, Sichern und Nadel stehen nur noch im
          Drei-Punkte-Menü, die Glocke zeigt sich oben nur, solange sie an ist. Die Knöpfe
          bleiben im Aufbau, weil das Menü sie auslöst und der Code ihren Zustand pflegt. -->
-    <button id="knopf-linkliste" class="knopf-blank ins-menue" aria-label="Gesammelte Links">
+    <button id="knopf-linkliste" data-tour="linkliste" class="knopf-blank" aria-label="Gesammelte Links">
       <svg viewBox="0 0 24 24"><use href="#i-kette"/></svg>
     </button>
     <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">
@@ -478,7 +478,7 @@
       <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
     </button>
     <!-- Kartenmenü (Monitor-Baustein 4): Umbenennen, Fork, Ungelesen, Archiv, Löschen. -->
-    <button id="knopf-kartenmenue" data-tour="linkliste" class="knopf-blank" aria-label="Menü dieser Karte">⋯</button>
+    <button id="knopf-kartenmenue" class="knopf-blank" aria-label="Menü dieser Karte">⋯</button>
   </header>
   <!-- Eine schlichte Zeile: links der Berechtigungs-Modus zum Antippen (fragt
        nach → Änderungen ok → nur Plan → Auto), dahinter welches Modell denkt
@@ -696,6 +696,7 @@
         <h2 id="kartenmenue-titel">Diese Karte</h2>
       </div>
       <div class="kartenmenue-liste">
+        <button type="button" class="kartenmenue-punkt" data-punkt="suche">Im Verlauf suchen</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="links">Gesammelte Links</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="melden">Melden, wenn die Karte dich braucht</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="sichern">Stand sichern</button>
@@ -1022,7 +1023,7 @@
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-kette"/></svg>
-          <span>Gesammelte Links — alles, was Claude hier verlinkt hat. Liegt im Menü hinter den drei Punkten.</span>
+          <span>Gesammelte Links — alles, was Claude hier verlinkt hat.</span>
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-terminal"/></svg>

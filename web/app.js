@@ -7078,14 +7078,14 @@ function tourSchritte(ansicht) {
       text: "Der Lautsprecher liest dir Claudes Antwort vor — einmal antippen " +
             "reicht, es liest weiter, während Claude noch schreibt. Die Stimme " +
             "wählst du in den Einstellungen." },
-    { kapitel: "Dein erstes Gespräch", sel: '[data-tour="suche"]', titel: "Im Verlauf suchen",
-      text: "Die Lupe sucht ein Wort im bisherigen Gespräch — direkt auf dem " +
-            "Handy, ohne Claude zu fragen. Treffer werden hervorgehoben, mit " +
-            "den Pfeilen springst du von einem zum nächsten." },
+    { kapitel: "Dein erstes Gespräch", titel: "Im Verlauf suchen",
+      text: "Hinter den drei Punkten liegt „Im Verlauf suchen“: Das sucht ein Wort " +
+            "im bisherigen Gespräch — direkt auf dem Handy, ohne Claude zu fragen. " +
+            "Treffer werden hervorgehoben, mit den Pfeilen springst du von einem zum nächsten." },
     { kapitel: "Dein erstes Gespräch", sel: '[data-tour="linkliste"]', titel: "Gesammelte Links",
-      text: "Hinter den drei Punkten liegt „Gesammelte Links“: jeder Link, den " +
-            "Claude in diesem Gespräch nennt, der neueste zuerst. Dort stehen " +
-            "auch Stand sichern, Anheften und die Benachrichtigung." },
+      text: "Das Ketten-Symbol oben sammelt jeden Link, den Claude in diesem " +
+            "Gespräch nennt, der neueste zuerst. Hinter den drei Punkten stehen " +
+            "außerdem Stand sichern, Anheften und die Benachrichtigung." },
     { kapitel: "Dein erstes Gespräch", titel: "Und wenn Claude fragt?",
       text: "Manchmal stellt Claude eine Rückfrage — die App zeigt sie dir als " +
             "Knöpfe, du tippst die Antwort einfach an. Beim allerersten " +
@@ -7973,7 +7973,7 @@ document.addEventListener("keydown", (e) => {
   const taste = e.key.toLowerCase();
   if (taste === "/") { e.preventDefault(); kuerzelBlatt($("kuerzel-blatt").hidden); return; }
   if (blattOffen) return;
-  if (taste === "k" && !e.shiftKey && sichtbar("knopf-suche")) {
+  if (taste === "k" && !e.shiftKey && (!$("ansicht-sitzung").hidden && $("knopf-suche"))) {
     e.preventDefault(); $("knopf-suche").click();
   } else if (taste === "d" && !e.shiftKey && sichtbar("knopf-diktat")) {
     e.preventDefault(); $("knopf-diktat").click();
@@ -8012,6 +8012,7 @@ document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListene
   try {
     if (art === "umbenennen") { $("sitzung-name").click(); }
     else if (art === "anheften") { $("knopf-anheften").click(); }
+    else if (art === "suche") { $("knopf-suche").click(); }
     else if (art === "links") { $("knopf-linkliste").click(); }
     else if (art === "melden") { $("knopf-melden").click(); }
     else if (art === "sichern") { $("knopf-sichern").click(); }

@@ -240,7 +240,7 @@ body.eng .sitzung-info { display: none; }
    der Blitz neben dem Senden-Pfeil holt sie hervor. Eingeschaltetes bleibt sichtbar. */
 body.eng .kopf-sitzung { padding-top: .15rem; padding-bottom: .2rem; }
 body.eng .kopf-sitzung .knopf-blank { padding-top: .45rem; padding-bottom: .45rem; }
-body.eng .kopf-sitzung #knopf-suche,
+body.eng .kopf-sitzung #knopf-linkliste,
 body.eng .kopf-sitzung #knopf-kaira,
 body.eng .kopf-sitzung #knopf-freisprech:not(.an) { display: none; }
 body.eng #ansicht-sitzung:has(#terminal[hidden]) #knopf-ansicht { display: none; }
