@@ -235,6 +235,20 @@ html, body {
    verschwindet, damit zum Lesen mehr übrig bleibt (Roli 10.10.2026 17:11:
    „das alles so viel frisst, wenn ich was eintippen muss"). */
 body.eng .sitzung-info { display: none; }
+/* V253 (Roli 21.11.2026 „16. Ja“): Bei offener Tastatur wird auch die Kopfzeile flach
+   und zeigt nur Zurück, Name, Vorlesen und das Menü. Die Schnellbefehle klappen ein,
+   der Blitz neben dem Senden-Pfeil holt sie hervor. Eingeschaltetes bleibt sichtbar. */
+body.eng .kopf-sitzung { padding-top: .15rem; padding-bottom: .2rem; }
+body.eng .kopf-sitzung .knopf-blank { padding-top: .45rem; padding-bottom: .45rem; }
+body.eng .kopf-sitzung #knopf-suche,
+body.eng .kopf-sitzung #knopf-kaira,
+body.eng .kopf-sitzung #knopf-freisprech:not(.an) { display: none; }
+body.eng #ansicht-sitzung:has(#terminal[hidden]) #knopf-ansicht { display: none; }
+body.eng .schnellbefehle:not(.auf) { display: none; }
+#knopf-schnell { display: none; }
+body.eng #knopf-schnell { display: flex; }
+body.eng #ansicht-sitzung:has(#schnellbefehle[hidden]) #knopf-schnell { display: none; }
+#knopf-schnell[aria-expanded="true"] { background: var(--akzent-weich); box-shadow: 0 0 0 1.5px var(--akzent); }
 
 /* V222: Der Kontext-Balken steht in der Zeile des Modus, rechts davon (Roli 08.11.2026). */
 .sitzung-info .kontext-balken { flex: 1; min-width: 0; width: auto; padding: 0; background: none; border: 0; gap: .2rem; }
@@ -649,7 +663,10 @@ body.eng .sitzung-info { display: none; }
 /* Sieben Knöpfe neben dem Namen: enger gesetzt, damit auf einem schmalen
    Handy vom Kartennamen mehr als ein Buchstabe übrig bleibt. */
 .kopf-sitzung { gap: .1rem; padding-left: .5rem; padding-right: .5rem; }
-.kopf-sitzung .knopf-blank { padding: .4rem .3rem; }
+.kopf-sitzung .knopf-blank { padding: .6rem; }
+/* V253: Kette, Sichern und Nadel liegen im Drei-Punkte-Menü; die Glocke steht oben
+   nur, solange sie an ist. Dafür sind die übrigen Symbole 39 statt 30 Pixel breit. */
+.kopf-sitzung .ins-menue, .kopf-sitzung #knopf-melden:not(.an) { display: none; }
 .kopf-sitzung h1 { margin-right: .3rem; }
 /* Der Zurück-Knopf ist das meistgetippte Ziel der Zeile — als sichtbare
    Fläche und mit mehr Luft, damit der Daumen nicht auf dem Namen daneben

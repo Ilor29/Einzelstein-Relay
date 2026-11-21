@@ -331,6 +331,10 @@
       <path d="M12 7.5V12l3 2"/>
     </g>
     <!-- Zwei Kettenglieder: die gesammelten Links einer Karte. -->
+    <g id="i-blitz" fill="none" stroke="currentColor" stroke-width="1.7"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 3L6 13.5h5L10 21l8-11h-5.5z"/>
+    </g>
     <g id="i-kette" fill="none" stroke="currentColor" stroke-width="1.7"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M10.6 13.4a4 4 0 0 0 5.6 0l2.9-2.9a4 4 0 1 0-5.6-5.6l-1.6 1.6"/>
@@ -446,7 +450,10 @@
     <button id="knopf-suche" data-tour="suche" class="knopf-blank" aria-label="Im Verlauf suchen">
       <svg viewBox="0 0 24 24"><use href="#i-lupe"/></svg>
     </button>
-    <button id="knopf-linkliste" data-tour="linkliste" class="knopf-blank" aria-label="Gesammelte Links">
+    <!-- V253 (Roli 21.11.2026 „18. Ja“): Kette, Sichern und Nadel stehen nur noch im
+         Drei-Punkte-Menü, die Glocke zeigt sich oben nur, solange sie an ist. Die Knöpfe
+         bleiben im Aufbau, weil das Menü sie auslöst und der Code ihren Zustand pflegt. -->
+    <button id="knopf-linkliste" class="knopf-blank ins-menue" aria-label="Gesammelte Links">
       <svg viewBox="0 0 24 24"><use href="#i-kette"/></svg>
     </button>
     <button id="knopf-ansicht" class="knopf-blank" aria-label="Zwischen Lesen und Terminal wechseln">
@@ -464,14 +471,14 @@
     <button id="knopf-melden" class="knopf-blank" aria-label="Melden, wenn die Karte dich braucht">
       <svg viewBox="0 0 24 24"><use href="#i-glocke"/></svg>
     </button>
-    <button id="knopf-sichern" class="knopf-blank" aria-label="Stand sichern">
+    <button id="knopf-sichern" class="knopf-blank ins-menue" aria-label="Stand sichern">
       <svg viewBox="0 0 24 24"><use href="#i-sichern"/></svg>
     </button>
-    <button id="knopf-anheften" class="knopf-blank" aria-label="Sitzung anheften">
+    <button id="knopf-anheften" class="knopf-blank ins-menue" aria-label="Sitzung anheften">
       <svg viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
     </button>
     <!-- Kartenmenü (Monitor-Baustein 4): Umbenennen, Fork, Ungelesen, Archiv, Löschen. -->
-    <button id="knopf-kartenmenue" class="knopf-blank" aria-label="Menü dieser Karte">⋯</button>
+    <button id="knopf-kartenmenue" data-tour="linkliste" class="knopf-blank" aria-label="Menü dieser Karte">⋯</button>
   </header>
   <!-- Eine schlichte Zeile: links der Berechtigungs-Modus zum Antippen (fragt
        nach → Änderungen ok → nur Plan → Auto), dahinter welches Modell denkt
@@ -664,6 +671,12 @@
         <svg viewBox="0 0 24 24"><use href="#i-archiv"/></svg>
       </button>
       <span class="fueller"></span>
+      <!-- V253: Bei offener Tastatur ist die Schnellbefehl-Reihe eingeklappt, der Blitz
+           holt sie hervor (Roli 21.11.2026 12:39 „dass es einklappt, damit man mehr Lesefläche hat“). -->
+      <button type="button" id="knopf-schnell" class="knopf-diktat" aria-expanded="false"
+              aria-controls="schnellbefehle" aria-label="Schnellbefehle zeigen">
+        <svg viewBox="0 0 24 24"><use href="#i-blitz"/></svg>
+      </button>
       <button type="submit" id="knopf-senden" class="knopf-senden" aria-label="Senden">
         <svg viewBox="0 0 24 24"><use href="#i-senden"/></svg>
       </button>
@@ -683,6 +696,9 @@
         <h2 id="kartenmenue-titel">Diese Karte</h2>
       </div>
       <div class="kartenmenue-liste">
+        <button type="button" class="kartenmenue-punkt" data-punkt="links">Gesammelte Links</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="melden">Melden, wenn die Karte dich braucht</button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="sichern">Stand sichern</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="umbenennen">Umbenennen</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="anheften">Anheften</button>
         <button type="button" class="kartenmenue-punkt" data-punkt="ungelesen">Als ungelesen markieren</button>
@@ -1006,7 +1022,7 @@
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-kette"/></svg>
-          <span>Gesammelte Links — alles, was Claude hier verlinkt hat.</span>
+          <span>Gesammelte Links — alles, was Claude hier verlinkt hat. Liegt im Menü hinter den drei Punkten.</span>
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-terminal"/></svg>
@@ -1014,7 +1030,7 @@
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-glocke"/></svg>
-          <span>Melden, wenn Claude fertig ist.</span>
+          <span>Melden, wenn Claude fertig ist. Einschalten im Menü hinter den drei Punkten; solange die Glocke an ist, steht sie oben.</span>
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-nadel"/></svg>
@@ -1022,7 +1038,11 @@
         </div>
         <div class="symbol-zeile">
           <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-sichern"/></svg>
-          <span>Den Stand sichern — ins Lager und zu GitHub.</span>
+          <span>Den Stand sichern — ins Lager und zu GitHub. Liegt im Menü hinter den drei Punkten.</span>
+        </div>
+        <div class="symbol-zeile">
+          <svg class="symbol-icon" viewBox="0 0 24 24"><use href="#i-blitz"/></svg>
+          <span>Der Blitz erscheint, wenn die Tastatur offen ist, und holt die Schnellbefehle hervor.</span>
         </div>
       </div>
 

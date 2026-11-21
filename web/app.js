@@ -7083,9 +7083,9 @@ function tourSchritte(ansicht) {
             "Handy, ohne Claude zu fragen. Treffer werden hervorgehoben, mit " +
             "den Pfeilen springst du von einem zum nächsten." },
     { kapitel: "Dein erstes Gespräch", sel: '[data-tour="linkliste"]', titel: "Gesammelte Links",
-      text: "Die Kette hebt jeden Link auf, den Claude in diesem Gespräch " +
-            "nennt — der neueste zuerst. Nichts mehr im Verlauf ausgraben: " +
-            "antippen, Liste auf, Link öffnen." },
+      text: "Hinter den drei Punkten liegt „Gesammelte Links“: jeder Link, den " +
+            "Claude in diesem Gespräch nennt, der neueste zuerst. Dort stehen " +
+            "auch Stand sichern, Anheften und die Benachrichtigung." },
     { kapitel: "Dein erstes Gespräch", titel: "Und wenn Claude fragt?",
       text: "Manchmal stellt Claude eine Rückfrage — die App zeigt sie dir als " +
             "Knöpfe, du tippst die Antwort einfach an. Beim allerersten " +
@@ -7362,6 +7362,20 @@ $("knopf-tour").addEventListener("click", () => {
 
 start();
 
+// V253: Bei offener Tastatur liegen die Schnellbefehle eingeklappt hinter dem Blitz.
+function schnellKlappe(auf) {
+  $("schnellbefehle").classList.toggle("auf", auf);
+  const k = $("knopf-schnell");
+  k.setAttribute("aria-expanded", auf ? "true" : "false");
+  k.setAttribute("aria-label", auf ? "Schnellbefehle einklappen" : "Schnellbefehle zeigen");
+}
+$("knopf-schnell").addEventListener("click", () =>
+  schnellKlappe(!$("schnellbefehle").classList.contains("auf")));
+// Ein gewählter Befehl klappt die Reihe wieder ein (Zauberstab und Pfeile nicht).
+$("schnellbefehle").addEventListener("click", (e) => {
+  if (e.target.closest(".chip, .chip-menu")) schnellKlappe(false);
+});
+
 // --- Tastatur offen? ---------------------------------------------------------
 // Dieselbe Messung wie im LEIT//PULS (dort seit 15.09.2026): Die sichtbare Höhe
 // wird gegen die größte je gemessene verglichen, also gegen den Zustand ohne
@@ -7373,7 +7387,9 @@ start();
   function messen() {
     const h = vv ? vv.height : window.innerHeight;
     if (h > basis) basis = h;
-    document.body.classList.toggle("eng", h < basis * 0.75);
+    const eng = h < basis * 0.75;
+    document.body.classList.toggle("eng", eng);
+    if (!eng) schnellKlappe(false);
   }
   if (vv) { vv.addEventListener("resize", messen); vv.addEventListener("scroll", messen); }
   window.addEventListener("resize", messen);
@@ -7982,6 +7998,8 @@ $("knopf-kartenmenue").addEventListener("click", () => {
   $("kartenmenue-titel").textContent = benannt(aktuelleSitzung);
   const punkt = (n) => document.querySelector(`.kartenmenue-punkt[data-punkt="${n}"]`);
   punkt("anheften").textContent = aktuelleSitzung.pinned ? "Nicht mehr anheften" : "Anheften";
+  punkt("melden").textContent = aktuelleSitzung.notifyWhenDone
+    ? "Benachrichtigung ist an (ausschalten)" : "Melden, wenn die Karte dich braucht";
   for (const n of ["zurueckspulen", "kurzfassung", "fork", "archivieren", "loeschen"]) punkt(n).hidden = !eigen;
   kartenmenueBlatt(true);
 });
@@ -7994,6 +8012,9 @@ document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListene
   try {
     if (art === "umbenennen") { $("sitzung-name").click(); }
     else if (art === "anheften") { $("knopf-anheften").click(); }
+    else if (art === "links") { $("knopf-linkliste").click(); }
+    else if (art === "melden") { $("knopf-melden").click(); }
+    else if (art === "sichern") { $("knopf-sichern").click(); }
     else if (art === "archivieren") { $("knopf-archivieren").click(); }
     else if (art === "zurueckspulen") { rewindOeffnen(); }
     else if (art === "kurzfassung") {
