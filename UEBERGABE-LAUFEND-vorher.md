@@ -1,8 +1,11 @@
-<!-- sitzung 889e4313-99bf-4cba-a037-bdaa36563c97 -->
+<!-- sitzung 44b14900-bc25-4a49-a74b-8433c18202d1 -->
 # Laufende Übergabe, automatisch mitgeschrieben
 
-Rolis Nachrichten in dieser Karte, wörtlich, seit 21.11.2026 08:54. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
+Rolis Nachrichten in dieser Karte, wörtlich, seit 21.11.2026 12:39. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
-- [21.11. 08:54] „.hetzner-bilder/1795247612-4a257d7c.jpg 1. Ja, Jetzt eine Frage an dich: Ich kriege jedes Mal so eine Benachrichtigung: „Das hat sich bei Cloud geändert.“ Und die Frage ist, wer setzt diese Änderungen denn tatsächlich um? Das heißt, haben wir einen kleinen Suchlauf, der immer wieder die neuesten Updates rausholt, das, was wir ändern oder anpassen könnten, damit wir immer zeitgemäß bleiben, auch bei unserer Version von der Relay-App?“
-- [21.11. 09:02] „2. Ja, Ja bitte, dann arbeite alle Punkte ab, ohne mich zu fragen. Nur da, wo du mich wirklich brauchst.“
-- [21.11. 10:07] „Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register nachtragen, dann UEBERGABE.md im Projektordner schreiben (Stand, offen, nächster Schritt, Beschlüsse mit Auslöser-Satz, Rolis letzter Wortlaut) und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.“
+- [21.11. 12:39] „13. Ja 14. Deine Empfehlung 15. Wo wisst du sie hinpacken, Vielleicht wäre die Überlegung, dass wir die Schnellwahltaste etwas schmäler machen oder sogar seitlich, dass es einklappt, damit man halt einfach wirklich mehr Lesefläche hat. Weil wenn die Tastatur hochgeht und dann noch das, das nimmt dann auch noch so viel Platz weg, dass man im Grunde genommen gar nicht mehr viel sieht vom Fenster. Deswegen müssen wir uns da noch ein bisschen was überlegen, wie wir das dann lösen. Vielleicht hast du ja einen Vorschlag, kannst ja gerne ein Mock-up machen.“
+- [21.11. 12:57] „16. Ja 18. Ja“
+- [21.11. 13:41] „19. Ja, testbestanden“
+- [21.11. 13:42] „Glocke auch erledigt geht terminal auch“
+- [21.11. 14:01] „.hetzner-bilder/1795264975-cbd9fc9b.jpg .hetzner-bilder/1795264976-cf0504ef.jpg“
+- [21.11. 14:05] „war nur als Beleg für dich dann sind wir quasi fertig dann würde ich dich bitten dass du jetzt die Übergabe vorbereitest weil wir den Server neu starten müssen“
