@@ -7997,8 +7997,8 @@ $("knopf-kartenmenue").addEventListener("click", () => {
   const eigen = aktuelleSitzung.eigen !== false;
   $("kartenmenue-titel").textContent = benannt(aktuelleSitzung);
   const punkt = (n) => document.querySelector(`.kartenmenue-punkt[data-punkt="${n}"]`);
-  punkt("anheften").textContent = aktuelleSitzung.pinned ? "Nicht mehr anheften" : "Anheften";
-  punkt("melden").textContent = aktuelleSitzung.notifyWhenDone
+  punkt("anheften").querySelector("span").textContent = aktuelleSitzung.pinned ? "Nicht mehr anheften" : "Anheften";
+  punkt("melden").querySelector("span").textContent = aktuelleSitzung.notifyWhenDone
     ? "Benachrichtigung ist an (ausschalten)" : "Melden, wenn die Karte dich braucht";
   for (const n of ["zurueckspulen", "kurzfassung", "fork", "archivieren", "loeschen"]) punkt(n).hidden = !eigen;
   kartenmenueBlatt(true);

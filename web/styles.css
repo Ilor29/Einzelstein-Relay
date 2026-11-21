@@ -2620,6 +2620,8 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 /* Kartenmenü (Baustein 4) */
 .kartenmenue-liste { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 18px; }
 .kartenmenue-punkt { text-align: left; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--linie, rgba(255,255,255,.14)); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.kartenmenue-punkt { display: flex; align-items: center; gap: 12px; }
+.kartenmenue-punkt .menue-icon { width: 22px; height: 22px; flex: none; }
 .kartenmenue-punkt[hidden] { display: none; }
 .kartenmenue-punkt.gefahr { color: #ff8a80; }
 

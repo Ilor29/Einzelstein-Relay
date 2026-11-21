@@ -1321,3 +1321,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** Das Ketten-Symbol (`knopf-linkliste`) steht wieder oben, die Lupe trägt `ins-menue`. Neuer Menüpunkt „Im Verlauf suchen“ löst die Lupe aus. Bei offener Tastatur wird die Kette statt der Lupe ausgeblendet. Strg+K prüft nicht mehr die Sichtbarkeit der Lupe. Tour: Link-Schritt zeigt auf die Kette, Such-Schritt ohne Markierung, Text nennt das Menü.
 **Geprüft:** Playwright 412x800 gegen Testserver 8799: Kette sichtbar, Lupe unsichtbar, bei `body.eng` Kette weg, keine Seitenfehler, Bildschirmfoto der Kopfzeile angesehen.
 **Nicht geprüft:** Menüpunkt „Im Verlauf suchen“ mit echter Karte (Handler ruft nur den Lupen-Klick auf), Tour im Durchlauf, Handy.
+
+## 21.11.2026: V255, Symbole im Kartenmenü
+**Auslöser:** Roli 21.11. 15:31 „hinter den drei Punkten ist mehr Platz, wenn man die Symbole auch dazu sehen würde, dann weiß man, was sich hinter den Wörtern versteckt“.
+**Lösung:** Jeder der zwölf Menüpunkte trägt vor dem Text sein Symbol (Lupe, Kette, Glocke, Sichern, Stift, Nadel, Ungelesen, Zurück, Buch, Kopie, Archiv, Mülleimer), dieselben wie oben in der Kopfzeile. Der Text steht in einem `span`; die zwei Stellen in app.js, die Anheften und Melden umbeschriften, setzen nur noch diesen Text.
+**Geprüft:** Playwright 412x800, Menü aufgeklappt, Bildschirmfoto angesehen (erste acht Punkte), keine Seitenfehler.
+**Nicht geprüft:** untere vier Punkte im Bild, Umbeschriften von Anheften und Melden mit echter Karte, Handy.
