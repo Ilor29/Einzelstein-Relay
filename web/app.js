@@ -766,6 +766,59 @@ document.querySelectorAll(".blatt").forEach((blatt, i) => {
   }
 });
 
+// V252, Fokusfang (Durchsicht 11.11. Befund 16, Rest): Öffnet sich ein Blatt,
+// wandert der Fokus hinein; Tab und Umschalt+Tab bleiben im obersten offenen
+// Blatt; schließt es, kehrt der Fokus zu dem Knopf zurück, der es geöffnet hat.
+// Am Handy ohne Tastatur ändert das nichts Sichtbares.
+const FOKUSZIELE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
+  'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+function fokusZiele(blatt) {
+  return [...blatt.querySelectorAll(FOKUSZIELE)].filter((el) => el.getClientRects().length > 0);
+}
+function oberstesBlatt() {
+  const offen = [...document.querySelectorAll(".blatt")].filter((b) => !b.hidden);
+  return offen.length ? offen[offen.length - 1] : null;
+}
+const blattVorher = new WeakMap();
+const blattWaechter = new MutationObserver((aenderungen) => {
+  for (const a of aenderungen) {
+    const blatt = a.target;
+    if (!blatt.hidden) {
+      if (blatt.contains(document.activeElement)) continue;
+      blattVorher.set(blatt, document.activeElement);
+      // Erst nach dem Füllen des Blatts fokussieren; ohne Ziel das Blatt selbst.
+      requestAnimationFrame(() => {
+        if (blatt.hidden || blatt.contains(document.activeElement)) return;
+        const inhalt = blatt.querySelector(".blatt-inhalt") || blatt;
+        if (!inhalt.hasAttribute("tabindex")) inhalt.setAttribute("tabindex", "-1");
+        inhalt.focus({ preventScroll: true });
+      });
+    } else {
+      const vorher = blattVorher.get(blatt);
+      blattVorher.delete(blatt);
+      if (vorher && document.contains(vorher) && (blatt.contains(document.activeElement)
+          || document.activeElement === document.body)) {
+        vorher.focus({ preventScroll: true });
+      }
+    }
+  }
+});
+document.querySelectorAll(".blatt").forEach((b) => blattWaechter.observe(b, { attributes: true, attributeFilter: ["hidden"] }));
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  const blatt = oberstesBlatt();
+  if (!blatt) return;
+  const ziele = fokusZiele(blatt);
+  if (!ziele.length) { e.preventDefault(); return; }
+  const erstes = ziele[0], letztes = ziele[ziele.length - 1];
+  const drin = blatt.contains(document.activeElement);
+  if (e.shiftKey && (!drin || document.activeElement === erstes || !ziele.includes(document.activeElement) && document.activeElement.classList.contains("blatt-inhalt"))) {
+    e.preventDefault(); letztes.focus();
+  } else if (!e.shiftKey && (!drin || document.activeElement === letztes)) {
+    e.preventDefault(); erstes.focus();
+  }
+});
+
 let fit = null;
 let steckdose = null;      // die WebSocket-Verbindung
 let steckdoseWartet = [];  // Eingaben, die kamen, während die Verbindung noch aufgebaut wird
@@ -7890,7 +7943,13 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (!$("kuerzel-blatt").hidden) { kuerzelBlatt(false); return; }
     if (!$("datei-blatt").hidden) { $("datei-blatt").hidden = true; return; }
-    if (blattOffen || e.target.id === "verlauf-suchfeld") return;
+    if (blattOffen) {
+      // V252: Escape schließt das oberste Blatt wie ein Tipp auf den Schatten.
+      const schatten = oberstesBlatt()?.querySelector(":scope > .blatt-schatten");
+      if (schatten) { e.preventDefault(); schatten.click(); }
+      return;
+    }
+    if (e.target.id === "verlauf-suchfeld") return;
     if (sichtbar("knopf-abbrechen-arbeit")) { e.preventDefault(); $("knopf-abbrechen-arbeit").click(); }
     return;
   }

@@ -2653,3 +2653,14 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .modus-pille::after, .modell-knopf::after { inset: -8px 0; }
 .knopf-leeren::after { inset: -6px; }
 .knopf-diktat::after, .knopf-senden::after { inset: -3px; }
+
+/* V252: die drei übrigen kleinen Tippziele aus Befund 16.
+   „Claude anhalten“ (und „Jetzt senden“) war 36 Pixel hoch, „Nebenfrage stellen“ 31,
+   die Zeilen im Dateibaum 28. */
+.abbrechen-leiste { min-height: 44px; }
+.denkt-knopf { position: relative; }
+.denkt-knopf::after { content: ""; position: absolute; inset: -6px 0; }
+.zh-baumknopf { min-height: 40px; padding-top: .45rem; padding-bottom: .45rem; }
+/* V252: Akzentschrift auf der weichen Akzentfläche kam im Dunkeln nur auf 4,47 zu 1
+   (gewählter Reiter, Fach-Schild in der Bibliothek). Einen Hauch heller: 4,77 zu 1. */
+:root:not(.hell) .reiter.an, :root:not(.hell) .bib-fach { color: #DD7D5E; }
