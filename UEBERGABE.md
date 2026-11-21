@@ -1,48 +1,46 @@
 # Project Handoff: Hetzner-App (Relay)
 
-Version: v07 (ersetzt die Übergabe vom 20.11.)
-Date: 2026-11-21, gegen 10:10
+Version: v08 (ersetzt die Übergabe vom 21.11. gegen 10:10)
+Date: 2026-11-21, gegen 14:10
 Owner/User: Roli
-Prepared by: Claude (Karte Hetzner-App 21)
+Prepared by: Claude (Karte Hetzner-App 22)
 
-Die Wahrheit steht in `BAUBUCH.md` (am Ende die Einträge V251 und V252 vom 21.11.) und in `~/projekte/Brain/REGISTER.md` (Einträge „Hetzner-App 21“ vom 21.11. um 09:05 und 09:20). Diese Datei fasst nur zusammen.
+Die Wahrheit steht in `BAUBUCH.md` (am Ende der Eintrag V253 vom 21.11. mit zwei Nachträgen) und in `~/projekte/Brain/REGISTER.md` (Eintrag „Hetzner-App 22“ vom 21.11. um 13:10). Diese Datei fasst nur zusammen.
 
 ## 1. Stand
 
-Relay V252 läuft. Der Dienst wurde nach V252 neu gestartet, als keine andere Karte arbeitete. `/api/version` meldet 252, und Piper antwortet. Alles ist committet und auf `github main` gesichert. Nichts ist halb fertig. Der Testserver 8799 ist beendet, und die Probe-tmux `probeeasel` samt Ordner ist weg.
+Relay V253 läuft. Der Dienst wurde nach V253 neu gestartet, `/api/version` meldet 253, Piper lauscht auf Port 5005. Alles ist committet und auf `github main` gesichert. Nichts ist halb fertig. Der Testserver 8799 ist beendet. Roli startet nach dieser Übergabe den ganzen Server neu (sein Wort 14:05).
 
 ## 2. Was in dieser Karte geschah
 
-- **V251:** Der MCP-Anmeldekasten weist darauf hin, dass Claude Code nur etwa fünf Minuten wartet, und sagt, dass man sonst im Terminal-Teil neu „Authenticate“ wählt.
-- **Neuerungs-Wache:** Roli fragte, wer die Funde der Wache umsetzt. Bisher tat das niemand, weil die Wache bewusst nichts baut. Seit heute legt sie Funde, die eindeutig einer Karte gehören, per `korb.py frage` in den Entscheidungskorb (Schritt 5b in `Brain/werkzeug/claude-neues.md`, gebaut von Brain 75).
-- **easel (Diagramm-Mod aus 2.1.330):** Bei einer Probe in eigener tmux-Sitzung erschien es nicht. Claude zeichnete nur Textbalken, fand kein Werkzeug, und `/config` hat keinen Eintrag dazu. Meine erste Vermutung „nur Pro und Max“ war falsch: Das Konto ist Max, das Plugin steckt als `cc-plugin-easel@builtin` im Programm, wird aber nicht freigeschaltet (Brain 75 hat das berichtigt). Für Relay ist derzeit nichts zu bauen.
-- **V252, Barrierefreiheit:** Alle 13 Blätter halten den Fokus fest. Tab bleibt im obersten Blatt, Escape schließt es über den Schatten, danach springt der Fokus zum Auslöser zurück. „Claude anhalten“ ist 44 Pixel hoch, „Nebenfrage stellen“ hat eine größere Trefferfläche, und die Zeilen im Dateibaum sind mindestens 40 Pixel hoch. Kontrast in der Bibliothek: Reiter und Fach-Schild kamen auf 4,47, jetzt 4,77. Die Einstellungen waren ohne Befund.
-- **Bibliothek:** Sie las alle alten Plugin-Fassungen unter `~/.claude/plugins/cache`, deshalb stand jeder Koffer-Skill bis zu vierzehnmal darin. Jetzt zählt dort nur noch der `installPath` aus `installed_plugins.json` (603 statt 931 Einträge). Kein Etikett ging verloren.
-- **Google-Stimme:** Kaputtes JSON, eine Liste statt eines Objekts und ungültiges base64 werden zu `TTSError` „Google hat eine unlesbare Antwort geschickt.“
-- **XSS-Durchsicht:** Die 30 `innerHTML`-Stellen in app.js sind ohne Befund, keine Änderung.
-- **Cache-Übergabe:** Das Protokoll zeigt 13 Aufträge seit dem 17.11., keinen doppelt. Es gibt nichts zu ändern.
-- Die automatische Sicherung um 09:08 nahm die V252-Änderungen an app.js und styles.css vor meinem Commit mit. Der sprechende Commit 9251ce5 ist deshalb leer und verweist auf 19ee1eb.
+- **Mockup:** `~/seiten/relay-leseflaeche/index.html`, erreichbar unter `https://seiten-roli.65-21-246-222.sslip.io/relay-leseflaeche/`. Es zeigt heute, Vorschlag A (Griff am Rand), Vorschlag B (schlank beim Tippen) und die neue Kopfzeile.
+- **V253, Tastatur offen (`body.eng`):** Die Kopfzeile wird flach (43 statt 64 Pixel) und zeigt nur Zurück, Name, Vorlesen und die drei Punkte. Die Schnellbefehle sind eingeklappt, der Blitz-Knopf `#knopf-schnell` links vom Senden-Pfeil holt sie hervor (`schnellKlappe` in app.js). Ein gewählter Befehl oder das Schließen der Tastatur klappt sie wieder ein. Lesefläche 319 statt 246 von 480 Pixeln.
+- **V253, Kopfzeile:** Oben stehen Lupe, Terminal, Vorlesen, Freisprech und die drei Punkte, 39 statt 30 Pixel breit. Kette, Sichern und Nadel tragen die Klasse `ins-menue` und sind oben unsichtbar, bleiben aber im Aufbau, weil das Kartenmenü sie auslöst. Neue Menüpunkte: „Gesammelte Links“, „Melden, wenn die Karte dich braucht“, „Stand sichern“. Die Glocke steht oben nur, solange sie an ist. Tour-Schritt „Gesammelte Links“ und die Symbol-Erklärung in den Einstellungen sind nachgezogen.
+- **Abweichung vom Mockup:** Der Griff schwebt nicht am Rand über dem Text (hätte „Nebenfrage stellen“ und die Erlaubnis-Knöpfe verdeckt), sondern ist der Blitz in der Knopfzeile des Eingabefelds.
+- **Berichtigte Zahl:** Das Mockup nennt „heute 210 Pixel“ und „111 Pixel mehr“. Richtig sind 246 und 73 mehr, weil die Modus-Zeile bei offener Tastatur schon seit 10.10. verschwindet. Das Mockup selbst ist nicht berichtigt.
 
 ## 3. Beschlüsse (mit Auslöser)
 
-- Roli 21.11. 08:54: „1. Ja“ (Fünf-Minuten-Hinweis, dann Barrierefreiheit) und die Frage „wer setzt diese Änderungen denn tatsächlich um? … haben wir einen kleinen Suchlauf, der immer wieder die neuesten Updates rausholt … auch bei unserer Version von der Relay-App?“
-- Roli 21.11. 09:02: „2. Ja, Ja bitte, dann arbeite alle Punkte ab, ohne mich zu fragen. Nur da, wo du mich wirklich brauchst.“ Dieses Ja galt der Korb-Weitergabe der Wache. Als vierte Wiederholung steht es im Gedächtnis `nur-fragen-was-ich-nicht-entscheiden-kann`.
-- Roli 09:09, an Brain 75: Er zweifelte meine easel-Begründung an, zu Recht, sie ist berichtigt.
+- Roli 21.11. 12:39: „13. Ja, 14. Deine Empfehlung“ (doppelte Skills aus nicht installierten Plugin-Katalogen bleiben, wie sie sind) und zu 15: „Vielleicht wäre die Überlegung, dass wir die Schnellwahltaste etwas schmäler machen oder sogar seitlich, dass es einklappt, damit man halt einfach wirklich mehr Lesefläche hat … kannst ja gerne ein Mock-up machen.“
+- Roli 12:57: „16. Ja, 18. Ja“ (Vorschlag B bauen, Aufteilung der Kopfzeile passt). Frage 17 blieb ohne Antwort, gebaut ist die Empfehlung: einklappen nur bei offener Tastatur.
+- Roli 13:41: „19. Ja, testbestanden“ (V253 am Handy mit echter Tastatur). 13:42: „Glocke auch erledigt geht terminal auch“.
+- Roli 14:05 zu zwei Bildschirmfotos von 12:37: „war nur als Beleg für dich“. Frage 20 (schwebender Lautsprecher-Knopf über dem Text) ist damit kein Auftrag.
 
-Rolis letzter Wortlaut (10:07): „Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register nachtragen, dann UEBERGABE.md im Projektordner schreiben … und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.“
+Rolis letzter Wortlaut (14:05): „war nur als Beleg für dich dann sind wir quasi fertig dann würde ich dich bitten dass du jetzt die Übergabe vorbereitest weil wir den Server neu starten müssen“.
 
 ## 4. Offen
 
-Bei Roli (die Nummern laufen weiter, zuletzt vergeben: 15):
-- 13. Am Handy prüfen: Terminal (V249), Glocke einschalten, Bibliothek zeigt jeden Skill nur einmal.
-- 14. Doppelte Skills aus nicht installierten Plugin-Katalogen (`plugins/marketplaces`) werden nur angefasst, wenn es ihn stört.
-- 15 bzw. alte 30: Sollen selten gebrauchte Kopfzeilen-Symbole ins Drei-Punkte-Menü? Erst danach werden die neun Symbole breiter.
+Bei Roli (die Nummern laufen weiter, zuletzt vergeben: 20):
+- Rest von 13: Zeigt die Bibliothek am Handy jeden Skill nur einmal?
+- 17: Sollen die Schnellbefehle auch ohne Tastatur hinter dem Blitz liegen? Gebaut ist Nein.
 - Alt: 27 (Tablet-App neu installieren), 28 (Tablet quer), 40 (Handyprobe Vorlesen), neue Medienwerk-Karte für die Fish-Werkzeuge.
 
 Bei der nächsten Karte:
-- Nichts Gebautes ist offen. Ungeprüft sind: Handy, echtes Vorleseprogramm, Höhe von Nebenfrage und Dateibaum im Browser gemessen, echte Google-Antwort.
+- Nichts Gebautes ist offen. Ungeprüft an V253: „Stand sichern“ und Glocke aus dem Menü an einer echten Karte, der Tour-Schritt im Durchlauf, Safari (ohne `:has` bleiben Terminal-Wechsel und Blitz einfach sichtbar).
+- Beobachtung aus Rolis Bildern, kein Auftrag: Ein runder, halb durchsichtiger Lautsprecher-Knopf liegt links über dem Verlaufstext. Ob er zur Relay-App oder zum LEIT//PULS-Rahmen gehört, ist nicht nachgesehen. Bei Roli steht in der Kopfzeile außerdem die Sprechblase mit Plus (vermutlich Kaira), die bleibt oben.
 - Das verwaiste Etikett `skills/mein-gin-tonic-helfer` in `~/.hetzner-app/bibliothek.json` hat keinen Skill mehr. Ohne Rolis Wort nicht löschen.
+- Im Projektordner liegt eine nicht eingecheckte `UEBERGABE-LAUFEND.md`, die nicht von dieser Karte stammt. Nicht angefasst.
 
 ## 5. Nächster Schritt
 
-Neue Karte mit „Übergabe lesen“. Danach auf Rolis Antworten zu 13 bis 15 warten. Kommt keine, sind die Korb-Fragen der Neuerungs-Wache für die Relay-Karte das Nächste, sobald welche ankommen.
+Nach dem Server-Neustart: neue Karte mit „Übergabe lesen“. Zuerst prüfen, ob `hetzner-app.service` wieder läuft (`curl -s localhost:8787/api/version` soll 253 melden) und ob Piper auf Port 5005 lauscht. Danach auf Rolis Wort warten oder die Korb-Fragen der Neuerungs-Wache abarbeiten, sobald welche ankommen.
