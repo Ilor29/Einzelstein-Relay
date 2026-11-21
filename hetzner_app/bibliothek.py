@@ -35,6 +35,32 @@ EIGENE = CLAUDE / "skills"
 # Gesprächsmitschriften, und die will man nicht bei jedem Aufruf durchwaten.
 WURZELN = [EIGENE, CLAUDE / "plugins"]
 
+# V252: Unter plugins/cache hebt Claude Code jede je geladene Fassung eines
+# Plugins auf (beim Koffer über 40 Stück). Gilt davon nur die installierte,
+# sonst stand jeder Koffer-Skill vielfach in der Bibliothek.
+CACHE = CLAUDE / "plugins" / "cache"
+INSTALLIERT = CLAUDE / "plugins" / "installed_plugins.json"
+
+
+def _installierte_pfade() -> list[Path]:
+    try:
+        daten = json.loads(INSTALLIERT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    pfade = []
+    for eintraege in (daten.get("plugins") or {}).values():
+        for e in eintraege if isinstance(eintraege, list) else [eintraege]:
+            if isinstance(e, dict) and e.get("installPath"):
+                pfade.append(Path(e["installPath"]))
+    return pfade
+
+
+def _gilt(datei: Path, installiert: list[Path]) -> bool:
+    """Liegt die SKILL.md im Zwischenspeicher, zählt sie nur in einer installierten Fassung."""
+    if not datei.is_relative_to(CACHE):
+        return True
+    return any(datei.is_relative_to(p) for p in installiert)
+
 # Deine Etiketten. Neben den Fotos, im selben App-Ordner.
 ETIKETTEN = Path.home() / ".hetzner-app" / "bibliothek.json"
 
@@ -119,11 +145,14 @@ def liste() -> list[dict]:
     etiketten = _etiketten_lesen()
     skills: list[dict] = []
     gesehen: set[str] = set()
+    installiert = _installierte_pfade()
 
     for wurzel in WURZELN:
         if not wurzel.is_dir():
             continue
         for datei in wurzel.rglob("SKILL.md"):
+            if not _gilt(datei, installiert):
+                continue
             ordner = datei.parent
             kennung = str(ordner.relative_to(CLAUDE))
             if kennung in gesehen:
