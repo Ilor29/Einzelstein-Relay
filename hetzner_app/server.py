@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
+from . import uebersetzung
 from . import aenderungen, befehle, bibliothek, dateibaum, diktat, geraete, hintergrund, korb, melden, mitschrift, routinen, speicher, state, strom, tmux, tts, uebergabe_cache, verbrauch, verlauf, vorschau, zurueckspulen
 
 WEB_DIR = Path(__file__).parent.parent / "web"
@@ -258,7 +259,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 259
+VERSION = 260
 
 
 @app.get("/api/version")
@@ -1907,7 +1908,12 @@ class SkillEtikett(BaseModel):
 @app.get("/api/skills", dependencies=[Depends(require_auth)])
 def skills() -> list[dict]:
     """Alle Skills — mit deinem deutschen Etikett, wo du eins vergeben hast."""
-    return bibliothek.liste()
+    liste = bibliothek.liste()
+    # V260: Fehlt für einen Skill noch die Übersetzung (etwa frisch installiert),
+    # stößt das einen Lauf im Hintergrund an. Höchstens alle zehn Minuten.
+    if any(s["original_beschreibung"].strip() and not s["beschreibung_de"] for s in liste):
+        uebersetzung.im_hintergrund_starten()
+    return liste
 
 
 @app.patch("/api/skills", dependencies=[Depends(require_auth)])

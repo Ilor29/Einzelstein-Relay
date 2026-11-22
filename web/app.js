@@ -6182,7 +6182,24 @@ function skillName(s) {
   }
   return _namen.get(s.id) || n;
 }
-const skillText = (s) => s.beschreibung || s.original_beschreibung;
+// V260 (Roli 22.11. 15:09, „39. Ja“): Beschreibungen in der Sprache der Oberfläche,
+// der Knopf „Original“ zeigt den Text, wie er im Skill steht. Dein Etikett geht vor.
+let bibOriginal = localStorage.getItem("relay_bib_original_v1") === "1";
+const skillText = (s) => s.beschreibung ||
+  (!bibOriginal && s["beschreibung_" + (window.sprache ? sprache() : "de")]) ||
+  s.original_beschreibung;
+function bibOriginalMalen() {
+  const k = $("knopf-bib-original");
+  k.setAttribute("aria-pressed", bibOriginal ? "true" : "false");
+  k.classList.toggle("an", bibOriginal);
+}
+$("knopf-bib-original").addEventListener("click", () => {
+  bibOriginal = !bibOriginal;
+  try { localStorage.setItem("relay_bib_original_v1", bibOriginal ? "1" : "0"); } catch {}
+  bibOriginalMalen();
+  zeigeSkills();
+});
+bibOriginalMalen();
 
 // Favoriten — die Skills, die du dauernd brauchst. Ihre IDs liegen im
 // Gerätespeicher; in der Liste rutschen sie nach oben, damit du sie sofort hast.
@@ -6539,7 +6556,8 @@ function zeigeSkills() {
   if (suche) {
     sichtbar = sichtbar.filter((s) =>
       (skillName(s) || "").toLowerCase().includes(suche) ||
-      (skillText(s) || "").toLowerCase().includes(suche)
+      [skillText(s), s.original_beschreibung, s.beschreibung_de, s.beschreibung_en]
+        .some((x) => (x || "").toLowerCase().includes(suche))
     );
   }
 

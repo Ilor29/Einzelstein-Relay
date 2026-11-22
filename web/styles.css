@@ -2686,3 +2686,11 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 /* V252: Akzentschrift auf der weichen Akzentfläche kam im Dunkeln nur auf 4,47 zu 1
    (gewählter Reiter, Fach-Schild in der Bibliothek). Einen Hauch heller: 4,77 zu 1. */
 :root:not(.hell) .reiter.an, :root:not(.hell) .bib-fach { color: #DD7D5E; }
+
+/* V260: Schalter Original/übersetzt in der Bibliothek-Kopfzeile. */
+.bib-original {
+  min-height: 36px; padding: 0 .8rem; margin-right: .3rem;
+  border: 1px solid var(--linie); border-radius: 999px;
+  font-size: .85rem; color: var(--schrift-leise);
+}
+.bib-original.an { border-color: var(--akzent); color: var(--schrift); font-weight: 600; }

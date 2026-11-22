@@ -198,6 +198,14 @@ def liste() -> list[dict]:
         beste.setdefault((s["original_name"], s["original_beschreibung"]), s)
     skills = [s for s in skills if beste[(s["original_name"], s["original_beschreibung"])] is s]
 
+    # V260: Übersetzungen dazulegen (Deutsch und Englisch), siehe uebersetzung.py.
+    from . import uebersetzung
+    sprachen = uebersetzung.lesen()
+    for s in skills:
+        u = sprachen.get(uebersetzung.fingerabdruck(s["original_beschreibung"])) or {}
+        s["beschreibung_de"] = u.get("de", "")
+        s["beschreibung_en"] = u.get("en", "")
+
     # Nach dem sichtbaren Namen sortieren — deiner, sonst der originale.
     skills.sort(key=lambda s: (s["name"] or s["original_name"]).lower())
     return skills
