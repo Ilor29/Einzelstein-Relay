@@ -8328,6 +8328,42 @@ $("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden 
 (() => {
   const feld = $("eingabe"), box = $("schraeg-liste");
   if (!feld || !box) return;
+  // Eingebaute Befehle von Claude Code (Roli 23.11. 00:19, „45. Ja“), mit deutscher Kurzerklärung.
+  const EINGEBAUT = [
+    ["clear", "Neues Gespräch beginnen, der Verlauf wird geleert"],
+    ["compact", "Gespräch zusammenfassen, um Platz im Kontext zu schaffen"],
+    ["model", "Modell wechseln"],
+    ["resume", "Ein früheres Gespräch fortsetzen"],
+    ["rewind", "Gespräch oder Änderungen auf einen früheren Punkt zurücksetzen"],
+    ["context", "Zeigt, wie voll der Kontext ist"],
+    ["cost", "Zeigt Verbrauch und Kosten dieser Sitzung"],
+    ["usage", "Zeigt die Nutzungsgrenzen des Abos"],
+    ["status", "Zeigt Version, Konto und Verbindungen"],
+    ["doctor", "Prüft die Installation auf Probleme"],
+    ["config", "Einstellungen öffnen"],
+    ["permissions", "Erlaubnisregeln für Werkzeuge ansehen und ändern"],
+    ["memory", "Gedächtnisdateien (CLAUDE.md) bearbeiten"],
+    ["init", "CLAUDE.md für dieses Projekt anlegen"],
+    ["mcp", "MCP-Verbindungen verwalten"],
+    ["agents", "Unteragenten verwalten"],
+    ["hooks", "Hooks ansehen"],
+    ["review", "Eine Änderung oder einen Pull Request prüfen"],
+    ["security-review", "Änderungen auf Sicherheitslücken prüfen"],
+    ["add-dir", "Weiteren Ordner zum Arbeiten freigeben"],
+    ["export", "Gespräch als Text exportieren"],
+    ["help", "Hilfe und Befehlsübersicht"],
+    ["login", "Anmelden"],
+    ["logout", "Abmelden"],
+    ["vim", "Vim-Bedienung ein- oder ausschalten"],
+    ["output-style", "Ausgabestil wählen"],
+    ["todos", "Aufgabenliste ansehen"],
+    ["release-notes", "Neuerungen der Version ansehen"],
+  ].map(([n, b]) => ({ id: "eingebaut/" + n, original_name: n, name: "", befehl: "/" + n,
+                      beschreibung: b, eingebaut: true }));
+  const alle = () => {
+    const da = new Set(skills.map((x) => x.befehl));
+    return [...skills, ...EINGEBAUT.filter((x) => !da.has(x.befehl))];
+  };
   let laedt = false;
   async function skillsSichern() {
     if (skills.length || laedt) return;
@@ -8342,12 +8378,15 @@ $("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden 
     if (!skills.length) { skillsSichern(); box.hidden = true; return; }
     // Steht schon ein vollständiger Skill-Name mit Leerzeichen da, ist die Wahl getroffen.
     const erst = w.match(/^(\/\S+)\s/);
-    if (erst && skills.some((s) => s.befehl === erst[1])) { box.hidden = true; return; }
+    if (erst && alle().some((s) => s.befehl === erst[1])) { box.hidden = true; return; }
     const suche = w.slice(1);
     const favs = new Set(favoritenLesen()), benutzt = benutztLesen();
     const rang = (s) => (favs.has(s.id) ? 0 : benutzt[s.id] ? 1 : 2);
-    const treffer = skills.filter((s) => skillTrifft(s, suche))
-      .sort((a, b) => rang(a) - rang(b) || (benutzt[b.id] || 0) - (benutzt[a.id] || 0))
+    // Treffer im Namen vor Treffern nur in der Beschreibung, Namensanfang ganz vorn.
+    const q = _glatt(suche).replace(/ /g, "");
+    const namensRang = (x) => { const n = _glatt(skillName(x)).replace(/ /g, ""); return n.startsWith(q) ? 0 : n.includes(q) ? 1 : 2; };
+    const treffer = alle().filter((s) => skillTrifft(s, suche))
+      .sort((a, b) => rang(a) - rang(b) || (benutzt[b.id] || 0) - (benutzt[a.id] || 0) || namensRang(a) - namensRang(b) || (b.eingebaut ? 1 : 0) - (a.eingebaut ? 1 : 0))
       .slice(0, 40);
     if (!treffer.length) { box.hidden = true; return; }
     box.replaceChildren(...treffer.map((s) => {

@@ -1383,3 +1383,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** Beginnt das einzeilige Eingabefeld mit „/“, erscheint über dem Feld eine Liste (`#schraeg-liste`, höchstens 38 % der Höhe, scrollbar) mit den Skills der Bibliothek. Gefiltert wird mit derselben Suche wie in der Bibliothek (`skillTrifft`, aus V262 herausgelöst): „code guard“ findet code-guard. Reihenfolge: Favoriten, zuletzt Benutzte, Rest. Ein Tipp schreibt „/name “ ins Feld und merkt den Skill als benutzt; steht schon ein vollständiger Name mit Leerzeichen da, bleibt die Liste zu. Die Skills lädt die App beim ersten „/“ nach, falls die Bibliothek noch nie offen war. Eingebaute Befehle wie /clear stehen nicht in der Liste (nur Skills).
 **Geprüft:** Playwright 412x800 gegen Testserver 8799: „/code guard“ zeigt code-guard und pruef-schwarm, Tipp trägt „/code-guard “ ein und schließt die Liste, Schrägstrich mitten im Text öffnet nichts, keine Seitenfehler, Bildschirmfoto angesehen.
 **Nicht geprüft:** Handy, Tastatur-Verhalten beim Tippen auf einen Eintrag, helles Schema, eingebaute Befehle.
+
+## 23.11.2026: V264, eingebaute Befehle in der Schrägstrich-Liste
+**Auslöser:** Roli 23.11. 00:19 „45. Ja“ (eingebaute Befehle wie /clear auch in die Liste).
+**Lösung:** 28 eingebaute Befehle von Claude Code (clear, compact, model, resume, context, usage, doctor …) stehen mit deutscher Kurzerklärung in der Liste des Eingabefelds, fest im Code (`EINGEBAUT` in app.js), nicht vom Server. Ein gleichnamiger Skill verdrängt den eingebauten Eintrag. Treffer im Namen stehen vor Treffern nur in der Beschreibung, Namensanfang zuerst, eingebaute vor Skills.
+**Geprüft:** Playwright gegen Testserver 8799: „/compa“ zeigt /compact zuerst, Tipp trägt „/comp-analysis “ bzw. den gewählten Eintrag ein, keine Seitenfehler.
+**Nicht geprüft:** Handy; die Liste ist von Hand gepflegt und kann bei neuen Claude-Code-Befehlen veralten.
