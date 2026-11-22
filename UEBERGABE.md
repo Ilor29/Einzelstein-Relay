@@ -1,42 +1,42 @@
 # Project Handoff: Hetzner-App (Relay)
 
-Version: v09 (ersetzt die Übergabe vom 21.11. gegen 14:10)
-Date: 2026-11-21, gegen 15:50
+Version: v10 (ersetzt v09 vom 21.11. gegen 15:50)
+Date: 2026-11-22, gegen 11:40
 Owner/User: Roli
-Prepared by: Claude (Karte Hetzner-App 23)
+Prepared by: Claude (Karte Hetzner-App 24), automatisch vor Cache-Ablauf
 
-Die Wahrheit steht in `BAUBUCH.md` (am Ende die Einträge V254 und V255 vom 21.11.) und in `~/projekte/Brain/REGISTER.md`. Diese Datei fasst nur zusammen.
+Die Wahrheit steht in `BAUBUCH.md` (Einträge V256 und V257 vom 22.11.) und in `~/projekte/Brain/REGISTER.md`. Diese Datei fasst nur zusammen.
 
 ## 1. Stand
 
-Relay V255 läuft, `/api/version` meldet 255, Piper lauscht auf Port 5005. Alles ist committet und auf `github main` gesichert. Nichts ist halb fertig, der Testserver 8799 ist beendet.
+Relay V257 läuft, `/api/version` meldet 257, Piper lauscht auf Port 5005. Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig.
 
 ## 2. Was in dieser Karte geschah
 
-- **V254:** Das Ketten-Symbol für „Gesammelte Links“ steht wieder oben in der Kopfzeile, die Lupe wanderte hinter die drei Punkte (neuer Menüpunkt „Im Verlauf suchen“). Bei offener Tastatur wird oben die Kette statt der Lupe ausgeblendet. Strg+K prüft nicht mehr die Sichtbarkeit der Lupe. Tour-Schritte nachgezogen: Der Link-Schritt zeigt auf die Kette, der Such-Schritt hat keine Markierung mehr und nennt das Menü.
-- **V255:** Alle zwölf Punkte im Kartenmenü tragen vor dem Text ihr Symbol (Lupe, Kette, Glocke, Sichern, Stift, Nadel, Ungelesen, Zurück, Buch, Kopie, Archiv, Mülleimer). Der Text steht in einem `span`, Anheften und Melden ändern nur diesen Text.
-- Rolis Handy-Bildschirmfoto von 15:47 zeigt das Menü mit Symbolen und die Kette oben in der Kopfzeile: Beides funktioniert am echten Gerät. Das Bild fällt nach 14 Tagen weg; das Ergebnis steht hier.
+- **V256:** Der Knopf „Übergabe vorbereiten“ steht immer im Verbrauchs-Blatt. Vorher erschien er erst ab 100.000 Token oder bei kaltem Zwischenspeicher. Unter der Grenze sieht er zurückhaltend aus, darüber hervorgehoben (weiche Akzentfläche, 2 Pixel Akzentrand). Roli hat ihn am Handy bestätigt („27. Ja“).
+- **V257:** Der Blitz (`#knopf-schnell`) steht immer in der Knopfzeile des Eingabefelds. Ohne Tastatur klappt er die Befehlsreihe dauerhaft ein oder aus (`body.schnell-zu`, gemerkt unter `relay_schnell_zu_v1`). Bei offener Tastatur bleibt alles wie seit V253. Erklärtext in den Einstellungen nachgezogen.
+- Beschlüsse stehen auch in der Zweitgehirn-Notiz „02 Projekte/Einzelstein Relay.md“.
 
 ## 3. Beschlüsse (mit Auslöser)
 
-- Roli 21.11. 15:29: „22. Nein“ (Schnellbefehle ohne Tastatur bleiben sichtbar, kein Blitz-Einklappen) und „23. Ja, Bitte noch einmal die Lupe gegen den Link tauschen, weil das ist das, was ich häufiger brauche … Die Lupe verschwindet in den drei Punkten, aber die Linkklammer brauche ich auf jeden Fall auf der Schnellwahltaste oben.“
-- Roli 15:31: „hinter den drei Punkten ist mehr Platz, wenn man die Symbole auch dazu sehen würde, dann weiß man, was sich hinter den Wörtern versteckt“ und „24. Ja“.
-- Roli 15:47: „25. Ja, gute Arbeit, bitte Übergabe machen“.
+- Roli 22.11. 10:19: „wir hatten doch früher die hier die Übergabe datei mit drin“, 10:22 „26. Ja“ (Übergabe-Knopf immer zeigen).
+- Roli 11:06: „war das so geplant wie auf dem Bild? Die Schnellwahltaste die muss einfahrbar sein“, 11:08 „30. Ja“ (Befehlsreihe auch ohne Tastatur einklappbar, Wahl gemerkt). Das ersetzt Beschluss 22 vom 21.11.
+- Achtung Begriff: Mit „Schnellwahltaste“ meinte Roli am 21.11. die Symbolleiste oben, am 22.11. die Befehlsreihe über dem Eingabefeld. Bei dem Wort nachfragen.
 
-Rolis letzter Wortlaut (15:47): „25. Ja, gute arbeit bitte übergabe machen“ (mit Handy-Bildschirmfoto des Menüs).
+Rolis letzter Wortlaut (11:08): „30. Ja“.
 
 ## 4. Offen
 
-Bei Roli (die Nummern laufen weiter, zuletzt vergeben: 25):
+Bei Roli (die Nummern laufen weiter, zuletzt vergeben: 31):
+- 31: Blitz am Handy antippen, bleibt die Reihe nach dem Neuladen eingeklappt?
 - 21: Zeigt die Bibliothek am Handy jeden Skill nur einmal?
-- Alt: 27 (Tablet-App neu installieren), 28 (Tablet quer), 40 (Handyprobe Vorlesen), neue Medienwerk-Karte für die Fish-Werkzeuge.
+- 28: Tablet quer. 29: Tablet-App neu installieren (früher Nummer 27, umnummeriert). 40: Handyprobe Vorlesen.
 
 Bei der nächsten Karte:
-- Nichts Gebautes ist offen. Ungeprüft: die unteren vier Menüpunkte im Bild (Kurzfassung, Fork, Archiv, Löschen), Menüpunkt „Im Verlauf suchen“ an einer echten Karte, der Tour-Durchlauf, Safari.
-- Beobachtung, kein Auftrag: Auf Rolis Bild liegt links über dem Verlaufstext ein runder, halb durchsichtiger Lautsprecher-Knopf. Ob er zur Relay-App oder zum LEIT//PULS-Rahmen gehört, ist nicht nachgesehen.
-- Das verwaiste Etikett `skills/mein-gin-tonic-helfer` in `~/.hetzner-app/bibliothek.json` hat keinen Skill mehr; ohne Rolis Wort nicht löschen.
-- Im Projektordner liegt eine nicht eingecheckte `UEBERGABE-LAUFEND.md` (geändert, nicht von dieser Karte); nicht angefasst.
+- Ungeprüft: V256 im hellen Farbschema, V257 am Handy, Tour-Durchlauf, Safari. Aus V255 noch: untere vier Menüpunkte, „Im Verlauf suchen“ an echter Karte.
+- Das verwaiste Etikett `skills/mein-gin-tonic-helfer` in `~/.hetzner-app/bibliothek.json` nicht ohne Rolis Wort löschen.
+- `UEBERGABE-LAUFEND.md` und `UEBERGABE-LAUFEND-vorher.md` im Projektordner stammen nicht von diesen Karten, nicht angefasst.
 
 ## 5. Nächster Schritt
 
-Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version` (soll 255 melden) und Piper auf Port 5005 prüfen. Danach auf Rolis Wort warten oder Korb-Fragen der Neuerungs-Wache abarbeiten.
+Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version` (soll 257 melden) und Piper auf Port 5005 prüfen. Dann auf Rolis Antwort zu 31 warten.
