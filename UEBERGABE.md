@@ -9,7 +9,7 @@ Die Wahrheit steht in `BAUBUCH.md` (Einträge V256 bis V258 vom 22.11.) und in `
 
 ## 1. Stand
 
-Relay V258 läuft, `/api/version` meldet 258, Piper lauscht auf Port 5005 (nach dem Neustart wieder oben). Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig.
+Relay V260 läuft, `/api/version` meldet 260 (V260: Skill-Beschreibungen Deutsch/Englisch, Knopf Original, Übersetzung über uebersetzung.py, Cron 04:20) (V259: Plugin im Namen bei gleichnamigen Skills, Roli „38. Ja“), Piper lauscht auf Port 5005 (nach dem Neustart wieder oben). Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig.
 
 ## 2. Was in dieser Karte geschah
 
@@ -47,3 +47,5 @@ Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version
 ## Nach der Übergabe gekommen (automatisch mitgeschrieben, Rolis Wortlaut)
 - [22.11. 15:02] „Biite nochmal link für relay“ → erledigt: Relay-Adresse genannt (https://65-21-246-222.sslip.io), nichts geändert
 - [22.11. 15:04] „Quer geht bitte alle frGen nochmal neu“ → erledigt: Tablet quer geht (28, 29, 36, 37 damit erledigt), offen neu gestellt: 35, 38, 40
+- [22.11. 15:09] „35. Ja 38. Ja 40. Ja dann können wir das so machen dass bei der deutschen Version Kills auf Deutsch angezeigt werden und in der englischen Version dann in Englisch so ist es ein bisschen gemischt entweder Deutsch und englische Beschreibung dazu switchen kann und eben die Skills erklärt werden wenn wir neu installieren das ist immer so fortgeführt wird dass es immer gleich die deutsche Beschreibung sichtbar ist“ → erledigt: 35 und 40 bestätigt, 38 als V259 gebaut und ausgerollt; offen als Frage 39: deutsche und englische Skill-Beschreibungen mit Umschalter
+- [22.11. 15:12] „39. Ja“ → erledigt: V260 gebaut und ausgerollt, erster Übersetzungslauf lief ab 15:13
