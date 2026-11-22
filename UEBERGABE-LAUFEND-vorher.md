@@ -1,11 +1,8 @@
-<!-- sitzung 44b14900-bc25-4a49-a74b-8433c18202d1 -->
+<!-- sitzung f93aeef6-e86e-4bf2-90ff-a541eb34ee7a -->
 # Laufende Übergabe, automatisch mitgeschrieben
 
-Rolis Nachrichten in dieser Karte, wörtlich, seit 21.11.2026 12:39. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
+Rolis Nachrichten in dieser Karte, wörtlich, seit 21.11.2026 15:29. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
-- [21.11. 12:39] „13. Ja 14. Deine Empfehlung 15. Wo wisst du sie hinpacken, Vielleicht wäre die Überlegung, dass wir die Schnellwahltaste etwas schmäler machen oder sogar seitlich, dass es einklappt, damit man halt einfach wirklich mehr Lesefläche hat. Weil wenn die Tastatur hochgeht und dann noch das, das nimmt dann auch noch so viel Platz weg, dass man im Grunde genommen gar nicht mehr viel sieht vom Fenster. Deswegen müssen wir uns da noch ein bisschen was überlegen, wie wir das dann lösen. Vielleicht hast du ja einen Vorschlag, kannst ja gerne ein Mock-up machen.“
-- [21.11. 12:57] „16. Ja 18. Ja“
-- [21.11. 13:41] „19. Ja, testbestanden“
-- [21.11. 13:42] „Glocke auch erledigt geht terminal auch“
-- [21.11. 14:01] „.hetzner-bilder/1795264975-cbd9fc9b.jpg .hetzner-bilder/1795264976-cf0504ef.jpg“
-- [21.11. 14:05] „war nur als Beleg für dich dann sind wir quasi fertig dann würde ich dich bitten dass du jetzt die Übergabe vorbereitest weil wir den Server neu starten müssen“
+- [21.11. 15:29] „22. Nein 23. Ja, Bitte noch einmal die Lupe gegen den Link tauschen, weil das ist das, was ich häufiger brauche, also genau andersrum. Die Lupe verschwindet in den drei Punkten zum Aufrufen, aber die Linkklammer brauche ich auf jeden Fall auf der Schnellwahltaste oben. Bitte einmal wechseln.“
+- [21.11. 15:31] „was natürlich mega wären ist auch weil die haben ja hinter den drei Punkten mehr überall Platz wenn man die Symbole auch dazu sehen würde dann weiß man auch was man was es tatsächlich ist und was sich hinter den Wörtern versteckt Bilder sprechen manchmal mehr als was geschrieben wird 24. Ja“
+- [21.11. 15:47] „.hetzner-bilder/1795272455-9af2a61d.jpg 25. Ja, gute arbeit bitte übergabe machen“
