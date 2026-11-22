@@ -1364,3 +1364,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Geprüft:** Probelauf mit drei Beschreibungen, dann Playwright gegen Testserver 8799: deutsche Texte, Knopf Original zeigt englische Originale und bleibt nach Neuladen gemerkt, mit Sprache „en“ englische Fassungen (auch für ursprünglich deutsche Skills), Suche „Barrierefreiheit“ findet accessibility-review, keine Seitenfehler, Bildschirmfoto angesehen.
 **Nicht geprüft:** Handy; Spiegel von Lorenz und Lea (dort übersetzt der Server über deren eigenes Abo, sobald sie die Bibliothek öffnen); Umschalten der Sprache zur Laufzeit ohne Neuöffnen der Bibliothek.
 **Nachtrag 22.11. 16:44:** Roli am Handy: „sind auf deutsch“ (Frage 41 bestätigt).
+
+## 22.11.2026: V261, Übersetzung gibt nach drei Fehlversuchen auf
+**Auslöser:** Roli 22.11. 16:46 „42. Ja“. Die Beschreibung von gedaechtnis-pflege kam im ersten Lauf nicht zurück, und weil sie fehlte, stieß jedes Öffnen der Bibliothek alle zehn Minuten einen neuen Lauf an.
+**Lösung:** `uebersetzung.py` zählt unter `_fehl` im Sprachenspeicher je Fingerabdruck die Fehlversuche (auch wenn ein ganzer Durchgang scheitert). Ab drei wird der Text nicht mehr probiert, bis er sich ändert (neuer Fingerabdruck). `/api/skills` startet einen Lauf nur noch, wenn `fehlende()` wirklich etwas meldet.
+**Geprüft:** Probe mit nachgestelltem, immer scheiterndem Modell in eigenem Speicher: fünf Läufe, drei Modellaufrufe, danach nichts mehr fehlend, geänderter Text wieder fehlend. Der echte Nachlauf hat gedaechtnis-pflege beim zweiten Mal übersetzt, alle 479 sind da.
+**Nicht geprüft:** nichts Sichtbares geändert, kein Handy nötig.

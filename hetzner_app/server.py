@@ -259,7 +259,7 @@ class Unterschrift(BaseModel):
 # Hochzählen, sobald sich an der Oberfläche etwas ändert. Die App prüft das
 # beim Start und lädt sich selbst neu, wenn sie veraltet ist — sonst läuft man
 # stundenlang gegen einen Fehler an, der längst behoben ist.
-VERSION = 260
+VERSION = 261
 
 
 @app.get("/api/version")
@@ -1911,7 +1911,7 @@ def skills() -> list[dict]:
     liste = bibliothek.liste()
     # V260: Fehlt für einen Skill noch die Übersetzung (etwa frisch installiert),
     # stößt das einen Lauf im Hintergrund an. Höchstens alle zehn Minuten.
-    if any(s["original_beschreibung"].strip() and not s["beschreibung_de"] for s in liste):
+    if uebersetzung.fehlende([s["original_beschreibung"] for s in liste if not s["beschreibung_de"]]):
         uebersetzung.im_hintergrund_starten()
     return liste
 

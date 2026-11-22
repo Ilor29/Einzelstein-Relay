@@ -53,9 +53,14 @@ def _schreiben(daten: dict) -> None:
     tmp.replace(SPEICHER)
 
 
+VERSUCHE = 3          # V261: danach gibt ein Text auf, bis er sich ändert
+
+
 def fehlende(beschreibungen: list[str]) -> list[str]:
     da = lesen()
-    return [b for b in dict.fromkeys(beschreibungen) if b.strip() and fingerabdruck(b) not in da]
+    fehl = da.get("_fehl") or {}
+    return [b for b in dict.fromkeys(beschreibungen)
+            if b.strip() and fingerabdruck(b) not in da and fehl.get(fingerabdruck(b), 0) < VERSUCHE]
 
 
 def laeuft() -> bool:
@@ -128,12 +133,19 @@ def uebersetzen(beschreibungen: list[str]) -> int:
             antwort = _modell(stueck)
         except Exception as e:   # ein kaputter Durchgang hält die anderen nicht auf
             print(time.strftime("%F %T"), "Durchgang", runde, "gescheitert:", repr(e)[:200], flush=True)
-            continue
+            antwort = {}
         daten = lesen()
         for k, v in antwort.items():
             if k in stueck and isinstance(v, dict) and isinstance(v.get("de"), str) and isinstance(v.get("en"), str):
                 daten[k] = {"de": v["de"].strip()[:1500], "en": v["en"].strip()[:1500]}
                 neu += 1
+        # V261 (Roli 22.11. „42. Ja“): Was ohne Übersetzung blieb, bekommt einen
+        # Fehlversuch angeschrieben; nach drei Versuchen wird es nicht mehr probiert.
+        fehl = daten.setdefault("_fehl", {})
+        for k in stueck:
+            if k not in daten:
+                fehl[k] = fehl.get(k, 0) + 1
+                print(time.strftime("%F %T"), "ohne Übersetzung:", k, "Versuch", fehl[k], flush=True)
         _schreiben(daten)
         print(time.strftime("%F %T"), f"Durchgang {runde}: {neu} übersetzt", flush=True)
     return neu
