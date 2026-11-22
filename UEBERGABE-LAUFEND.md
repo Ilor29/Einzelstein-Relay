@@ -5,3 +5,6 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt de
 
 - [22.11. 12:52] „32. Ja“
 - [22.11. 13:03] „bitte noch mal die Fragen 21 28 29 40“
+- [22.11. 13:06] „21. Siehe bilder oder hat das wS mit code und cace zu run 28. Prüfe ich gkeich 29. Ja 40. Ja“
+- [22.11. 13:07] „Hast du eigentlich das stimmtraining für kaira grmacht oder was das die karte selber ?“
+- [22.11. 13:08] „.hetzner-bilder/1795349300-5128ddc1.jpg .hetzner-bilder/1795349302-1051a41e.jpg 33. Ja 34. Ja“
