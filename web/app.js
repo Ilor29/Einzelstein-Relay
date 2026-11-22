@@ -7363,15 +7363,34 @@ $("knopf-tour").addEventListener("click", () => {
 
 start();
 
-// V253: Bei offener Tastatur liegen die Schnellbefehle eingeklappt hinter dem Blitz.
+// V253: Bei offener Tastatur liegen die Schnellbefehle eingeklappt hinter dem Blitz,
+// „auf“ holt sie vorübergehend hervor.
+// V257 (Roli 22.11.2026 11:06 „Die Schnellwahltaste die muss einfahrbar sein“, „30. Ja“):
+// Ohne Tastatur klappt der Blitz die Reihe dauerhaft ein oder aus; gemerkt wird das
+// unter relay_schnell_zu_v1 und als Klasse body.schnell-zu.
+const SCHNELL_ZU = "relay_schnell_zu_v1";
+document.body.classList.toggle("schnell-zu", localStorage.getItem(SCHNELL_ZU) === "1");
+function schnellZeigen() {
+  const sichtbar = $("schnellbefehle").classList.contains("auf") ||
+    (!document.body.classList.contains("eng") && !document.body.classList.contains("schnell-zu"));
+  const k = $("knopf-schnell");
+  k.setAttribute("aria-expanded", sichtbar ? "true" : "false");
+  k.setAttribute("aria-label", sichtbar ? "Schnellbefehle einklappen" : "Schnellbefehle zeigen");
+}
 function schnellKlappe(auf) {
   $("schnellbefehle").classList.toggle("auf", auf);
-  const k = $("knopf-schnell");
-  k.setAttribute("aria-expanded", auf ? "true" : "false");
-  k.setAttribute("aria-label", auf ? "Schnellbefehle einklappen" : "Schnellbefehle zeigen");
+  schnellZeigen();
 }
-$("knopf-schnell").addEventListener("click", () =>
-  schnellKlappe(!$("schnellbefehle").classList.contains("auf")));
+$("knopf-schnell").addEventListener("click", () => {
+  if (document.body.classList.contains("eng")) {
+    schnellKlappe(!$("schnellbefehle").classList.contains("auf"));
+    return;
+  }
+  const zu = !document.body.classList.contains("schnell-zu");
+  document.body.classList.toggle("schnell-zu", zu);
+  localStorage.setItem(SCHNELL_ZU, zu ? "1" : "0");
+  schnellKlappe(false);
+});
 // Ein gewählter Befehl klappt die Reihe wieder ein (Zauberstab und Pfeile nicht).
 $("schnellbefehle").addEventListener("click", (e) => {
   if (e.target.closest(".chip, .chip-menu")) schnellKlappe(false);
@@ -7390,7 +7409,7 @@ $("schnellbefehle").addEventListener("click", (e) => {
     if (h > basis) basis = h;
     const eng = h < basis * 0.75;
     document.body.classList.toggle("eng", eng);
-    if (!eng) schnellKlappe(false);
+    if (!eng) schnellKlappe(false); else schnellZeigen();
   }
   if (vv) { vv.addEventListener("resize", messen); vv.addEventListener("scroll", messen); }
   window.addEventListener("resize", messen);

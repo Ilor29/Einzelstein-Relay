@@ -245,9 +245,10 @@ body.eng .kopf-sitzung #knopf-kaira,
 body.eng .kopf-sitzung #knopf-freisprech:not(.an) { display: none; }
 body.eng #ansicht-sitzung:has(#terminal[hidden]) #knopf-ansicht { display: none; }
 body.eng .schnellbefehle:not(.auf) { display: none; }
-#knopf-schnell { display: none; }
-body.eng #knopf-schnell { display: flex; }
-body.eng #ansicht-sitzung:has(#schnellbefehle[hidden]) #knopf-schnell { display: none; }
+/* V257: Der Blitz steht immer da. Ohne Tastatur klappt er die Reihe dauerhaft ein
+   oder aus, die App merkt es sich (Roli 22.11.2026 „30. Ja“). */
+body.schnell-zu .schnellbefehle:not(.auf) { display: none; }
+#ansicht-sitzung:has(#schnellbefehle[hidden]) #knopf-schnell { display: none; }
 #knopf-schnell[aria-expanded="true"] { background: var(--akzent-weich); box-shadow: 0 0 0 1.5px var(--akzent); }
 
 /* V222: Der Kontext-Balken steht in der Zeile des Modus, rechts davon (Roli 08.11.2026). */
