@@ -7,3 +7,5 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 23.11.2026 00:05. Schreibt de
 - [23.11. 00:09] „44. direkt ins eingabe feld das ist bei der app vom claude auch so“
 - [23.11. 00:19] „https://orca.dev/ was kann orca mehr was wir nicht können was können wir lernen 45. Ja“
 - [23.11. 00:25] „46. bevor du was baust bitte mockup damit ich mir das vorstellen kann“
+- [23.11. 00:28] „ich habe den vorteil bzw den nutzen noch nicht verstanden von der karte bitt erkläre es mir einfach“
+- [23.11. 00:31] „49. lass einbauen ich hatte bis jetz tnicht gewusst das es geht“
