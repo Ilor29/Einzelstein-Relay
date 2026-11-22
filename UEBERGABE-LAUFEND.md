@@ -5,3 +5,5 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 10:19. Schreibt de
 
 - [22.11. 10:19] „.hetzner-bilder/1795339110-cee8ad92.jpg 1. Ja, wir hatten doch früher die hier die übrrgabe datei mit drin“
 - [22.11. 10:22] „26. Ja“
+- [22.11. 11:06] „.hetzner-bilder/1795341929-aa84273a.jpg 27. Ja, war das so geplant wie auf dem bild ? Die schnelwahltste die muss einfahrbar sei“
+- [22.11. 11:08] „30. Ja“
