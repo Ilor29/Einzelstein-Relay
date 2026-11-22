@@ -15,3 +15,4 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt de
 - [22.11. 15:12] „39. Ja“
 - [22.11. 16:44] „sind auf deutsch“
 - [22.11. 16:46] „42. Ja“
+- [22.11. 20:52] „Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register nachtragen, dann UEBERGABE.md im Projektordner schreiben (Stand, offen, nächster Schritt, Beschlüsse mit Auslöser-Satz, Rolis letzter Wortlaut) und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.“
