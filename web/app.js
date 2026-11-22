@@ -4029,11 +4029,12 @@ async function oeffneVerbrauchsBlatt() {
       kontextGroesse = { name: fuer, benutzt: daten.kontext.benutzt || 0 };
       const cz = cacheZeile(daten.kontext.cache);
       if (cz) liste.appendChild(cz);
-      // Ab 100.000 Token (oder kalt) ist eine Übergabe der günstige Weg: ein Zug
-      // jetzt statt eines teuren Neuaufbaus später.
-      if (daten.kontext.benutzt >= CACHE_WARNUNG_AB || (daten.kontext.cache && !daten.kontext.cache.warm)) {
-        liste.appendChild(uebergabeKnopf());
-      }
+      // Der Knopf steht immer da (Roli 22.11.2026 „26. Ja“: Übergabe auch vor der
+      // Grenze, etwa wenn ein Thema abgeschlossen ist). Ab 100.000 Token oder kalt
+      // ist sie der günstige Weg, dann ist er farbig hervorgehoben.
+      liste.appendChild(uebergabeKnopf(
+        daten.kontext.benutzt >= CACHE_WARNUNG_AB || !!(daten.kontext.cache && !daten.kontext.cache.warm)
+      ));
     }
     for (const limit of daten.limits || []) {
       liste.appendChild(verbrauchZeile(limit.name, limit.prozent, resetText(limit.reset)));
@@ -7633,10 +7634,10 @@ const UEBERGABE_AUFTRAG =
   "nachtragen, dann UEBERGABE.md im Projektordner schreiben (Stand, offen, nächster Schritt, Beschlüsse mit " +
   "Auslöser-Satz, Rolis letzter Wortlaut) und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.";
 
-function uebergabeKnopf() {
+function uebergabeKnopf(dringend) {
   const k = document.createElement("button");
   k.type = "button";
-  k.className = "uebergabe-knopf";
+  k.className = dringend ? "uebergabe-knopf dringend" : "uebergabe-knopf";
   k.textContent = "Übergabe vorbereiten";
   k.addEventListener("click", async () => {
     if (!confirm("Claude schreibt jetzt die Übergabe für eine neue Karte. Abschicken?")) return;

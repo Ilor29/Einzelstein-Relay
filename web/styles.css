@@ -2504,6 +2504,8 @@ mark.treffer.aktuell { background: var(--akzent); color: var(--auf-akzent); }
   border: 1px solid var(--akzent, #D97757); background: transparent; color: inherit;
   font: inherit; font-weight: 600; cursor: pointer;
 }
+.uebergabe-knopf:not(.dringend) { border-color: var(--linie); color: var(--schrift-schwach); font-weight: 500; }
+.uebergabe-knopf.dringend { background: var(--akzent-weich); border-width: 2px; color: var(--schrift); }
 .uebergabe-knopf:active { filter: brightness(1.2); }
 
 /* Entscheidungskorb oben in der Kartenliste */

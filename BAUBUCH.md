@@ -1327,3 +1327,10 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** Jeder der zwölf Menüpunkte trägt vor dem Text sein Symbol (Lupe, Kette, Glocke, Sichern, Stift, Nadel, Ungelesen, Zurück, Buch, Kopie, Archiv, Mülleimer), dieselben wie oben in der Kopfzeile. Der Text steht in einem `span`; die zwei Stellen in app.js, die Anheften und Melden umbeschriften, setzen nur noch diesen Text.
 **Geprüft:** Playwright 412x800, Menü aufgeklappt, Bildschirmfoto angesehen (erste acht Punkte), keine Seitenfehler.
 **Nicht geprüft:** untere vier Punkte im Bild, Umbeschriften von Anheften und Melden mit echter Karte, Handy.
+
+## 22.11.2026: V256, Knopf „Übergabe vorbereiten“ immer im Verbrauchs-Blatt
+**Auslöser:** Roli 22.11. 10:19 mit Bildschirmfoto des Verbrauchs-Blatts (Wetter-App-Karte, 90.000 Token, warm): „wir hatten doch früher die hier die Übergabe datei mit drin“, dann 10:22 „26. Ja“ (Knopf immer zeigen).
+**Befund:** Der Knopf war nicht weg. Er erschien seit V216 nur ab 100.000 Token (`CACHE_WARNUNG_AB`) oder bei kaltem Zwischenspeicher.
+**Lösung:** `uebergabeKnopf(dringend)` steht jetzt immer unter der Cache-Zeile. Unter der Grenze ist er zurückhaltend (Rand in Linienfarbe, schwache Schrift), ab 100.000 Token oder kalt hervorgehoben mit weicher Akzentfläche, 2 Pixel Akzentrand und voller Schrift. Weiß auf vollem Akzent wurde verworfen, weil der Kontrast unter 4,5 zu 1 läge.
+**Geprüft:** Playwright 412x800 gegen Testserver 8799 mit nachgestellter Verbrauchs-Antwort (90.000 warm und 120.000 warm): Knopf in beiden Fällen sichtbar, Klasse `dringend` nur bei 120.000, zwei Bildschirmfotos angesehen, keine Seitenfehler. Piper lief danach weiter.
+**Nicht geprüft:** am Handy, helles Farbschema, Klick auf den Knopf mit echter Karte (unverändert seit V216).
