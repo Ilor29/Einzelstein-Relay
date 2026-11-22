@@ -4,3 +4,4 @@
 Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
 - [22.11. 12:52] „32. Ja“
+- [22.11. 13:03] „bitte noch mal die Fragen 21 28 29 40“
