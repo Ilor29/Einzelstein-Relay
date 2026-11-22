@@ -6183,6 +6183,19 @@ function skillName(s) {
   }
   return _namen.get(s.id) || n;
 }
+// V262: „code guard“ findet „code-guard“. Bindestriche, Unterstriche, Punkte und Schrägstriche
+// zählen als Leerzeichen, jedes Wort muss vorkommen, und ohne Leerzeichen geht es auch.
+// Gilt für die Bibliothek und für die Skill-Liste beim Tippen von „/“ im Eingabefeld.
+const _glatt = (t) => (t || "").toLowerCase().replace(/[-_.\/]+/g, " ").replace(/\s+/g, " ").trim();
+function skillTrifft(s, suche) {
+  const worte = _glatt(suche).split(" ").filter(Boolean);
+  if (!worte.length) return true;
+  const heu = _glatt([skillName(s), s.name, s.original_name, skillText(s), s.original_beschreibung,
+    s.beschreibung_de, s.beschreibung_en, s.kategorie].filter(Boolean).join(" \n "));
+  return worte.every((w) => heu.includes(w)) ||
+    _glatt(skillName(s)).replace(/ /g, "").includes(_glatt(suche).replace(/ /g, ""));
+}
+
 // V260 (Roli 22.11. 15:09, „39. Ja“): Beschreibungen in der Sprache der Oberfläche,
 // der Knopf „Original“ zeigt den Text, wie er im Skill steht. Dein Etikett geht vor.
 let bibOriginal = localStorage.getItem("relay_bib_original_v1") === "1";
@@ -6559,16 +6572,7 @@ function zeigeSkills() {
   // auch, wenn man nur weiß, wofür er gut war, nicht mehr, wie er heißt.
   const suche = bibSuche.trim().toLowerCase();
   if (suche) {
-    // V262: „code guard“ findet „code-guard“. Bindestriche und Unterstriche zählen als
-    // Leerzeichen, jedes Wort muss vorkommen, und ohne Leerzeichen geht es auch.
-    const glatt = (t) => (t || "").toLowerCase().replace(/[-_.\/]+/g, " ").replace(/\s+/g, " ");
-    const worte = glatt(suche).split(" ").filter(Boolean);
-    const ohne = (t) => glatt(t).replace(/ /g, "");
-    sichtbar = sichtbar.filter((s) => {
-      const heu = glatt([skillName(s), s.name, s.original_name, skillText(s), s.original_beschreibung,
-        s.beschreibung_de, s.beschreibung_en, s.kategorie].filter(Boolean).join(" \n "));
-      return worte.every((w) => heu.includes(w)) || ohne(skillName(s)).includes(ohne(suche));
-    });
+    sichtbar = sichtbar.filter((s) => skillTrifft(s, suche));
   }
 
   if (sichtbar.length === 0) {
@@ -8315,4 +8319,58 @@ $("datei-schliessen").addEventListener("click", () => { $("datei-blatt").hidden 
     adresse = d.url;
     knoepfe.forEach((k) => { k.hidden = false; });
   })();
+})();
+
+
+// --- V262: Skill-Auswahl beim Tippen von „/“ im Eingabefeld ------------------------
+// Roli 23.11. 00:05/00:09: wie in der Claude-App öffnet „/“ eine Liste, „code guard“ findet
+// code-guard. Ein Tipp trägt „/name “ ins Feld ein.
+(() => {
+  const feld = $("eingabe"), box = $("schraeg-liste");
+  if (!feld || !box) return;
+  let laedt = false;
+  async function skillsSichern() {
+    if (skills.length || laedt) return;
+    laedt = true;
+    try { skills = await (await api("/skills")).json(); } catch { /* dann bleibt die Liste leer */ }
+    laedt = false;
+    auffrischen();
+  }
+  function auffrischen() {
+    const w = feld.value;
+    if (!w.startsWith("/") || w.includes("\n")) { box.hidden = true; return; }
+    if (!skills.length) { skillsSichern(); box.hidden = true; return; }
+    // Steht schon ein vollständiger Skill-Name mit Leerzeichen da, ist die Wahl getroffen.
+    const erst = w.match(/^(\/\S+)\s/);
+    if (erst && skills.some((s) => s.befehl === erst[1])) { box.hidden = true; return; }
+    const suche = w.slice(1);
+    const favs = new Set(favoritenLesen()), benutzt = benutztLesen();
+    const rang = (s) => (favs.has(s.id) ? 0 : benutzt[s.id] ? 1 : 2);
+    const treffer = skills.filter((s) => skillTrifft(s, suche))
+      .sort((a, b) => rang(a) - rang(b) || (benutzt[b.id] || 0) - (benutzt[a.id] || 0))
+      .slice(0, 40);
+    if (!treffer.length) { box.hidden = true; return; }
+    box.replaceChildren(...treffer.map((s) => {
+      const k = document.createElement("button");
+      k.type = "button";
+      k.className = "schraeg-eintrag";
+      const n = document.createElement("span"); n.className = "schraeg-name"; n.textContent = "/" + skillName(s);
+      const b = document.createElement("span"); b.className = "schraeg-text"; b.textContent = skillText(s) || "";
+      k.append(n, b);
+      k.addEventListener("click", () => {
+        feld.value = s.befehl + " ";
+        benutztMerken(s.id);
+        box.hidden = true;
+        feld.dispatchEvent(new Event("input", { bubbles: true }));
+        feld.focus();
+      });
+      return k;
+    }));
+    box.hidden = false;
+    box.scrollTop = 0;
+  }
+  // Das Tippen soll nicht den Fokus verlieren, bevor der Tipp ankommt.
+  box.addEventListener("mousedown", (e) => e.preventDefault());
+  feld.addEventListener("input", auffrischen);
+  feld.addEventListener("keydown", (e) => { if (e.key === "Escape" && !box.hidden) { box.hidden = true; e.stopPropagation(); } });
 })();

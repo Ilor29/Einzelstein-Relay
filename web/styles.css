@@ -2699,3 +2699,13 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
   font-size: .85rem; color: var(--schrift-leise);
 }
 .bib-original.an { border-color: var(--akzent); color: var(--schrift); font-weight: 600; }
+
+/* V262: Skill-Liste über dem Eingabefeld beim Tippen von „/“ */
+.schraeg-liste { max-height: 38vh; overflow-y: auto; display: flex; flex-direction: column; gap: .15rem;
+  border-bottom: 1px solid var(--linie); padding-bottom: .35rem; margin-bottom: .1rem; }
+.schraeg-liste[hidden] { display: none; }
+.schraeg-eintrag { display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; text-align: left;
+  background: transparent; border: 0; border-radius: 10px; padding: .45rem .5rem; min-height: 44px; color: var(--schrift); cursor: pointer; }
+.schraeg-eintrag:active, .schraeg-eintrag:hover { background: var(--erhoben-2); }
+.schraeg-name { font-family: var(--mono); font-size: .82rem; color: var(--akzent); }
+.schraeg-text { font-size: .74rem; color: var(--schrift-schwach); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
