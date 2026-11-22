@@ -1349,3 +1349,9 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** `bibliothek.liste()` fasst Einträge mit gleichem Namen UND gleicher Beschreibung zusammen. Vorrang: eigenes Etikett, eigener Skill, installierte Fassung, Katalog. Gleicher Name mit anderer Beschreibung bleibt stehen, denn account-research aus Vertrieb, Common Room und synced sind verschiedene Skills.
 **Geprüft:** Zählung über die echte Liste auf dem Server: vorher 600, nachher 479, Namen weiterhin 452. Kein Etikett verloren außer dem schon verwaisten `skills/mein-gin-tonic-helfer` (nicht angefasst).
 **Nicht geprüft:** am Handy. Die 27 verbleibenden Doppelnamen haben verschiedene Beschreibungen, sehen aber gleich benannt aus.
+
+## 22.11.2026: V259, gleichnamige Skills mit Plugin im Namen
+**Auslöser:** Roli 22.11. 15:09 „38. Ja“ (Plugin hinter gleichnamige Skills, nachdem er auf dem Tablet account-research dreimal sah). 35 und 40 beantwortete er ebenfalls mit „Ja“ (Bibliothek am Handy in Ordnung, Vorlesen-Sprungknöpfe in Ordnung).
+**Lösung:** `bibliothek.liste()` liefert zusätzlich `quelle` (Plugin-Ordner vor `skills/`). In `app.js` baut `skillName()` bei gleichen Namen den Zusatz „(quelle)“, bei gleicher Quelle „(quelle, herkunft)“. Beispiel jetzt: account-research (common-room), account-research (sales, synced), account-research (sales, Claude Code). Gespeicherte eigene Namen bleiben gültig, der Zusatz entsteht nur in der Anzeige.
+**Geprüft:** Playwright gegen Testserver 8799, Bibliothek, Suche „account-research“: drei unterscheidbare Namen, keine Seitenfehler.
+**Nicht geprüft:** Handy, Anzeige in der Einfüge-Meldung bei langem Zusatz.

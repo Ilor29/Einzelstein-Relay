@@ -6157,7 +6157,31 @@ let bibSuche = "";              // das Suchwort aus dem Lupenfeld
 let bibZiel = null;             // die Sitzung, in die "Einfügen" schreibt
 let bearbeiteterSkill = null;
 
-const skillName = (s) => s.name || s.original_name;
+// V259 (Roli 22.11. „38. Ja“): Heißen mehrere Skills gleich, steht das Plugin dahinter,
+// etwa „account-research (common-room)“. Ist auch das gleich, kommt die Herkunft dazu.
+let _namenFuer = null, _namen = new Map();
+function skillName(s) {
+  const n = s.name || s.original_name;
+  if (_namenFuer !== skills) {
+    const zaehl = new Map(), zaehl2 = new Map();
+    for (const t of skills) {
+      const tn = t.name || t.original_name;
+      zaehl.set(tn, (zaehl.get(tn) || 0) + 1);
+      const k = tn + "\u0000" + (t.quelle || t.herkunft);
+      zaehl2.set(k, (zaehl2.get(k) || 0) + 1);
+    }
+    _namen = new Map();
+    for (const t of skills) {
+      const tn = t.name || t.original_name;
+      if (zaehl.get(tn) < 2) continue;
+      const teil = t.quelle || t.herkunft;
+      const eng = zaehl2.get(tn + "\u0000" + teil) > 1;
+      _namen.set(t.id, `${tn} (${eng ? teil + ", " + t.herkunft : teil})`);
+    }
+    _namenFuer = skills;
+  }
+  return _namen.get(s.id) || n;
+}
 const skillText = (s) => s.beschreibung || s.original_beschreibung;
 
 // Favoriten — die Skills, die du dauernd brauchst. Ihre IDs liegen im

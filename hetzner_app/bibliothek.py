@@ -169,6 +169,8 @@ def liste() -> list[dict]:
                 "original_name": name,
                 "original_beschreibung": beschreibung,
                 "herkunft": _herkunft(ordner),
+                # V259: Das Plugin-Verzeichnis, um gleichnamige Skills zu unterscheiden.
+                "quelle": ordner.parent.parent.name if (ordner.parent.name == "skills" and ordner.parent.parent != CLAUDE) else "",
                 # Der Befehl, den man in die Sitzung tippt, um den Skill zu rufen.
                 "befehl": "/" + name,
                 # Dein Etikett — leer, solange du keins vergeben hast.
