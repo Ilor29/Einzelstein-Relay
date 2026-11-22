@@ -9,3 +9,5 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt de
 - [22.11. 13:07] „Hast du eigentlich das stimmtraining für kaira grmacht oder was das die karte selber ?“
 - [22.11. 13:08] „.hetzner-bilder/1795349300-5128ddc1.jpg .hetzner-bilder/1795349302-1051a41e.jpg 33. Ja 34. Ja“
 - [22.11. 13:38] „also Querformat vom funktioniert bei diesem noch nicht ich bin gerade auf dem Tablet und schalte dort also bei den Skills Account research ist sogar dreimal drin“
+- [22.11. 15:02] „Biite nochmal link für relay“
+- [22.11. 15:04] „Quer geht bitte alle frGen nochmal neu“

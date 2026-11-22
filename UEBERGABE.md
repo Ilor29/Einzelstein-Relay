@@ -43,3 +43,7 @@ Bei der nächsten Karte:
 ## 5. Nächster Schritt
 
 Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version` (soll 258 melden) und Piper auf Port 5005 prüfen. Dann Rolis Antworten auf 36 bis 38 abholen: bei Ja auf 38 Plugin-Zusatz im Namen bauen (V259), beim Tablet je nach 37 die Ursache suchen (alte Installation, Android-Rotationssperre oder Layout bei quer, etwa 1000 Pixel Breite, mit Playwright nachstellen).
+
+## Nach der Übergabe gekommen (automatisch mitgeschrieben, Rolis Wortlaut)
+- [22.11. 15:02] „Biite nochmal link für relay“ → erledigt: Relay-Adresse genannt (https://65-21-246-222.sslip.io), nichts geändert
+- [22.11. 15:04] „Quer geht bitte alle frGen nochmal neu“ → erledigt: Tablet quer geht (28, 29, 36, 37 damit erledigt), offen neu gestellt: 35, 38, 40
