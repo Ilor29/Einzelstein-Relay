@@ -1370,3 +1370,10 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** `uebersetzung.py` zählt unter `_fehl` im Sprachenspeicher je Fingerabdruck die Fehlversuche (auch wenn ein ganzer Durchgang scheitert). Ab drei wird der Text nicht mehr probiert, bis er sich ändert (neuer Fingerabdruck). `/api/skills` startet einen Lauf nur noch, wenn `fehlende()` wirklich etwas meldet.
 **Geprüft:** Probe mit nachgestelltem, immer scheiterndem Modell in eigenem Speicher: fünf Läufe, drei Modellaufrufe, danach nichts mehr fehlend, geänderter Text wieder fehlend. Der echte Nachlauf hat gedaechtnis-pflege beim zweiten Mal übersetzt, alle 479 sind da.
 **Nicht geprüft:** nichts Sichtbares geändert, kein Handy nötig.
+
+## 23.11.2026: V262, Bibliothek-Suche mit Leerzeichen, Favoriten-Reiter, Start-Knopf bleibt unten
+**Auslöser:** Roli 23.11. 00:05: „ich kann per / kein skill aufrufen … ich gebe im suchfeld code guard ein sagt er das gibt es nicht … wenn ich es mit stern versehe ist es an erster stelle das sollte ein eigener reiter bekommen favoriten … in der neue sitzung öffnen … die liste so lang … entweder habe ich oben und unten ein knopf oder der knopf neue sitzung wandert mit“.
+**Befund:** Die Suche suchte den Text „code guard“ wörtlich, der Skill heißt aber „code-guard“. Bindestrich und Leerzeichen passten nie zusammen.
+**Lösung:** Suche macht aus Bindestrich, Unterstrich, Punkt und Schrägstrich ein Leerzeichen, jedes Wort muss vorkommen (Name, Beschreibungen, Fach), und ohne Leerzeichen geht es auch („codeguard“). Eigener Reiter „★ Favoriten“ nach „Alle“, nur sichtbar, solange es Sterne gibt; Favoriten werden in „Alle“ nicht mehr nach oben sortiert (zuletzt Benutztes bleibt oben). „Sitzung starten“ in Neue Sitzung ist unten angeheftet (sticky).
+**Geprüft:** Playwright 412x800 gegen Testserver 8799: „code guard“ findet code-guard, Reiter erscheint nach Stern und verschwindet nach dem Entsternen, Start-Knopf bei hochgescrollter Liste sichtbar, Bildschirmfoto angesehen, keine Seitenfehler.
+**Nicht geprüft:** Handy; helles Schema beim angehefteten Knopf.
