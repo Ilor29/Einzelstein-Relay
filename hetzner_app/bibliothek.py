@@ -177,6 +177,25 @@ def liste() -> list[dict]:
                 "kategorie": etikett.get("kategorie", ""),
             })
 
+    # V258: Derselbe Skill liegt oft zweimal da, im Marktplatz-Katalog und als
+    # installierte Fassung im Zwischenspeicher. Gleicher Name UND gleiche
+    # Beschreibung heißt gleicher Skill, dann bleibt nur einer. Gleicher Name mit
+    # anderer Beschreibung (account-research aus drei Plugins) sind verschiedene
+    # Skills und bleiben alle stehen. Vorrang: Etikett, eigen, installiert, Katalog.
+    def _vorrang(s: dict) -> int:
+        if s["name"] or s["beschreibung"] or s["kategorie"]:
+            return 0
+        if s["id"].startswith("skills/"):
+            return 1
+        if "/marketplaces/" in s["id"]:
+            return 3
+        return 2
+
+    beste: dict[tuple[str, str], dict] = {}
+    for s in sorted(skills, key=_vorrang):
+        beste.setdefault((s["original_name"], s["original_beschreibung"]), s)
+    skills = [s for s in skills if beste[(s["original_name"], s["original_beschreibung"])] is s]
+
     # Nach dem sichtbaren Namen sortieren — deiner, sonst der originale.
     skills.sort(key=lambda s: (s["name"] or s["original_name"]).lower())
     return skills

@@ -1342,3 +1342,10 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Geprüft:** Playwright gegen Testserver 8799, 412x800 und 412x480 (löst `body.eng` aus): offen, Blitz klappt zu und speichert „1“, nach Neuladen weiter zu, Tastatur auf, Blitz holt die Reihe kurz hervor, Tastatur zu wieder eingeklappt, Blitz klappt dauerhaft aus und speichert „0“, keine Seitenfehler, zwei Bildschirmfotos angesehen.
 **Nicht geprüft:** Tour-Durchlauf (kein Tour-Schritt nennt den Blitz).
 **Nachtrag 22.11. 12:50:** Roli am Handy: „31. Ja, funktioniert“.
+
+## 22.11.2026: V258, Bibliothek zeigt jeden Skill nur einmal
+**Auslöser:** Roli 22.11. 13:06 zu Frage 21 mit zwei Handy-Bildschirmfotos (academy-guide zweimal, account-research dreimal): „Siehe bilder oder hat das was mit Code und Cache zu tun“, dann 13:08 „33. Ja“.
+**Befund:** Die Bibliothek las Marktplatz-Katalog (herkunft „Claude Code“), Zwischenspeicher („cache“) und synchronisierte Plugins nebeneinander: 600 Einträge, 452 verschiedene Namen, 112 Namen mehrfach. Roli hatte mit „Code und Cache“ recht. V252 hatte nur die alten Cache-Fassungen entfernt.
+**Lösung:** `bibliothek.liste()` fasst Einträge mit gleichem Namen UND gleicher Beschreibung zusammen. Vorrang: eigenes Etikett, eigener Skill, installierte Fassung, Katalog. Gleicher Name mit anderer Beschreibung bleibt stehen, denn account-research aus Vertrieb, Common Room und synced sind verschiedene Skills.
+**Geprüft:** Zählung über die echte Liste auf dem Server: vorher 600, nachher 479, Namen weiterhin 452. Kein Etikett verloren außer dem schon verwaisten `skills/mein-gin-tonic-helfer` (nicht angefasst).
+**Nicht geprüft:** am Handy. Die 27 verbleibenden Doppelnamen haben verschiedene Beschreibungen, sehen aber gleich benannt aus.
