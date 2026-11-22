@@ -13,3 +13,4 @@ Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt de
 - [22.11. 15:04] „Quer geht bitte alle frGen nochmal neu“
 - [22.11. 15:09] „35. Ja 38. Ja 40. Ja dann können wir das so machen dass bei der deutschen Version Kills auf Deutsch angezeigt werden und in der englischen Version dann in Englisch so ist es ein bisschen gemischt entweder Deutsch und englische Beschreibung dazu switchen kann und eben die Skills erklärt werden wenn wir neu installieren das ist immer so fortgeführt wird dass es immer gleich die deutsche Beschreibung sichtbar ist“
 - [22.11. 15:12] „39. Ja“
+- [22.11. 16:44] „sind auf deutsch“
