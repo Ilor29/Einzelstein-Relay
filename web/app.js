@@ -7960,7 +7960,7 @@ $("zh-aend-komm-senden").addEventListener("click", async () => {
 });
 
 async function zurHandAenderungen(erzwingen) {
-  if ($("zur-hand").hidden || !aktuelleSitzung) return;
+  if (($("zur-hand").hidden && $("aend-blatt").hidden) || !aktuelleSitzung) return;
   const name = aktuelleSitzung.name;
   if (!erzwingen && aendFuer === name && Date.now() - aendZuletzt < 12000) return;
   if (aendFuer !== name) { aendOffen = new Set(); aendAbdruck = ""; aendKomm = { name, liste: [] }; aendKommZeichnen(); }
@@ -8137,6 +8137,25 @@ document.addEventListener("keydown", (e) => {
 // --- Kartenmenü (Monitor-Baustein 4, Roli 01.11.2026 „3. Ja“, 23:07 „mach mit 4 weiter“) ---
 // Sammelt, was es verstreut schon gab (Name antippen, Nadel, Kiste), und ergänzt Fork,
 // Als-ungelesen und Löschen. Jeder Punkt fragt bei Folgen nach, Löschen immer.
+// V266: Änderungen am Handy. Der Block aus „Zur Hand“ zieht ins Blatt um und wieder zurück.
+let aendTakt = null;
+function aendBlatt(auf) {
+  const blatt = $("aend-blatt"), block = $("zh-aend-block");
+  blatt.hidden = !auf;
+  if (auf) {
+    $("aend-koerper").append(block);
+    zurHandAenderungen(true);
+    clearInterval(aendTakt);
+    aendTakt = setInterval(() => { if (!$("aend-blatt").hidden) zurHandAenderungen(true); }, 12000);
+  } else {
+    clearInterval(aendTakt);
+    const rollt = document.querySelector("#zur-hand .zh-rollt");
+    rollt.insertBefore(block, $("zh-befehle-block"));
+  }
+}
+$("aend-schatten").addEventListener("click", () => aendBlatt(false));
+$("aend-schliessen").addEventListener("click", () => aendBlatt(false));
+
 function kartenmenueBlatt(auf) { $("kartenmenue-blatt").hidden = !auf; }
 $("kartenmenue-schatten").addEventListener("click", () => kartenmenueBlatt(false));
 $("kartenmenue-schliessen").addEventListener("click", () => kartenmenueBlatt(false));
@@ -8161,6 +8180,7 @@ document.querySelectorAll(".kartenmenue-punkt").forEach((k) => k.addEventListene
     if (art === "umbenennen") { $("sitzung-name").click(); }
     else if (art === "anheften") { $("knopf-anheften").click(); }
     else if (art === "suche") { $("knopf-suche").click(); }
+    else if (art === "aenderungen") { aendBlatt(true); }
     else if (art === "links") { $("knopf-linkliste").click(); }
     else if (art === "melden") { $("knopf-melden").click(); }
     else if (art === "sichern") { $("knopf-sichern").click(); }

@@ -2712,3 +2712,11 @@ body.drei-spalten #verbindung { font-size: 0; gap: 0; }
 .schraeg-name { font-family: var(--mono); font-size: .82rem; color: var(--akzent); }
 .schraeg-text { font-size: .74rem; color: var(--schrift-schwach); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .zh-aend-diff .z.klick { padding: .22rem 0; }
+
+/* V266: Änderungen im Blatt am Handy; der Block braucht dort keinen eigenen Kasten */
+.aend-blatt-inhalt { max-height: 88vh; }
+.aend-blatt-inhalt .zh-block { background: transparent; border: 0; padding: 0; }
+.aend-blatt-inhalt .zh-aend-diff { max-height: 40vh; }
+.aend-blatt-inhalt .zh-aend-kopf { min-height: 44px; }
+.aend-blatt-inhalt .zh-block > h2 > span:first-child { display: none; }   /* Titel steht schon im Blattkopf, die Zahl bleibt */
+.aend-blatt-inhalt .zh-block > h2 { justify-content: flex-end; }

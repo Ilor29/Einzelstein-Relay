@@ -274,6 +274,7 @@
     </g>
 
     <!-- Ein Stift: einen eigenen Schnellbefehl ändern. -->
+    <g id="i-diff" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v8M8 9h8M8 18h8"/></g>
     <g id="i-stift" fill="none" stroke="currentColor" stroke-width="1.6"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.8-2.8L4 18.2z"/>
@@ -699,6 +700,7 @@
       </div>
       <div class="kartenmenue-liste">
         <button type="button" class="kartenmenue-punkt" data-punkt="suche"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-lupe"/></svg><span>Im Verlauf suchen</span></button>
+        <button type="button" class="kartenmenue-punkt" data-punkt="aenderungen"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-diff"/></svg><span>Änderungen ansehen und kommentieren</span></button>
         <button type="button" class="kartenmenue-punkt" data-punkt="links"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-kette"/></svg><span>Gesammelte Links</span></button>
         <button type="button" class="kartenmenue-punkt" data-punkt="melden"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-glocke"/></svg><span>Melden, wenn die Karte dich braucht</span></button>
         <button type="button" class="kartenmenue-punkt" data-punkt="sichern"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-sichern"/></svg><span>Stand sichern</span></button>
@@ -711,6 +713,19 @@
         <button type="button" class="kartenmenue-punkt" data-punkt="archivieren"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-archiv"/></svg><span>Ins Archiv stellen</span></button>
         <button type="button" class="kartenmenue-punkt gefahr" data-punkt="loeschen"><svg class="menue-icon" viewBox="0 0 24 24"><use href="#i-muell"/></svg><span>Löschen</span></button>
       </div>
+    </div>
+  </div>
+
+  <!-- V266: Änderungen der Karte am Handy (Roli 23.11. 00:47 „51. Ja“). Der Block aus „Zur Hand“
+       wird beim Öffnen hierher gesetzt und beim Schließen zurückgestellt. -->
+  <div id="aend-blatt" class="blatt" hidden>
+    <div class="blatt-schatten" id="aend-schatten"></div>
+    <div class="blatt-inhalt aend-blatt-inhalt">
+      <div class="blatt-kopf">
+        <button type="button" id="aend-schliessen" class="knopf-blank" aria-label="Schließen">✕</button>
+        <h2>Änderungen dieser Karte</h2>
+      </div>
+      <div id="aend-koerper"></div>
     </div>
   </div>
 
