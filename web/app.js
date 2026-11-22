@@ -7900,11 +7900,70 @@ async function zurHandVorschau() {
   $("zh-vorschau-block").hidden = false;
 }
 
+// V265 (Roli 23.11. 00:31 „49. lass einbauen“): Zeilen der Änderungen antippen, kurz kommentieren,
+// gesammelt ans Eingabefeld legen oder an die Karte senden. Liegt nur auf dem Gerät, bis es geschickt wird.
+let aendKomm = { name: "", liste: [] };
+function aendKommNeu(pfad, nr, art, inhalt) {
+  const da = aendKomm.liste.find((k) => k.pfad === pfad && k.nr === nr && k.art === art);
+  if (!da) aendKomm.liste.push({ pfad, nr, art, inhalt: inhalt.slice(0, 160), kommentar: "" });
+  aendKommZeichnen();
+  const felder = $("zh-aend-komm-liste").querySelectorAll("textarea");
+  (da ? felder[aendKomm.liste.indexOf(da)] : felder[felder.length - 1])?.focus();
+}
+function aendKommZeichnen() {
+  const block = $("zh-aend-komm"), liste = $("zh-aend-komm-liste");
+  block.hidden = aendKomm.liste.length === 0;
+  liste.replaceChildren(...aendKomm.liste.map((k) => {
+    const li = document.createElement("li");
+    const ziel = document.createElement("code");
+    ziel.className = "zh-komm-ziel";
+    ziel.textContent = `${k.pfad}, Zeile ${k.nr}${k.art === "entfernt" ? " (entfernt)" : ""}: ${k.inhalt.trim().slice(0, 70)}`;
+    const feld = document.createElement("textarea");
+    feld.value = k.kommentar; feld.placeholder = "Was soll hier anders werden?";
+    feld.addEventListener("input", () => { k.kommentar = feld.value; });
+    const weg = document.createElement("button");
+    weg.type = "button"; weg.className = "zh-klein"; weg.textContent = "Entfernen";
+    weg.addEventListener("click", () => { aendKomm.liste = aendKomm.liste.filter((x) => x !== k); aendKommZeichnen(); aendMarken(); });
+    li.append(ziel, feld, weg);
+    return li;
+  }));
+  aendMarken();
+}
+function aendMarken() {   // Zeilen mit Kommentar links markieren
+  const offen = new Set();
+  document.querySelectorAll("#zh-aend-liste .zh-aend-datei").forEach((box) => {
+    const pfad = box.querySelector(".zh-aend-name")?.textContent.replace(/ \(neu\)$/, "");
+    box.querySelectorAll(".z.klick").forEach((el) => {
+      el.classList.toggle("kom", aendKomm.liste.some((k) => k.pfad === pfad && k.nr === +el.dataset.nr && k.art === el.dataset.art));
+    });
+  });
+}
+function aendKommText() {
+  const mit = aendKomm.liste.filter((k) => k.kommentar.trim());
+  if (!mit.length) return "";
+  return `Bitte diese Anmerkungen zu deinen Änderungen bearbeiten (${mit.length}):\n\n` + mit.map((k, i) =>
+    `${i + 1}. ${k.pfad}, Zeile ${k.nr}${k.art === "entfernt" ? " (die entfernte Zeile)" : ""}\n   ${k.inhalt.trim().slice(0, 120)}\n   → ${k.kommentar.trim()}`).join("\n\n");
+}
+$("zh-aend-komm-leeren").addEventListener("click", () => { aendKomm.liste = []; aendKommZeichnen(); });
+$("zh-aend-komm-feld").addEventListener("click", () => {
+  const t = aendKommText();
+  if (!t) { melde("Noch kein Kommentar geschrieben."); return; }
+  chipInsFeld(t);
+});
+$("zh-aend-komm-senden").addEventListener("click", async () => {
+  const t = aendKommText();
+  if (!t) { melde("Noch kein Kommentar geschrieben."); return; }
+  if (!aktuelleSitzung || imTerminal) return;
+  if (beschaeftigt) { melde("Claude arbeitet noch, gleich wieder frei."); return; }
+  try { await sendeInSitzung(t); aendKomm.liste = []; aendKommZeichnen(); melde("Anmerkungen gesendet."); }
+  catch (err) { melde(err.message); }
+});
+
 async function zurHandAenderungen(erzwingen) {
   if ($("zur-hand").hidden || !aktuelleSitzung) return;
   const name = aktuelleSitzung.name;
   if (!erzwingen && aendFuer === name && Date.now() - aendZuletzt < 12000) return;
-  if (aendFuer !== name) { aendOffen = new Set(); aendAbdruck = ""; }
+  if (aendFuer !== name) { aendOffen = new Set(); aendAbdruck = ""; aendKomm = { name, liste: [] }; aendKommZeichnen(); }
   aendFuer = name;
   aendZuletzt = Date.now();
   let d;
@@ -7955,10 +8014,22 @@ async function zurHandAenderungen(erzwingen) {
         if (x.geheim) { pre.textContent = "Diese Datei kann Zugangsdaten enthalten, der Inhalt wird nicht gezeigt."; return; }
         if (x.binaer) { pre.textContent = "Binärdatei, keine Zeilen zu zeigen."; return; }
         if (x.fehler) { pre.textContent = x.fehler; return; }
+        let alt = 1, neu = 1;   // V265: Zeilennummern aus den @@-Köpfen mitzählen
         for (const z of x.zeilen) {
           const el = document.createElement("span");
           el.className = "z " + (z.startsWith("+") ? "p" : z.startsWith("-") ? "m" : "k");
           el.textContent = z || " ";
+          const kopfZ = z.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)/);
+          if (kopfZ) { alt = +kopfZ[1]; neu = +kopfZ[2]; }
+          else if (!z.startsWith("\\")) {
+            const art = z.startsWith("-") ? "entfernt" : "neu";
+            const nr = art === "entfernt" ? alt : neu;
+            if (z.startsWith("-")) alt++; else if (z.startsWith("+")) neu++; else { alt++; neu++; }
+            el.classList.add("klick");
+            el.dataset.nr = nr; el.dataset.art = art;
+            el.addEventListener("click", () => aendKommNeu(f.pfad, nr, art, z.slice(1)));
+            if (aendKomm.liste.some((k) => k.pfad === f.pfad && k.nr === nr && k.art === art)) el.classList.add("kom");
+          }
           pre.appendChild(el);
         }
         if (x.gekuerzt) pre.appendChild(Object.assign(document.createElement("span"), { className: "z k", textContent: "… gekürzt" }));
