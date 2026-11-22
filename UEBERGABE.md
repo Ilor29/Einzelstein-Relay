@@ -9,7 +9,7 @@ Die Wahrheit steht in `BAUBUCH.md` (Einträge V256 bis V258 vom 22.11.) und in `
 
 ## 1. Stand
 
-Relay V260 läuft, `/api/version` meldet 260 (V260: Skill-Beschreibungen Deutsch/Englisch, Knopf Original, Übersetzung über uebersetzung.py, Cron 04:20) (V259: Plugin im Namen bei gleichnamigen Skills, Roli „38. Ja“), Piper lauscht auf Port 5005 (nach dem Neustart wieder oben). Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig.
+Relay V260 läuft, `/api/version` meldet 261 (V261: Übersetzung gibt nach drei Fehlversuchen auf) (V260: Skill-Beschreibungen Deutsch/Englisch, Knopf Original, Übersetzung über uebersetzung.py, Cron 04:20) (V259: Plugin im Namen bei gleichnamigen Skills, Roli „38. Ja“), Piper lauscht auf Port 5005 (nach dem Neustart wieder oben). Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig.
 
 ## 2. Was in dieser Karte geschah
 
@@ -50,3 +50,4 @@ Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version
 - [22.11. 15:09] „35. Ja 38. Ja 40. Ja dann können wir das so machen dass bei der deutschen Version Kills auf Deutsch angezeigt werden und in der englischen Version dann in Englisch so ist es ein bisschen gemischt entweder Deutsch und englische Beschreibung dazu switchen kann und eben die Skills erklärt werden wenn wir neu installieren das ist immer so fortgeführt wird dass es immer gleich die deutsche Beschreibung sichtbar ist“ → erledigt: 35 und 40 bestätigt, 38 als V259 gebaut und ausgerollt; offen als Frage 39: deutsche und englische Skill-Beschreibungen mit Umschalter
 - [22.11. 15:12] „39. Ja“ → erledigt: V260 gebaut und ausgerollt, erster Übersetzungslauf lief ab 15:13
 - [22.11. 16:44] „sind auf deutsch“ → erledigt: V260 am Handy bestätigt (41), keine offenen Fragen mehr
+- [22.11. 16:46] „42. Ja“ → erledigt: V261 gebaut und ausgerollt, alle 479 Beschreibungen übersetzt, nichts offen
