@@ -1363,3 +1363,4 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Kosten:** kein Geld, nur Abo-Kontingent (Haiku, rund 160.000 Zeichen beim ersten Lauf, etwa 24 Aufrufe zu je rund 25 Sekunden).
 **Geprüft:** Probelauf mit drei Beschreibungen, dann Playwright gegen Testserver 8799: deutsche Texte, Knopf Original zeigt englische Originale und bleibt nach Neuladen gemerkt, mit Sprache „en“ englische Fassungen (auch für ursprünglich deutsche Skills), Suche „Barrierefreiheit“ findet accessibility-review, keine Seitenfehler, Bildschirmfoto angesehen.
 **Nicht geprüft:** Handy; Spiegel von Lorenz und Lea (dort übersetzt der Server über deren eigenes Abo, sobald sie die Bibliothek öffnen); Umschalten der Sprache zur Laufzeit ohne Neuöffnen der Bibliothek.
+**Nachtrag 22.11. 16:44:** Roli am Handy: „sind auf deutsch“ (Frage 41 bestätigt).
