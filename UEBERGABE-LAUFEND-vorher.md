@@ -1,10 +1,18 @@
-<!-- sitzung f2b66f9d-0c68-4b87-8e68-204e125b89c9 -->
+<!-- sitzung f8d60921-0787-41c8-9187-b7c4b108866e -->
 # Laufende Übergabe, automatisch mitgeschrieben
 
-Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 10:19. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
+Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
-- [22.11. 10:19] „.hetzner-bilder/1795339110-cee8ad92.jpg 1. Ja, wir hatten doch früher die hier die übrrgabe datei mit drin“
-- [22.11. 10:22] „26. Ja“
-- [22.11. 11:06] „.hetzner-bilder/1795341929-aa84273a.jpg 27. Ja, war das so geplant wie auf dem bild ? Die schnelwahltste die muss einfahrbar sei“
-- [22.11. 11:08] „30. Ja“
-- [22.11. 12:50] „31. Ja, funktionier was ist offen?“
+- [22.11. 12:52] „32. Ja“
+- [22.11. 13:03] „bitte noch mal die Fragen 21 28 29 40“
+- [22.11. 13:06] „21. Siehe bilder oder hat das wS mit code und cace zu run 28. Prüfe ich gkeich 29. Ja 40. Ja“
+- [22.11. 13:07] „Hast du eigentlich das stimmtraining für kaira grmacht oder was das die karte selber ?“
+- [22.11. 13:08] „.hetzner-bilder/1795349300-5128ddc1.jpg .hetzner-bilder/1795349302-1051a41e.jpg 33. Ja 34. Ja“
+- [22.11. 13:38] „also Querformat vom funktioniert bei diesem noch nicht ich bin gerade auf dem Tablet und schalte dort also bei den Skills Account research ist sogar dreimal drin“
+- [22.11. 15:02] „Biite nochmal link für relay“
+- [22.11. 15:04] „Quer geht bitte alle frGen nochmal neu“
+- [22.11. 15:09] „35. Ja 38. Ja 40. Ja dann können wir das so machen dass bei der deutschen Version Kills auf Deutsch angezeigt werden und in der englischen Version dann in Englisch so ist es ein bisschen gemischt entweder Deutsch und englische Beschreibung dazu switchen kann und eben die Skills erklärt werden wenn wir neu installieren das ist immer so fortgeführt wird dass es immer gleich die deutsche Beschreibung sichtbar ist“
+- [22.11. 15:12] „39. Ja“
+- [22.11. 16:44] „sind auf deutsch“
+- [22.11. 16:46] „42. Ja“
+- [22.11. 20:52] „Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register nachtragen, dann UEBERGABE.md im Projektordner schreiben (Stand, offen, nächster Schritt, Beschlüsse mit Auslöser-Satz, Rolis letzter Wortlaut) und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.“

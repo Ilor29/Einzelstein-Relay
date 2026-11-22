@@ -1813,6 +1813,11 @@ body.schnell-zu .schnellbefehle:not(.auf) { display: none; }
 .ordnerwahl { display: flex; flex-direction: column; gap: .35rem; }
 .bib-suche.neu-suche { padding: 0 0 .45rem; }
 .bib-suche.neu-suche .bib-suche-lupe { left: .7rem; }
+/* V262: Start-Knopf bleibt unten stehen, auch wenn die Ordnerliste lang ist. */
+#neu-formular > button[type="submit"] {
+  position: sticky; bottom: calc(.4rem + var(--unten)); z-index: 2;
+  box-shadow: 0 -10px 14px -6px var(--grund, #0b0d10);
+}
 .neu-vorschlaege { display: flex; gap: .5rem; margin: -.35rem 0 .9rem; }
 .ordner {
   display: flex;

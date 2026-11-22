@@ -6153,6 +6153,7 @@ $("neu-formular").addEventListener("submit", async (e) => {
 
 let skills = [];
 let bibFach = "Alle";
+const BIB_FAV = "\u2605favoriten";   // Reiter-Kennung für die Favoriten
 let bibSuche = "";              // das Suchwort aus dem Lupenfeld
 let bibZiel = null;             // die Sitzung, in die "Einfügen" schreibt
 let bearbeiteterSkill = null;
@@ -6524,7 +6525,8 @@ $("knopf-bib-zurueck").addEventListener("click", () => {
 
 function baueReiter() {
   const leiste = $("bib-reiter");
-  const faecher = ["Alle", ...bibKategorien()];
+  // V262: Favoriten haben einen eigenen Reiter (nur wenn es welche gibt).
+  const faecher = ["Alle", ...(favoritenLesen().length ? [BIB_FAV] : []), ...bibKategorien()];
   // Ein gewähltes Fach, das es nicht mehr gibt, fällt auf "Alle" zurück.
   if (!faecher.includes(bibFach)) bibFach = "Alle";
 
@@ -6533,7 +6535,7 @@ function baueReiter() {
       const knopf = document.createElement("button");
       knopf.type = "button";
       knopf.className = "reiter" + (fach === bibFach ? " an" : "");
-      knopf.textContent = fach;
+      knopf.textContent = fach === BIB_FAV ? "★ Favoriten" : fach;
       knopf.addEventListener("click", () => {
         bibFach = fach;
         baueReiter();
@@ -6546,19 +6548,27 @@ function baueReiter() {
 
 function zeigeSkills() {
   const liste = $("bib-liste");
+  const favMenge = new Set(favoritenLesen());
   let sichtbar = bibFach === "Alle"
     ? skills
-    : skills.filter((s) => s.kategorie === bibFach);
+    : bibFach === BIB_FAV
+      ? skills.filter((s) => favMenge.has(s.id))
+      : skills.filter((s) => s.kategorie === bibFach);
 
   // Das Suchwort filtert über Name UND Beschreibung — so findet man einen Skill
   // auch, wenn man nur weiß, wofür er gut war, nicht mehr, wie er heißt.
   const suche = bibSuche.trim().toLowerCase();
   if (suche) {
-    sichtbar = sichtbar.filter((s) =>
-      (skillName(s) || "").toLowerCase().includes(suche) ||
-      [skillText(s), s.original_beschreibung, s.beschreibung_de, s.beschreibung_en]
-        .some((x) => (x || "").toLowerCase().includes(suche))
-    );
+    // V262: „code guard“ findet „code-guard“. Bindestriche und Unterstriche zählen als
+    // Leerzeichen, jedes Wort muss vorkommen, und ohne Leerzeichen geht es auch.
+    const glatt = (t) => (t || "").toLowerCase().replace(/[-_.\/]+/g, " ").replace(/\s+/g, " ");
+    const worte = glatt(suche).split(" ").filter(Boolean);
+    const ohne = (t) => glatt(t).replace(/ /g, "");
+    sichtbar = sichtbar.filter((s) => {
+      const heu = glatt([skillName(s), s.name, s.original_name, skillText(s), s.original_beschreibung,
+        s.beschreibung_de, s.beschreibung_en, s.kategorie].filter(Boolean).join(" \n "));
+      return worte.every((w) => heu.includes(w)) || ohne(skillName(s)).includes(ohne(suche));
+    });
   }
 
   if (sichtbar.length === 0) {
@@ -6577,7 +6587,7 @@ function zeigeSkills() {
   // der Rest in der Grundsortierung (alphabetisch vom Server — stabil erhalten).
   const favs = new Set(favoritenLesen());
   const benutzt = benutztLesen();
-  const rang = (s) => (favs.has(s.id) ? 0 : benutzt[s.id] ? 1 : 2);
+  const rang = (s) => (bibFach === BIB_FAV && favs.has(s.id) ? 0 : benutzt[s.id] ? 1 : 2);
   sichtbar = [...sichtbar].sort((a, b) => {
     const ra = rang(a), rb = rang(b);
     if (ra !== rb) return ra - rb;
@@ -6627,6 +6637,7 @@ function skillKarte(s) {
   stern.addEventListener("click", (e) => {
     e.stopPropagation();          // nicht gleichzeitig das Benennen-Blatt öffnen
     favoritUmschalten(s.id);
+    baueReiter();                 // der Favoriten-Reiter kommt und geht mit dem letzten Stern
     zeigeSkills();                // neu zeichnen — Favoriten rutschen nach oben
   });
 
