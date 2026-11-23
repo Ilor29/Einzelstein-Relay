@@ -1,52 +1,45 @@
 # Project Handoff: Hetzner-App (Relay)
 
-Version: v12 (ersetzt v11 vom 22.11. gegen 13:42)
-Date: 2026-11-22, gegen 20:55
+Version: v13 (ersetzt v12 vom 22.11. gegen 20:55)
+Date: 2026-11-23, gegen 01:35
 Owner/User: Roli
-Prepared by: Claude (Karte Hetzner-App 24), auf Rolis Bitte
+Prepared by: Claude (Karte Hetzner-App 25), automatisch vor Cache-Ablauf
 
-Die Wahrheit steht in `BAUBUCH.md` (Einträge V256 bis V261 vom 22.11.) und in `~/projekte/Brain/REGISTER.md`. Diese Datei fasst nur zusammen.
+Die Wahrheit steht in `BAUBUCH.md` (Einträge V262 bis V266 vom 23.11.) und in `~/projekte/Brain/REGISTER.md`. Diese Datei fasst nur zusammen.
 
 ## 1. Stand
 
-Relay V261 läuft, `/api/version` meldet 261, Piper lauscht auf Port 5005. Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig. Die Beschlüsse stehen auch im Zweitgehirn unter „02 Projekte/Einzelstein Relay.md“.
+Relay V266 läuft, `/api/version` meldet 266. Alles ist committet und auf `github main` gesichert, der Testserver 8799 ist beendet. Nichts ist halb fertig.
 
-## 2. Was in dieser Karte geschah (22.11.)
+## 2. Was in dieser Karte geschah (23.11., 00:05 bis 01:35)
 
-- V256: Knopf „Übergabe vorbereiten“ steht immer im Verbrauchs-Blatt. Am Handy bestätigt, im hellen Schema im Browser geprüft.
-- V257: Der Blitz klappt die Befehlsreihe auch ohne Tastatur ein, die Wahl wird gemerkt. Am Handy bestätigt.
-- Im Browser geprüft: alle zwölf Kartenmenü-Punkte mit Symbol, Tour der Sitzungsansicht mit sieben Schritten.
-- V258: Die Bibliothek fasst Skills mit gleichem Namen und gleicher Beschreibung zusammen (Katalog und Zwischenspeicher), 600 auf 479 Einträge. Am Handy bestätigt („35. Ja“).
-- V259: Gleichnamige, aber verschiedene Skills tragen das Plugin im Namen, etwa „account-research (common-room)“ oder „(sales, synced)“. Dafür liefert der Server das neue Feld `quelle`.
-- V260: Die Skill-Beschreibungen erscheinen in der Sprache der Oberfläche. Der Knopf „Original“ oben in der Bibliothek zeigt den Urtext (`relay_bib_original_v1`). Neues Modul `hetzner_app/uebersetzung.py` übersetzt über das Abo (`claude -p --model haiku`, ohne Werkzeuge, Hooks und Plugins), gespeichert in `~/.hetzner-app/bibliothek-sprachen.json`. `/api/skills` stößt bei Lücken einen Lauf an (höchstens alle zehn Minuten), dazu Cron täglich 04:20, Protokoll `~/logs/bibliothek-uebersetzung.log`. Alle 479 Beschreibungen sind übersetzt, am Handy bestätigt („sind auf deutsch“).
-- V261: Ein Text, der sich nicht übersetzen lässt, wird nach drei Fehlversuchen nicht mehr probiert (`_fehl` im Speicher).
-- Tablet quer geht nach Neuinstallation (Roli 15:04).
-- Kaira-Stimmtraining: Diese Karte war es nicht, das waren laut Register Kaira Assistent 8 bis 11. Kairas Stimme liest seit Relay V192 auch in Relay vor.
+- V262: Bibliothek-Suche findet „code guard“ für code-guard (Bindestrich zählt als Leerzeichen, jedes Wort muss vorkommen). Eigener Reiter „★ Favoriten“ nach „Alle“, nur sichtbar mit Sternen; Favoriten stehen in „Alle“ nicht mehr oben. „Sitzung starten“ in Neue Sitzung ist unten angeheftet.
+- V263: Tippt man „/“ am Anfang des Eingabefelds, erscheint eine Skill-Liste mit derselben Suche. Tipp trägt „/name “ ein.
+- V264: 28 eingebaute Claude-Code-Befehle (clear, compact, model …) mit deutscher Kurzerklärung stehen in dieser Liste, von Hand gepflegt (`EINGEBAUT` in app.js).
+- V265: Zeilen der Änderungen einer Karte sind antippbar, Kommentare lassen sich sammeln und „Ins Eingabefeld legen“ oder „An die Karte senden“. Diff jetzt blau (neu) und orange (entfernt) wegen Rolis Rot-Grün-Schwäche.
+- V266: Die Spalte „Zur Hand“ gibt es nur am breiten Rechner, deshalb neuer Punkt „Änderungen ansehen und kommentieren“ im Drei-Punkte-Menü der Karte. Er öffnet ein Blatt, in das der Block aus „Zur Hand“ umzieht.
+- Orca (orca.dev) eingeschätzt: Notiz `~/projekte/Brain/wissen/orca-dev-eingeschaetzt-2026-11-23.md`, Zeile im INDEX. Mockup: `https://seiten-roli.65-21-246-222.sslip.io/relay-diff-review/` (zeigt den Weg „Kartenmenü, Änderungen“, jetzt gebaut).
 
 ## 3. Beschlüsse (mit Auslöser)
 
-- 10:19 „wir hatten doch früher die hier die Übergabe datei mit drin“, 10:22 „26. Ja“: V256.
-- 11:06 „Die Schnellwahltaste die muss einfahrbar sein“, 11:08 „30. Ja“: V257, ersetzt Beschluss 22 vom 21.11.
-- 13:06 „Siehe bilder oder hat das was mit Code und Cache zu tun“, 13:08 „33. Ja“: V258.
-- 15:09 „38. Ja“: V259.
-- 15:09 „dann können wir das so machen, dass bei der deutschen Version Skills auf Deutsch angezeigt werden und in der englischen Version in Englisch … dazu switchen kann … wenn wir neu installieren, dass es immer gleich die deutsche Beschreibung sichtbar ist“, 15:12 „39. Ja“: V260.
-- 16:46 „42. Ja“: V261.
-- Achtung Begriff: Mit „Schnellwahltaste“ meinte Roli am 21.11. die Symbolleiste oben, am 22.11. die Befehlsreihe über dem Eingabefeld. Bei dem Wort nachfragen.
-
-Rolis letzter Wortlaut (20:52): „Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register nachtragen, dann UEBERGABE.md im Projektordner schreiben … und mir den Satz ‚Übergabe lesen‘ für die neue Karte als Codeblock nennen.“
+- 00:05 „ich kann per / kein skill aufrufen … code guard … sagt er das gibt es nicht … Favoriten eigener Reiter … Knopf neue Sitzung wandert mit“: V262.
+- 00:09 „44. direkt ins eingabe feld das ist bei der app vom claude auch so“: V263.
+- 00:19 „45. Ja“: V264.
+- 00:25 „46. bevor du was baust bitte mockup damit ich mir das vorstellen kann“: Mockup, nicht gebaut.
+- 00:31 „49. lass einbauen ich hatte bis jetzt nicht gewusst das es geht“: V265. Frage 47 (sofort senden oder ins Feld legen) blieb unbeantwortet, gebaut ist die Empfehlung: erst ins Feld legen, Senden gibt es zusätzlich.
+- 00:47 „51. Ja“: V266 (Roli hatte 00:38 gesagt, er überblicke nicht, wo die Kommentare stehen).
 
 ## 4. Offen
 
-Bei Roli: nichts. Zuletzt vergebene Nummer: 42, die nächste Frage bekommt die 43.
+Bei Roli: Frage 50 (sollen Kommentare nach Neuladen bleiben, Empfehlung Nein). Zuletzt vergebene Nummer: 51, die nächste Frage bekommt die 52.
 
 Bei der nächsten Karte, ohne Eile:
-- Ungeprüft: Menüpunkt „Im Verlauf suchen“ an echter Karte, Safari, Umschalten der Sprache zur Laufzeit bei offener Bibliothek (beim Öffnen wird neu gezeichnet, das ist geprüft).
-- Spiegel von Lorenz und Lea: Dort übersetzt der Server über deren eigenes Abo, sobald sie die Bibliothek öffnen. Den Cron für 04:20 hat nur Roli. Nicht geprüft.
-- Das verwaiste Etikett `skills/mein-gin-tonic-helfer` in `~/.hetzner-app/bibliothek.json` nicht ohne Rolis Wort löschen.
-- `UEBERGABE-LAUFEND.md` und `UEBERGABE-LAUFEND-vorher.md` im Projektordner stammen nicht von diesen Karten, nicht angefasst.
+- Handyprobe V262 bis V266 steht aus, besonders V266 mit einer Karte, die echte Änderungen hat (Weg: Drei-Punkte-Menü, „Änderungen ansehen und kommentieren“).
+- Ungeprüft: V259 am Handy; breiter Bildschirm nach dem Schließen des Blatts; Tastatur über dem Kommentarfeld; „An die Karte senden“ mit laufender Karte.
+- Die Befehlsliste in V264 veraltet, wenn Claude Code neue Befehle bekommt.
+- Aus der Vorkarte: „Im Verlauf suchen“ an echter Karte, Safari, Cron 04:20 der Übersetzung bei Lorenz und Lea, das verwaiste Etikett `skills/mein-gin-tonic-helfer` nicht ohne Rolis Wort löschen. `UEBERGABE-LAUFEND*.md` nicht angefasst.
+- Von Orca denkbar als nächste Steine: Anzeige der Abo-Grenzen in einer Ansicht, zeitgesteuerte Aufträge, Worktrees für parallele Karten. Nur auf Rolis Wort.
 
 ## 5. Nächster Schritt
 
-Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version` (soll 261 melden) und Piper auf Port 5005 prüfen. Nach einem Dienst-Neustart braucht Piper gut eine Minute, bis der Port wieder offen ist. Dann auf Rolis Wort warten.
-
-## Nach der Übergabe gekommen (automatisch mitgeschrieben, Rolis Wortlaut)
+Neue Karte mit „Übergabe lesen“. Zuerst `curl -s localhost:8787/api/version` (soll 266 melden) und Piper auf Port 5005 prüfen (nach einem Dienst-Neustart braucht Piper gut eine Minute). Dann auf Rolis Wort warten.
