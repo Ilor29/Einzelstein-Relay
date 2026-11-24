@@ -1401,3 +1401,10 @@ Gerätenamen: `geraete.entfernen` löscht nach Namen, `erlauben` ließ gleiche N
 **Lösung:** Neuer Punkt „Änderungen ansehen und kommentieren“ im Drei-Punkte-Menü der Karte. Er öffnet ein Blatt von unten (`#aend-blatt`) und setzt den Block `#zh-aend-block` aus „Zur Hand“ hinein, beim Schließen kommt er zurück. So gibt es eine Ansicht und eine Logik für Handy und Rechner. Solange das Blatt offen ist, lädt die Liste alle zwölf Sekunden neu. `zurHandAenderungen` läuft jetzt auch, wenn nur das Blatt offen ist.
 **Geprüft:** Playwright 412x800 gegen Testserver 8799 mit nachgestellten Änderungs-Antworten: „Zur Hand“ am Handy versteckt, Menüpunkt öffnet Blatt, Datei aufklappen, Zeile antippen, Kommentar schreiben, „Ins Eingabefeld legen“, Schließen stellt den Block zurück, keine Seitenfehler, Bildschirmfoto angesehen.
 **Nicht geprüft:** echtes Handy, echte Karte mit echten Änderungen, breiter Bildschirm (dort sollte der Block nach dem Schließen wieder rechts stehen, nur die Rückstellung geprüft), Tastatur über dem Kommentarfeld.
+
+## 24.11.2026: V267, lange Diktate fehlten im Verlauf
+**Auslöser:** Roli 24.11. 08:42: Bei PACHMAYR und schon bei anderen Karten bekommt die Karte seinen Text, der Chatverlauf zeigt ihn aber nicht. Ist das ein Einzelfall?
+**Befund:** Kein Einzelfall. Claude Code verpackt lange Diktate und Einfügungen in `<pasted_content id="…">…</pasted_content>`. `mitschrift.py` hielt jeden Text, der mit „<" beginnt, für einen Systemhinweis und blendete ihn aus. Bindung der Karte an die Mitschrift war in Ordnung (alle acht laufenden Karten geprüft). In den letzten drei Tagen traf es sechs Nachrichten; alle anderen Texte mit „<" (task-notification, system-reminder, Befehle) sind wirklich nicht von Roli.
+**Lösung:** Beginnt der Text mit `<pasted_content`, wird die Hülle abgestreift und der Text als „du" gezeigt.
+**Geprüft:** Mitschrift der Karte PACHMAYR 30 durch `mitschrift.lesen`: die Nachricht von 08:31 steht jetzt zwischen den Antworten. Dienst neu gestartet, Version geprüft.
+**Nicht geprüft:** Handy; Einfügungen mitten im Text (die Hülle steht dann im Text, wird nicht angefasst).

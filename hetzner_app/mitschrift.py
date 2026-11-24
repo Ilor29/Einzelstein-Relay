@@ -28,10 +28,14 @@ damit nichts von den Nachbarn geerbt wird).
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 
 PROJEKTE = Path.home() / ".claude" / "projects"
+
+
+_PASTED_HUELLE = re.compile(r"</?pasted_content[^>]*>")
 
 
 def _ordnername(cwd: str) -> str:
@@ -132,6 +136,15 @@ def _bloecke_aus(eintrag: dict) -> list[dict]:
         text = _text_aus(inhalt).strip()
         if not text:
             return bloecke
+
+        # Lange Diktate und Einfügungen kommen von Claude Code in einer Hülle
+        # <pasted_content id="…">…</pasted_content> an. Das ist DEIN Text (Fund
+        # 24.11.: die Karte bekam ihn, der Verlauf zeigte nichts, weil jeder
+        # Text mit „<" als Systemhinweis galt). Hülle abstreifen, Text zeigen.
+        if text.startswith("<pasted_content"):
+            text = _PASTED_HUELLE.sub("", text).strip()
+            if not text:
+                return bloecke
 
         # Hinweise, die das System einstreut, sind nicht von dir:
         # Bild-Beschreibungen, Erinnerungen, Werkzeug-Rückmeldungen.
