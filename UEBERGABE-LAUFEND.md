@@ -1,13 +1,6 @@
-<!-- sitzung b903bd99-1d74-40a5-93e4-457669e1c1bd -->
+<!-- sitzung a7801894-a571-46cb-9838-829818b8c424 -->
 # Laufende Übergabe, automatisch mitgeschrieben
 
-Rolis Nachrichten in dieser Karte, wörtlich, seit 23.11.2026 00:05. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
+Rolis Nachrichten in dieser Karte, wörtlich, seit 24.11.2026 08:42. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
-- [23.11. 00:05] „mir sind fehler aufgefallen erstens ich kann per / kein skill aufrufen wenn ih ein skill auswähle möchte und ich gebe im suchfeld code guard ein sagt er das gibt es nicht, ich habe es so gefunden wenn ich es mit stern versehe ist es an erster stelle das sollte ein eigene rieter bekomen favoriten und das zweite ist in der neue sitzung öffnen mittlerweile ist die liste so lang das ich unten beginne mit übergabe lese drücke und nach oben scrolle um die karte zu wählen danach drücke ich start entweder habe ich oben und unten ien knopf oder der knopf neue sitzung wandert mit“
-- [23.11. 00:09] „44. direkt ins eingabe feld das ist bei der app vom claude auch so“
-- [23.11. 00:19] „https://orca.dev/ was kann orca mehr was wir nicht können was können wir lernen 45. Ja“
-- [23.11. 00:25] „46. bevor du was baust bitte mockup damit ich mir das vorstellen kann“
-- [23.11. 00:28] „ich habe den vorteil bzw den nutzen noch nicht verstanden von der karte bitt erkläre es mir einfach“
-- [23.11. 00:31] „49. lass einbauen ich hatte bis jetz tnicht gewusst das es geht“
-- [23.11. 00:38] „ich muss mir das noch mal genau anschauen wo die Kommentare sich stehen sollten im Moment überblicke ich das gerade nicht“
-- [23.11. 00:47] „51. Ja“
+- [24.11. 08:42] „kannst du bitte prüfen und zwar gerade in der Partner App hatte ich habt und bei anderen ist es mir auch schon aufgefallen dass wenn ich jetzt einen Text rein spreche oder auch rein schreibe die Karte zwar die die Info kriegt released Chatverlauf nicht angezeigt wird ob Einzelfall ist“

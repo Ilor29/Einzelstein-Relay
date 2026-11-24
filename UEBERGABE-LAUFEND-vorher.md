@@ -1,18 +1,13 @@
-<!-- sitzung f8d60921-0787-41c8-9187-b7c4b108866e -->
+<!-- sitzung b903bd99-1d74-40a5-93e4-457669e1c1bd -->
 # Laufende Übergabe, automatisch mitgeschrieben
 
-Rolis Nachrichten in dieser Karte, wörtlich, seit 22.11.2026 12:52. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
+Rolis Nachrichten in dieser Karte, wörtlich, seit 23.11.2026 00:05. Schreibt der Koffer-Zuruf, nicht die Karte; nicht von Hand ändern. Die eigentliche Übergabe mit Stand und nächstem Schritt ist UEBERGABE.md.
 
-- [22.11. 12:52] „32. Ja“
-- [22.11. 13:03] „bitte noch mal die Fragen 21 28 29 40“
-- [22.11. 13:06] „21. Siehe bilder oder hat das wS mit code und cace zu run 28. Prüfe ich gkeich 29. Ja 40. Ja“
-- [22.11. 13:07] „Hast du eigentlich das stimmtraining für kaira grmacht oder was das die karte selber ?“
-- [22.11. 13:08] „.hetzner-bilder/1795349300-5128ddc1.jpg .hetzner-bilder/1795349302-1051a41e.jpg 33. Ja 34. Ja“
-- [22.11. 13:38] „also Querformat vom funktioniert bei diesem noch nicht ich bin gerade auf dem Tablet und schalte dort also bei den Skills Account research ist sogar dreimal drin“
-- [22.11. 15:02] „Biite nochmal link für relay“
-- [22.11. 15:04] „Quer geht bitte alle frGen nochmal neu“
-- [22.11. 15:09] „35. Ja 38. Ja 40. Ja dann können wir das so machen dass bei der deutschen Version Kills auf Deutsch angezeigt werden und in der englischen Version dann in Englisch so ist es ein bisschen gemischt entweder Deutsch und englische Beschreibung dazu switchen kann und eben die Skills erklärt werden wenn wir neu installieren das ist immer so fortgeführt wird dass es immer gleich die deutsche Beschreibung sichtbar ist“
-- [22.11. 15:12] „39. Ja“
-- [22.11. 16:44] „sind auf deutsch“
-- [22.11. 16:46] „42. Ja“
-- [22.11. 20:52] „Bitte jetzt die Übergabe vorbereiten: Laufenden Stein sauber zu Ende bringen, Stand in Baubuch und Register nachtragen, dann UEBERGABE.md im Projektordner schreiben (Stand, offen, nächster Schritt, Beschlüsse mit Auslöser-Satz, Rolis letzter Wortlaut) und mir den Satz „Übergabe lesen“ für die neue Karte als Codeblock nennen.“
+- [23.11. 00:05] „mir sind fehler aufgefallen erstens ich kann per / kein skill aufrufen wenn ih ein skill auswähle möchte und ich gebe im suchfeld code guard ein sagt er das gibt es nicht, ich habe es so gefunden wenn ich es mit stern versehe ist es an erster stelle das sollte ein eigene rieter bekomen favoriten und das zweite ist in der neue sitzung öffnen mittlerweile ist die liste so lang das ich unten beginne mit übergabe lese drücke und nach oben scrolle um die karte zu wählen danach drücke ich start entweder habe ich oben und unten ien knopf oder der knopf neue sitzung wandert mit“
+- [23.11. 00:09] „44. direkt ins eingabe feld das ist bei der app vom claude auch so“
+- [23.11. 00:19] „https://orca.dev/ was kann orca mehr was wir nicht können was können wir lernen 45. Ja“
+- [23.11. 00:25] „46. bevor du was baust bitte mockup damit ich mir das vorstellen kann“
+- [23.11. 00:28] „ich habe den vorteil bzw den nutzen noch nicht verstanden von der karte bitt erkläre es mir einfach“
+- [23.11. 00:31] „49. lass einbauen ich hatte bis jetz tnicht gewusst das es geht“
+- [23.11. 00:38] „ich muss mir das noch mal genau anschauen wo die Kommentare sich stehen sollten im Moment überblicke ich das gerade nicht“
+- [23.11. 00:47] „51. Ja“
