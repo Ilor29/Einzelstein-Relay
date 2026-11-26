@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 
 from . import state, tmux, verbrauch
+from .kartenwechsel import ausnahme
 
 FENSTER_S = 120         # so kurz vor Ablauf des Caches wird der Auftrag geschickt
 TAKT = 30               # so oft schaut die Schleife nach
@@ -138,6 +139,8 @@ def pruefen(probe: bool = False, kontext_fn=None, jetzt: float | None = None) ->
     gesendet: list[str] = []
     for s in karten:
         name = s["name"]
+        if ausnahme(name):
+            continue
         if s["state"] not in ("idle", "waiting") or je_ordner[s["cwd"]] > 1:
             continue
         meta = state.get(name)

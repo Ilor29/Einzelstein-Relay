@@ -35,6 +35,7 @@ SATZ = "Übergabe lesen"
 STAND = Path.home() / ".hetzner-app" / "kartenwechsel.json"
 AUS = Path.home() / ".hetzner-app" / "kartenwechsel.aus"
 WAECHTER = Path.home() / ".hetzner-app" / "uebergabe-waechter.json"
+AUSNAHMEN = Path.home() / ".hetzner-app" / "uebergabe-ausnahmen.txt"   # ein Kartenname je Zeile, # = Kommentar
 LOG = Path.home() / "logs" / "kartenwechsel.log"
 
 AUFTRAG = (
@@ -45,6 +46,16 @@ AUFTRAG = (
     "von selbst eine neue Karte mit „Übergabe lesen“. Roli ist vermutlich nicht am Gerät, bitte "
     "nichts Neues anfangen."
 )
+
+
+def ausnahme(name: str) -> bool:
+    """Karten in ~/.hetzner-app/uebergabe-ausnahmen.txt bekommen weder Auftrag noch Kartenwechsel
+    (Roli 26.11.2026 08:53 für Medienwerk 178). Datei löschen oder Zeile streichen hebt es auf."""
+    try:
+        zeilen = AUSNAHMEN.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    return name.strip() in {z.split("#")[0].strip() for z in zeilen}
 
 
 def log(text: str) -> None:
@@ -131,6 +142,8 @@ def main(argv: list[str]) -> None:
     je_ordner = collections.Counter(s["cwd"] for s in karten if s["state"] != "sleeping")
     for s in karten:
         name = s["name"]
+        if ausnahme(name):
+            continue
         if s["state"] not in ("idle", "waiting") or je_ordner[s["cwd"]] > 1:
             continue
         if s.get("attached") or (s.get("idleSeconds") or 0) < RUHE_S:
